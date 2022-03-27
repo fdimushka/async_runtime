@@ -1,0 +1,17 @@
+namespace AsyncRuntime;
+
+struct TraceWorkModel {
+    processor_id:uint32;
+    actor_id:uint32;
+    start_ts:int64;
+    end_ts:int64;
+}
+
+table TraceModel {
+    start_ts:int64;
+    end_ts:int64;
+    processors:[uint32];
+    works:[TraceWorkModel];
+}
+
+root_type TraceModel;
