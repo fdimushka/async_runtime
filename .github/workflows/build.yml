@@ -15,9 +15,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: install boost
       run: sudo apt install -y libboost-all-dev
-    - name: mkdir build
-      run: mkdir build && cd build
-    - name: cmake
-      run: cmake ..
     - name: make
-      run: make
+      run: |
+        mkdir build cd build
+        cmake ..
+        make
