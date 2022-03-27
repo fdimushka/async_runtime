@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install boost
-      run: libboost-all-dev
+      run: sudo apt install -y libboost-all-dev
     - name: build bir
       run: mkdir build & cd build
     - name: cmake
