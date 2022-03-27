@@ -17,6 +17,6 @@ jobs:
       run: sudo apt install -y libboost-all-dev
     - name: make
       run: |
-        mkdir build cd build
+        mkdir build && cd build
         cmake ..
         make
