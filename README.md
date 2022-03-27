@@ -1,5 +1,7 @@
 ## Async runtime library
 
+[![C/C++ CI](https://github.com/fdimushka/async_runtime/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/fdimushka/async_runtime/actions/workflows/build.yml)
+
 AR - it is a C++ library for efficient execution asynchronous tasks, io network operations and parallel heterogeneous computing. 
 
 #### Threads & coroutines & scheduler
