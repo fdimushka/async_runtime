@@ -1,0 +1,16 @@
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/install/local.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/install/strip.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/install.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/list_install_components.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/rebuild_cache.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/edit_cache.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/CMakeFiles/ar.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/install/local.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/list_install_components.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/install/strip.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/install.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/runtime.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/coroutine_tree.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/rebuild_cache.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/edit_cache.dir
+/Users/dmitrijfedorov/Documents/workspace/streams_runtime/build/examples/CMakeFiles/coroutine_fib.dir

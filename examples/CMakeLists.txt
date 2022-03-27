@@ -14,8 +14,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O0")
-else()
-    message(FATAL_ERROR "Unknown value of CMAKE_BUILD_TYPE!")
 endif()
 
 set( SOURCES_ALL ${EXAMPLES_SRC})
