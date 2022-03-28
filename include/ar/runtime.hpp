@@ -1,12 +1,12 @@
 #ifndef AR_RUNTIME_H
 #define AR_RUNTIME_H
 
-#include "work_steal_queue.h"
-#include "task.hpp"
-#include "notifier.hpp"
-#include "coroutine.hpp"
-#include "awaiter.hpp"
-#include "executor.hpp"
+#include "ar/work_steal_queue.h"
+#include "ar/task.hpp"
+#include "ar/notifier.hpp"
+#include "ar/coroutine.hpp"
+#include "ar/awaiter.hpp"
+#include "ar/executor.hpp"
 
 
 namespace AsyncRuntime {
@@ -210,6 +210,8 @@ namespace AsyncRuntime {
 
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
+        assert(result);
+
         result->Wait();
         return result->Get();
     }
@@ -217,6 +219,8 @@ namespace AsyncRuntime {
 
     template<class Ret, class YieldType>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
+        assert(result);
+
         auto handler = yield.coroutine_handler;
         if(handler != nullptr) {
             auto awaiter_resume_cb = [this](void* p) {
@@ -307,6 +311,33 @@ namespace AsyncRuntime {
     template< class Ret, class YieldType >
     inline Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
         return Runtime::g_runtime.Await(result, yield);
+    }
+
+
+    /**
+     * @brief await channel
+     * @tparam Ret
+     * @param awaiter
+     * @param context
+     * @return
+     */
+    template< class Ret, class YieldType >
+    inline Ret Await(Channel<Ret>& channel, YieldType& yield) {
+        return Runtime::g_runtime.Await(channel.AsyncReceive(), yield);
+    }
+
+
+    /**
+     * @brief await channel pointer
+     * @tparam Ret
+     * @tparam YieldType
+     * @param channel
+     * @param yield
+     * @return
+     */
+    template< class Ret, class YieldType >
+    inline Ret Await(Channel<Ret>* channel, YieldType& yield) {
+        return Runtime::g_runtime.Await(channel->AsyncReceive(), yield);
     }
 }
 

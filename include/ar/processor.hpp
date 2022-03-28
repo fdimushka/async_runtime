@@ -1,12 +1,12 @@
 #ifndef AR_PROCESSOR_H
 #define AR_PROCESSOR_H
 
-#include "object.hpp"
-#include "thread_executor.hpp"
-#include "work_steal_queue.h"
-#include "task.hpp"
+#include "ar/object.hpp"
+#include "ar/thread_executor.hpp"
+#include "ar/work_steal_queue.h"
+#include "ar/task.hpp"
 #include "trace.h"
-#include "notifier.hpp"
+#include "ar/notifier.hpp"
 
 
 #include <map>

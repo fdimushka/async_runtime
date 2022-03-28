@@ -1,0 +1,12 @@
+/home/df/Documents/install/CLion-2021.2.3/clion-2021.2.3/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/df/Documents/workspace/async_runtime
+-- Build with tracing: OFF
+-- Build with tests: OFF
+-- Build with examples: ON
+-- Build with docs: OFF
+-- Example: channel
+-- Example: coroutine_fib
+-- Example: coroutine_tree
+-- Example: runtime
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/df/Documents/workspace/async_runtime/cmake-build-debug

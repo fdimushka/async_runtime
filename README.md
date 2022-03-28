@@ -53,6 +53,38 @@ while(coro.Valid()) {
     coro();
 }
 ```
+
+Coroutines and runtime:
+```C++
+int request(int param) {
+    //maybe sync request to external api.
+    param++;
+    return param;
+}
+
+
+void coro_fun(AR::Yield<int> & yield, int p) {
+    for(;;) {
+        p = AR::Await(AR::Async(&request, p), yield); //async request and await result
+        //big compute operation
+        //...
+        yield(p); //yielding result big compute operation
+    }
+}
+
+
+int main() {
+    AR::SetupRuntime();
+    AR::Coroutine<int> coro = AR::MakeCoroutine<int>(&coro_fun, 0);
+
+    while (coro.Valid()) {
+        int p = AR::Await(AR::Async(coro)); //async execution and await
+        std::cout << p << std::endl; //result of big compute operation
+    }
+    return 0;
+}
+```
+
 Fibonacci numbers:
 ``` C++
 void fib(AR::Yield<int> & yield, int count) {
@@ -74,37 +106,6 @@ int main() {
 
     for(int x : coro_fib) {
         std::cout << x << std::endl;
-    }
-    return 0;
-}
-```
-
-Coroutines and async tasks
-```C++
-int request(int param) {
-    //maybe sync request to external api.
-    param++;
-    return param;
-}
-
-
-void async_func(AR::Yield<int> & yield, int p) {
-    for(;;) {
-        p = AR::Await(AR::Async(&request, p), yield); //async request and await result
-        //big compute operation
-        //...
-        yield(p); //yielding result big compute operation
-    }
-}
-
-
-int main() {
-    AR::SetupRuntime();
-    AR::Coroutine<int> coro = AR::MakeCoroutine<int>(&async_func, 0);
-
-    while (coro.Valid()) {
-        int p = AR::Await(AR::Async(coro)); //async execution and await
-        std::cout << p << std::endl; //result of big compute operation
     }
     return 0;
 }

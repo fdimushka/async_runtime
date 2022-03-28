@@ -1,0 +1,97 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <script>
+    function _base64ToArrayBuffer(base64) {
+      let binary_string = window.atob(base64);
+      let len = binary_string.length;
+      let bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+
+    function _ns_to_ms(ts_ns) {
+      return Math.round(ts_ns/1000000.0)
+    }
+
+
+    window.onload = function () {
+      var data = "{{ trace_data }}";
+
+      let buf = new flatbuffers.ByteBuffer(_base64ToArrayBuffer(data));
+      var trace = AsyncRuntime.TraceModel.getRootAsTraceModel(buf);
+
+      let work_time = _ns_to_ms(trace.endTs().toFloat64()) - _ns_to_ms(trace.startTs().toFloat64())
+
+      var data_point = []
+      var processors = {}
+      var strip_lines = []
+
+      for (let i = 0; i < trace.processorsLength(); ++i) {
+        processors[trace.processors(i)] = i+1
+        strip_lines.push(
+                {
+                  value:i+1,
+                  color:"#d8d8d8"
+                }
+        )
+      }
+
+      for(let i = 0; i < trace.worksLength(); ++i) {
+        let work = trace.works(i)
+        data_point.push({
+          x: processors[work.processorId()],
+          y:[_ns_to_ms(work.startTs().toFloat64() - trace.startTs().toFloat64()), _ns_to_ms(work.endTs().toFloat64() - trace.startTs().toFloat64())],
+          actor: work.actorId(),
+          work_time: _ns_to_ms(work.endTs().toFloat64() - work.startTs().toFloat64()),
+          processor: processors[work.processorId()],
+          color: "LightSeaGreen"
+        })
+      }
+
+
+      var options = {
+        animationEnabled: false,
+        exportEnabled: true,
+        zoomEnabled: true,
+        zoomType: "y",
+        title: {
+          text: "Trace of processors utilization"
+        },
+        axisX: {
+          title: "Processors",
+          interval: 1,
+          stripLines: strip_lines
+        },
+        axisY: {
+          title: "Time (ms)",
+          interval: 1000,
+          crosshair: {
+            enabled: true
+          }
+        },
+        data: [{
+          type: "rangeBar",
+          showInLegend: true,
+          yValueFormatString: "",
+          legendText: "Works",
+          toolTipContent: "actor_id: {actor}, processor: {processor}, time: {work_time}ms",
+          dataPoints: data_point
+        }]
+      };
+
+      $("#chartContainer").CanvasJSChart(options);
+    }
+  </script>
+</head>
+<body>
+<div id="chartContainer" style="height: 370px; width: 100%;"></div>
+<script type="text/javascript" src="data/js/flatbuffers.js"></script>
+<script type="text/javascript" src="TraceSchema_generated.js"></script>
+<script type="text/javascript" src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
+</body>
+</html>
