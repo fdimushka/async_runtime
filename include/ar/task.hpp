@@ -29,10 +29,19 @@ namespace AsyncRuntime {
         friend class runtime;
     public:
         typedef std::function<void(void*)> resume_cb_t;
+        typedef Ret RetType;
 
         explicit Result() : excepted(false) {
             resolved.store(false, std::memory_order_relaxed);
             future = promise.get_future();
+        };
+
+
+        template<typename T>
+        explicit Result(T && v) : excepted(false) {
+            resolved.store(true, std::memory_order_relaxed);
+            future = promise.get_future();
+            promise.set_value(v);
         };
 
 

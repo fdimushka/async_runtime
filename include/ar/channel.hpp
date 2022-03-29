@@ -1,12 +1,26 @@
 #ifndef AR_CHANNEL_H
 #define AR_CHANNEL_H
 
+
 #include "ar/object.hpp"
 #include "ar/array.hpp"
 #include "ar/task.hpp"
 
 
 namespace AsyncRuntime {
+    class Runtime;
+
+
+    /**
+     * @brief
+     * @tparam T
+     */
+    template<typename T>
+    class ChannelReader {
+
+    };
+
+
     /**
      * @class Channel
      * @brief Lock-free unbounded single-producer single-consumer queue.
@@ -14,6 +28,7 @@ namespace AsyncRuntime {
      */
     template<typename T>
     class Channel {
+        friend Runtime;
     public:
 
 
@@ -59,14 +74,11 @@ namespace AsyncRuntime {
 
         /**
          * @brief
-         * @tparam O
          * @return
          */
-        std::shared_ptr<Result<T>> AsyncReceive();
+        std::optional<T> Receive();
     private:
         bool Push(T & item);
-
-
         std::optional<T> Pop();
 
 
@@ -74,12 +86,11 @@ namespace AsyncRuntime {
         std::atomic<int64_t> _bottom;
         std::atomic<AtomicArray<T> *> _array;
         std::vector<AtomicArray<T> *> _garbage;
-        std::shared_ptr<Result<T>>  result;
     };
 
 
     template<typename T>
-    Channel<T>::Channel(int64_t c) : result(new Result<T>) {
+    Channel<T>::Channel(int64_t c) {
         assert(c && (!(c & (c - 1))));
         _top.store(0, std::memory_order_relaxed);
         _bottom.store(0, std::memory_order_relaxed);
@@ -142,8 +153,15 @@ namespace AsyncRuntime {
 
 
     template<typename T>
-    bool Channel<T>::Send(T & o) {
-        return Push(o);
+    bool Channel<T>::Send(T & v) {
+        bool res = Push(v);
+        return res;
+    }
+
+
+    template<typename T>
+    std::optional<T> Channel<T>::Receive() {
+        return Pop();
     }
 
 
@@ -176,19 +194,13 @@ namespace AsyncRuntime {
     }
 
 
-    template<typename T>
-    std::shared_ptr<Result<T>> Channel<T>::AsyncReceive() {
-        return std::shared_ptr<Result<T>>();
-    }
-
-
     /**
      * @brief
      * @tparam T
      * @return
      */
     template <typename T>
-    inline Channel<T> MakeChannel(size_t cap = 1024) {
+    inline Channel<T> MakeChannel(size_t cap = 64) {
         return Channel<T>(cap);
     }
 }

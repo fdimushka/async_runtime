@@ -12,11 +12,12 @@ namespace AsyncRuntime {
      * @class
      * @brief
      */
-    template<class Ret>
+    template< class ResultType >
     class Awaiter
     {
     public:
-        typedef std::shared_ptr<Result<Ret>> ResultPtr;
+        typedef typename ResultType::RetType Ret;
+        typedef std::shared_ptr<ResultType> ResultPtr;
         typedef std::function<void(void*)> resume_cb_t;
 
         explicit Awaiter(const ResultPtr& result_, resume_cb_t resume_cb_, CoroutineHandler*  handler_ = nullptr) :
@@ -44,8 +45,9 @@ namespace AsyncRuntime {
     };
 
 
-    template<class Ret>
-    Ret Awaiter<Ret>::Await() {
+    template< >
+    inline
+    typename Result<Ret>::RetType Awaiter<Result<Ret>>::Await() {
         if(coroutine_handler != nullptr) {
             if (result->Then(resume_coroutine_cb, coroutine_handler)) {
                 //suspend this

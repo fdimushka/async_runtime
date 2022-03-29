@@ -57,8 +57,9 @@ namespace AsyncRuntime {
 
 
         virtual void Complete() = 0;
-    protected:
+
         CoroutineHandler*               coroutine_handler;
+    protected:
         std::shared_ptr<ResultType>     result;
     };
 

@@ -110,6 +110,17 @@ namespace AsyncRuntime {
          */
         template<class Ret, class YieldType>
         Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield);
+
+
+        /**
+         * @brief
+         * @tparam Ret
+         * @param result
+         * @param handler
+         * @return
+         */
+        template<class Ret>
+        Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler);
     private:
         /**
          * @brief
@@ -243,6 +254,26 @@ namespace AsyncRuntime {
     }
 
 
+    template<class Ret>
+    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        assert(result);
+        assert(handler != nullptr);
+
+        auto awaiter_resume_cb = [this](void* p) {
+            if(p != nullptr) {
+                auto resumed_coroutine = (CoroutineHandler*)p;
+                auto task = resumed_coroutine->MakeExecTask();
+                if(task != nullptr) {
+                    Post(task);
+                }
+            }
+        };
+
+        Awaiter<Ret> awaiter(result, awaiter_resume_cb, handler);
+        return awaiter.Await();
+    }
+
+
     /**
      * @brief
      */
@@ -315,29 +346,15 @@ namespace AsyncRuntime {
 
 
     /**
-     * @brief await channel
+     * @brief await
      * @tparam Ret
      * @param awaiter
      * @param context
      * @return
      */
-    template< class Ret, class YieldType >
-    inline Ret Await(Channel<Ret>& channel, YieldType& yield) {
-        return Runtime::g_runtime.Await(channel.AsyncReceive(), yield);
-    }
-
-
-    /**
-     * @brief await channel pointer
-     * @tparam Ret
-     * @tparam YieldType
-     * @param channel
-     * @param yield
-     * @return
-     */
-    template< class Ret, class YieldType >
-    inline Ret Await(Channel<Ret>* channel, YieldType& yield) {
-        return Runtime::g_runtime.Await(channel->AsyncReceive(), yield);
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await(result, handler);
     }
 }
 

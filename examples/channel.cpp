@@ -10,6 +10,10 @@ void coro_a_fun(AR::YieldVoid & yield, AR::Channel<int>* channel) {
     for(;;) {
         channel->Send(i);
         i++;
+
+        if(i > 1000) {
+            break;
+        }
         yield();
     }
 }
@@ -18,9 +22,8 @@ void coro_a_fun(AR::YieldVoid & yield, AR::Channel<int>* channel) {
 void coro_b_fun(AR::YieldVoid & yield, AR::Channel<int>* channel) {
     yield();
     for(;;) {
-        int res = AR::Await(channel, yield);
-        std::cout << res << std::endl;
-        yield();
+        //int res = AR::Await(channel->AsyncReceive(), yield.coroutine_handler);
+        //std::cout << res << std::endl;
     }
 }
 
@@ -31,9 +34,10 @@ int main() {
     AR::Coroutine coro_a = AR::MakeCoroutine(&coro_a_fun, &channel);
     AR::Coroutine coro_b = AR::MakeCoroutine(&coro_b_fun, &channel);
 
-    while (coro_a.Valid() && coro_b.Valid()) {
+    AR::Async(coro_b);
+
+    while (coro_a.Valid()) {
         AR::Await(AR::Async(coro_a));
-        AR::Await(AR::Async(coro_b));
     }
 
     return 0;
