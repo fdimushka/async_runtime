@@ -6,6 +6,7 @@
 #include "ar/notifier.hpp"
 #include "ar/coroutine.hpp"
 #include "ar/awaiter.hpp"
+#include "ar/channel.hpp"
 #include "ar/executor.hpp"
 
 
@@ -108,19 +109,8 @@ namespace AsyncRuntime {
          * @param context
          * @return
          */
-        template<class Ret, class YieldType>
-        Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield);
-
-
-        /**
-         * @brief
-         * @tparam Ret
-         * @param result
-         * @param handler
-         * @return
-         */
-        template<class Ret>
-        Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler);
+        template<class Ret, class Res>
+        Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
     private:
         /**
          * @brief
@@ -228,38 +218,12 @@ namespace AsyncRuntime {
     }
 
 
-    template<class Ret, class YieldType>
-    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
-        assert(result);
-
-        auto handler = yield.coroutine_handler;
-        if(handler != nullptr) {
-            auto awaiter_resume_cb = [this](void* p) {
-                if(p != nullptr) {
-                    auto resumed_coroutine = (CoroutineHandler*)p;
-                    auto task = resumed_coroutine->MakeExecTask();
-                    if(task != nullptr) {
-                        Post(task);
-                    }
-                }
-            };
-
-            Awaiter<Ret> awaiter(result, awaiter_resume_cb, handler);
-            return awaiter.Await();
-        }else{
-            result->Wait();
-        }
-
-        return result->Get();
-    }
-
-
-    template<class Ret>
-    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+    template<class Ret, class Res>
+    Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
         assert(result);
         assert(handler != nullptr);
 
-        auto awaiter_resume_cb = [this](void* p) {
+        return Awaiter::Await(result, [this](void* p) {
             if(p != nullptr) {
                 auto resumed_coroutine = (CoroutineHandler*)p;
                 auto task = resumed_coroutine->MakeExecTask();
@@ -267,10 +231,7 @@ namespace AsyncRuntime {
                     Post(task);
                 }
             }
-        };
-
-        Awaiter<Ret> awaiter(result, awaiter_resume_cb, handler);
-        return awaiter.Await();
+        }, handler);
     }
 
 
@@ -339,22 +300,15 @@ namespace AsyncRuntime {
      * @param context
      * @return
      */
-    template< class Ret, class YieldType >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
-        return Runtime::g_runtime.Await(result, yield);
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, handler);
     }
 
 
-    /**
-     * @brief await
-     * @tparam Ret
-     * @param awaiter
-     * @param context
-     * @return
-     */
     template< class Ret >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
-        return Runtime::g_runtime.Await(result, handler);
+    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
     }
 }
 

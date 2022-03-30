@@ -12,16 +12,6 @@ namespace AsyncRuntime {
 
 
     /**
-     * @brief
-     * @tparam T
-     */
-    template<typename T>
-    class ChannelReader {
-
-    };
-
-
-    /**
      * @class Channel
      * @brief Lock-free unbounded single-producer single-consumer queue.
      * @tparam T
@@ -30,6 +20,11 @@ namespace AsyncRuntime {
     class Channel {
         friend Runtime;
     public:
+        struct Watcher {
+            ObjectID                    id;
+            std::function<void(void*)>  cb;
+            void*                       data;
+        };
 
 
         /**
@@ -77,15 +72,25 @@ namespace AsyncRuntime {
          * @return
          */
         std::optional<T> Receive();
+
+
+        /**
+         * @brief
+         */
+        void Watch(ObjectID id, std::function<void(void*)>& cb, void* data);
     private:
         bool Push(T & item);
         std::optional<T> Pop();
+
+
+        void CallWatcher();
 
 
         std::atomic<int64_t> _top;
         std::atomic<int64_t> _bottom;
         std::atomic<AtomicArray<T> *> _array;
         std::vector<AtomicArray<T> *> _garbage;
+        Watcher *      watcher = nullptr;
     };
 
 
@@ -105,6 +110,11 @@ namespace AsyncRuntime {
             delete a;
         }
         delete _array.load();
+
+        if(watcher != nullptr) {
+            delete watcher;
+            watcher = nullptr;
+        }
     }
 
 
@@ -155,6 +165,11 @@ namespace AsyncRuntime {
     template<typename T>
     bool Channel<T>::Send(T & v) {
         bool res = Push(v);
+
+        if(res) {
+            CallWatcher();
+        }
+
         return res;
     }
 
@@ -191,6 +206,81 @@ namespace AsyncRuntime {
         }
 
         return item;
+    }
+
+
+    template<typename T>
+    void Channel<T>::Watch(ObjectID id, std::function<void(void*)>& cb, void* data) {
+        if(watcher != nullptr) {
+            delete watcher;
+            watcher = nullptr;
+        }
+
+        watcher = new Watcher{id, cb, data};
+    }
+
+
+    template<typename T>
+    void Channel<T>::CallWatcher() {
+        if(watcher != nullptr) {
+
+            if( watcher->cb )
+                watcher->cb( watcher->data );
+
+            delete watcher;
+            watcher = nullptr;
+        }
+    }
+
+
+    /**
+     * @brief
+     * @tparam T
+     */
+    template<typename T>
+    struct ChannelReceiver {
+        Channel<T>  *channel;
+    };
+
+
+    /**
+     * @brief async receive
+     * @tparam T
+     * @return
+     */
+    template<class T>
+    static std::shared_ptr<ChannelReceiver<T>> AsyncReceive(Channel<T> *channel) {
+        std::shared_ptr<ChannelReceiver<T>> receiver = std::make_shared<ChannelReceiver<T>>();
+        receiver->channel = channel;
+        return receiver;
+    }
+
+
+    namespace Awaiter {
+        typedef std::function<void(void*)> ResumeCb;
+
+
+        template<class Ret>
+        inline Ret Await(const std::shared_ptr<ChannelReceiver<Ret>>& receiver, ResumeCb resume_cb, CoroutineHandler* handler) {
+            assert(handler != nullptr);
+
+            auto *channel = receiver->channel;
+
+            assert(channel != nullptr);
+
+            auto o = channel->Receive();
+            if( o ) {
+                return o.value();
+            } else {
+                channel->Watch(handler->GetID(), resume_cb, (void *)handler);
+
+                //suspend the coroutine
+                handler->Suspend();
+
+                //resume the coroutine
+                return channel->Receive().value();
+            }
+        }
     }
 
 

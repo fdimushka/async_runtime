@@ -4,26 +4,26 @@
 namespace AR = AsyncRuntime;
 
 
-void coro_a_fun(AR::YieldVoid & yield, AR::Channel<int>* channel) {
+void coro_a_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channel<int>* channel) {
     yield();
     int i = 0;
     for(;;) {
         channel->Send(i);
         i++;
 
-        if(i > 1000) {
-            break;
-        }
+//        if(i > 1000) {
+//            break;
+//        }
         yield();
     }
 }
 
 
-void coro_b_fun(AR::YieldVoid & yield, AR::Channel<int>* channel) {
+void coro_b_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channel<int>* channel) {
     yield();
     for(;;) {
-        //int res = AR::Await(channel->AsyncReceive(), yield.coroutine_handler);
-        //std::cout << res << std::endl;
+        int res = AR::Await(AR::AsyncReceive(channel), handler);
+        std::cout << res << std::endl;
     }
 }
 

@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <assert.h>
 
+#include "ar/object.hpp"
 #include "ar/task.hpp"
 #include "ar/stack.hpp"
 #include "ar/context_switcher.hpp"
@@ -15,7 +16,7 @@ namespace AsyncRuntime {
     class Runtime;
 
 
-    class CoroutineHandler {
+    class CoroutineHandler : public BaseObject {
     public:
         virtual void MakeResult() = 0;
         virtual Task* MakeExecTask() = 0;
@@ -28,6 +29,7 @@ namespace AsyncRuntime {
         friend Runtime;
     public:
         typedef Result<T> ResultType;
+
 
         BaseYield(CoroutineHandler*  handler) : coroutine_handler(handler) { };
         virtual ~BaseYield() =default;
@@ -125,8 +127,8 @@ namespace AsyncRuntime {
      */
     template< typename StackAlloc, class CoroutineType >
     class ContextRecord {
-        typedef typename CoroutineType::YieldType       YieldType;
-        typedef std::function<void(YieldType&)>         Callable;
+        typedef typename CoroutineType::YieldType                       YieldType;
+        typedef std::function<void(CoroutineHandler*, YieldType&)>       Callable;
     public:
         ContextRecord(StackContext sctx, StackAlloc && salloc, Callable && fn, CoroutineType *coroutine) :
                 salloc_(salloc),
@@ -145,7 +147,7 @@ namespace AsyncRuntime {
             YieldType& yield = coroutine_->BindYieldContext(t.fctx);
             // invoke context-function
             try {
-                fn_(yield);
+                fn_(static_cast<CoroutineHandler*>(coroutine_), yield);
                 coroutine_->Complete();
             }catch (...) {
                 try {
@@ -196,7 +198,8 @@ namespace AsyncRuntime {
     public:
         typedef Yield<Ret>                                                          YieldType;
         typedef Ret                                                                 RetType;
-        typedef std::function<void(YieldType&)>                                     Callable;
+        typedef std::function<void(CoroutineHandler*, YieldType&)>                  Callable;
+
 
         template< class Function,
                   class ...Arguments>
@@ -205,7 +208,10 @@ namespace AsyncRuntime {
                 yield(this),
                 state{kExecuting} {
             yield.ResetResult();
-            CreateRecord(std::bind(std::forward<Function>(fn), std::placeholders::_1, std::forward<Arguments>(args)...));
+            CreateRecord(std::bind( std::forward<Function>(fn),
+                                    std::placeholders::_1,
+                                    std::placeholders::_2,
+                                    std::forward<Arguments>(args)...) );
 
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }

@@ -10,13 +10,13 @@ struct Node {
     Node *right = nullptr;
 };
 
-void dfs(AR::Yield<int> & sink, Node *x) {
+void dfs(AR::CoroutineHandler* handler, AR::Yield<int> & sink, Node *x) {
     if (x->left) {
-        dfs(sink, x->left);
+        dfs(handler, sink, x->left);
     }
     sink(x->val);
     if (x->right) {
-        dfs(sink, x->right);
+        dfs(handler, sink, x->right);
     }
 }
 

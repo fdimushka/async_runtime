@@ -10,10 +10,10 @@ int request(int param) {
 }
 
 
-void async_func(AR::Yield<int> & yield, int p) {
+void async_func(AR::CoroutineHandler* handler, AR::Yield<int> & yield, int p) {
     yield(0);
     for(;;) {
-        p = AR::Await(AR::Async(&request, p), yield);
+        p = AR::Await(AR::Async(&request, p), handler);
         //big compute operation
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         yield(p);

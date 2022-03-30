@@ -4,7 +4,7 @@
 namespace AR = AsyncRuntime;
 
 
-void fib(AR::Yield<int> & yield, int count) {
+void fib(AR::CoroutineHandler* handler, AR::Yield<int> & yield, int count) {
     int first = 1, second = 1;
     yield( first);
     yield( second);
