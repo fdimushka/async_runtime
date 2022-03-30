@@ -2,5 +2,6 @@
 #define AR_CONFIG_H
 
 #cmakedefine USE_TRACE
+#cmakedefine USE_TESTS
 
 #endif

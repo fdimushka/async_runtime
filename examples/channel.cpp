@@ -10,10 +10,6 @@ void coro_a_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channe
     for(;;) {
         channel->Send(i);
         i++;
-
-//        if(i > 1000) {
-//            break;
-//        }
         yield();
     }
 }
@@ -22,7 +18,7 @@ void coro_a_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channe
 void coro_b_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channel<int>* channel) {
     yield();
     for(;;) {
-        int res = AR::Await(AR::AsyncReceive(channel), handler);
+        int res = AR::Await(AsyncReceive(channel), handler);
         std::cout << res << std::endl;
     }
 }

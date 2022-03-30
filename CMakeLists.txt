@@ -16,6 +16,15 @@ message(STATUS "Build with examples: ${WITH_EXAMPLES}")
 message(STATUS "Build with docs: ${WITH_DOCS}")
 
 set(USE_TRACE OFF)
+set(USE_TESTS OFF)
+
+if (WITH_TESTS)
+    set(USE_TESTS ON)
+endif()
+
+if (WITH_TRACE)
+    set(USE_TRACE ON)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

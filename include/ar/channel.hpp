@@ -5,11 +5,15 @@
 #include "ar/object.hpp"
 #include "ar/array.hpp"
 #include "ar/task.hpp"
+#include "config.h"
+
+#ifdef USE_TESTS
+class CHANNEL_TEST_FRIEND;
+#endif
 
 
 namespace AsyncRuntime {
     class Runtime;
-
 
     /**
      * @class Channel
@@ -19,6 +23,10 @@ namespace AsyncRuntime {
     template<typename T>
     class Channel {
         friend Runtime;
+
+#ifdef USE_TESTS
+        friend CHANNEL_TEST_FRIEND;
+#endif
     public:
         struct Watcher {
             ObjectID                    id;
@@ -234,7 +242,8 @@ namespace AsyncRuntime {
 
 
     /**
-     * @brief
+     * @brief ChannelReceiver
+     * @todo temporary implementation
      * @tparam T
      */
     template<typename T>
