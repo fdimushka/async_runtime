@@ -2,8 +2,8 @@
 #define AR_WORKSTEALQUEUE_H
 
 
-#include "os.hpp"
-#include "array.hpp"
+#include "ar/os.hpp"
+#include "ar/array.hpp"
 
 
 namespace AsyncRuntime {

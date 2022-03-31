@@ -15,11 +15,11 @@ struct Foo {
 };
 
 
-void foo(YieldVoid &yield, int i) {
+void foo(CoroutineHandler* handler, YieldVoid &yield, int i) {
 }
 
 
-void bar(YieldVoid &yield) {
+void bar(CoroutineHandler* handler, YieldVoid &yield) {
 }
 
 
@@ -27,15 +27,15 @@ void bar(YieldVoid &yield) {
 TEST_CASE( "Init coroutine test", "[coroutine]" ) {
     auto coro1 = MakeCoroutine(&bar);
     auto coro2 = MakeCoroutine(&foo, 100);
-    auto coro3 = MakeCoroutine(std::bind(&foo, std::placeholders::_1, 100));
-    auto coro4 = MakeCoroutine([](YieldVoid &yield, int i){ }, 100);
-    auto coro5 = MakeCoroutine([](YieldVoid &yield){ });
+    auto coro3 = MakeCoroutine(std::bind(&foo, std::placeholders::_1, std::placeholders::_2, 100));
+    auto coro4 = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield, int i){ }, 100);
+    auto coro5 = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield){ });
 }
 
 
 TEST_CASE( "Call coroutine test", "[coroutine]" ) {
     bool exec = false;
-    auto coro = MakeCoroutine([&exec](YieldVoid &yield){ yield(); exec = true; });
+    auto coro = MakeCoroutine([&exec](CoroutineHandler* handler, YieldVoid &yield){ yield(); exec = true; });
     coro();
     REQUIRE(exec);
 }
@@ -44,7 +44,7 @@ TEST_CASE( "Call coroutine test", "[coroutine]" ) {
 TEST_CASE( "Coroutine yield test", "[coroutine]" ) {
     int step = 0;
 
-    Coroutine coro = MakeCoroutine([&step](YieldVoid &yield) {
+    Coroutine coro = MakeCoroutine([&step](CoroutineHandler* handler, YieldVoid &yield) {
         step = 1;
         yield();
         step = 2;
@@ -64,7 +64,7 @@ TEST_CASE( "Coroutine yield test", "[coroutine]" ) {
 
 
 TEST_CASE( "Coroutine exception test", "[coroutine]" ) {
-    auto coro = MakeCoroutine([](YieldVoid &yield) {
+    auto coro = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield) {
         yield();
         throw std::runtime_error("error");
     });
@@ -76,7 +76,7 @@ TEST_CASE( "Coroutine exception test", "[coroutine]" ) {
 
 
 TEST_CASE( "Coroutine call in thread test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](Yield<int> &yield) {
+    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
         yield(0);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         yield(100);
@@ -95,7 +95,7 @@ TEST_CASE( "Coroutine call in thread test", "[coroutine]" ) {
 
 
 TEST_CASE( "Coroutine create task test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](Yield<int> &yield) {
+    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
         yield(0);
         yield(100);
     });
@@ -109,7 +109,7 @@ TEST_CASE( "Coroutine create task test", "[coroutine]" ) {
 
 
 TEST_CASE( "Coroutine yield string value test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<std::string>([](Yield<std::string> &yield) {
+    auto coro = MakeCoroutine<std::string>([](CoroutineHandler* handler, Yield<std::string> &yield) {
         yield("run");
         yield("hello");
         yield("world");
@@ -124,7 +124,7 @@ TEST_CASE( "Coroutine yield string value test", "[coroutine]" ) {
 
 
 TEST_CASE( "Generator test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](Yield<int> &yield) {
+    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
         for(int i = 0; i < 5; ++i) {
             yield(i);
         }

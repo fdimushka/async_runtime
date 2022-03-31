@@ -1,12 +1,13 @@
 #ifndef AR_RUNTIME_H
 #define AR_RUNTIME_H
 
-#include "work_steal_queue.h"
-#include "task.hpp"
-#include "notifier.hpp"
-#include "coroutine.hpp"
-#include "awaiter.hpp"
-#include "executor.hpp"
+#include "ar/work_steal_queue.h"
+#include "ar/task.hpp"
+#include "ar/notifier.hpp"
+#include "ar/coroutine.hpp"
+#include "ar/awaiter.hpp"
+#include "ar/channel.hpp"
+#include "ar/executor.hpp"
 
 
 namespace AsyncRuntime {
@@ -108,8 +109,8 @@ namespace AsyncRuntime {
          * @param context
          * @return
          */
-        template<class Ret, class YieldType>
-        Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield);
+        template<class Ret, class Res>
+        Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
     private:
         /**
          * @brief
@@ -210,32 +211,27 @@ namespace AsyncRuntime {
 
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
+        assert(result);
+
         result->Wait();
         return result->Get();
     }
 
 
-    template<class Ret, class YieldType>
-    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
-        auto handler = yield.coroutine_handler;
-        if(handler != nullptr) {
-            auto awaiter_resume_cb = [this](void* p) {
-                if(p != nullptr) {
-                    auto resumed_coroutine = (CoroutineHandler*)p;
-                    auto task = resumed_coroutine->MakeExecTask();
-                    if(task != nullptr) {
-                        Post(task);
-                    }
+    template<class Ret, class Res>
+    Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
+        assert(result);
+        assert(handler != nullptr);
+
+        return Awaiter::Await(result, [this](void* p) {
+            if(p != nullptr) {
+                auto resumed_coroutine = (CoroutineHandler*)p;
+                auto task = resumed_coroutine->MakeExecTask();
+                if(task != nullptr) {
+                    Post(task);
                 }
-            };
-
-            Awaiter<Ret> awaiter(result, awaiter_resume_cb, handler);
-            return awaiter.Await();
-        }else{
-            result->Wait();
-        }
-
-        return result->Get();
+            }
+        }, handler);
     }
 
 
@@ -304,9 +300,15 @@ namespace AsyncRuntime {
      * @param context
      * @return
      */
-    template< class Ret, class YieldType >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result, YieldType& yield) {
-        return Runtime::g_runtime.Await(result, yield);
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, handler);
+    }
+
+
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
     }
 }
 

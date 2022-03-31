@@ -4,7 +4,9 @@
 
 #include "ar/coroutine.hpp"
 #include "ar/iterator.hpp"
+#include "ar/channel.hpp"
 #include "ar/runtime.hpp"
+#include "config.h"
 
 
 #endif //AR_ARRAY_H

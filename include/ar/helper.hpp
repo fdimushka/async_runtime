@@ -19,7 +19,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/range/algorithm/nth_element.hpp>
 
-#include "macros.hpp"
+#include "ar/macros.hpp"
 
 
 namespace AsyncRuntime {
