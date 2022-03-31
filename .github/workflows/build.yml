@@ -16,7 +16,7 @@ jobs:
     - name: install boost
       run: sudo apt install -y libboost-all-dev
     - name: install libuv
-      run: sudo apt install -y libuv
+      run: sudo apt install -y libuv-dev
     - name: make
       run: |
         mkdir build && cd build
