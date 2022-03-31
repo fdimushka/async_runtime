@@ -9,18 +9,24 @@ using namespace AsyncRuntime;
 
 Runtime Runtime::g_runtime;
 
-Runtime::Runtime() : main_executor{nullptr}
+Runtime::Runtime() : main_executor{nullptr}, is_setup(false)
 {
 }
 
 
 Runtime::~Runtime()
 {
+    is_setup = false;
 }
 
 
 void Runtime::Setup(/*...*/)
 {
+    if(is_setup)
+        return;
+
+    is_setup = true;
+
     CreateDefaultExecutors();
 }
 

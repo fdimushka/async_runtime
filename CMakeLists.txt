@@ -9,11 +9,13 @@ option(WITH_TRACE "Build with tracing" OFF)
 option(WITH_TESTS "Build with tests" OFF)
 option(WITH_EXAMPLES "Build with examples" ON)
 option(WITH_DOCS "Build with docs" OFF)
+option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
 message(STATUS "Build with tests: ${WITH_TESTS}")
 message(STATUS "Build with examples: ${WITH_EXAMPLES}")
 message(STATUS "Build with docs: ${WITH_DOCS}")
+message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
@@ -29,6 +31,14 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O0")
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
@@ -51,14 +61,18 @@ file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
 include_directories(include/)
 include_directories(src/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${LIBUV_INCLUDE_DIR})
+include_directories(${LibUV_INCLUDE_DIR})
 
 add_library(${LIB_NAME} SHARED ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${Boost_LIBRARIES} ${LIBUV_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${Boost_LIBRARIES} ${LibUV_LIBRARIES})
 
 if (WITH_TESTS)
     add_subdirectory(tests)
+endif()
+
+if (WITH_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
 
 if (WITH_EXAMPLES)
@@ -73,6 +87,5 @@ install(TARGETS ${LIB_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         PUBLIC_HEADER DESTINATION include/${LIB_NAME} COMPONENT
         )
-
 
 file(COPY data/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/data)

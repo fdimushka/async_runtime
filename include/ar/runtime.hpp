@@ -142,6 +142,7 @@ namespace AsyncRuntime {
         std::unordered_map<ObjectID, Executor*>    executors;
         Executor*                                  main_executor;
         Executor*                                  io_executor;
+        bool                                       is_setup;
     };
 
 
