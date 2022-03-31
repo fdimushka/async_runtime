@@ -68,11 +68,25 @@ namespace AsyncRuntime {
 
         /**
          * @brief
+         * @return
+         */
+        int64_t Capacity() const noexcept { return _capacity; }
+
+
+        /**
+         * @brief
          * @tparam O
          * @param item
          * @return
          */
+        bool Send(T && item);
         bool Send(T & item);
+
+
+        /**
+         * @brief
+         */
+        void Flush();
 
 
         /**
@@ -85,7 +99,7 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void Watch(ObjectID id, std::function<void(void*)>& cb, void* data);
+        void Watch(ObjectID id, std::function<void(void*)> cb, void* data);
     private:
         bool Push(T & item);
         std::optional<T> Pop();
@@ -98,6 +112,7 @@ namespace AsyncRuntime {
         std::atomic<int64_t> _bottom;
         std::atomic<AtomicArray<T> *> _array;
         std::vector<AtomicArray<T> *> _garbage;
+        int64_t                     _capacity;
         Watcher *      watcher = nullptr;
     };
 
@@ -109,6 +124,7 @@ namespace AsyncRuntime {
         _bottom.store(0, std::memory_order_relaxed);
         _array.store(new AtomicArray<T>{c}, std::memory_order_relaxed);
         _garbage.reserve(32);
+        _capacity = c;
     }
 
 
@@ -152,6 +168,14 @@ namespace AsyncRuntime {
 
 
     template<typename T>
+    void Channel<T>::Flush() {
+        while (!Empty()) {
+            Pop();
+        }
+    }
+
+
+    template<typename T>
     bool Channel<T>::Push(T & o) {
         int64_t b = _bottom.load(std::memory_order_relaxed);
         int64_t t = _top.load(std::memory_order_acquire);
@@ -167,6 +191,18 @@ namespace AsyncRuntime {
         _bottom.store(b + 1, std::memory_order_relaxed);
 
         return true;
+    }
+
+
+    template<typename T>
+    bool Channel<T>::Send(T && v) {
+        bool res = Push(v);
+
+        if(res) {
+            CallWatcher();
+        }
+
+        return res;
     }
 
 
@@ -218,7 +254,7 @@ namespace AsyncRuntime {
 
 
     template<typename T>
-    void Channel<T>::Watch(ObjectID id, std::function<void(void*)>& cb, void* data) {
+    void Channel<T>::Watch(ObjectID id, std::function<void(void*)> cb, void* data) {
         if(watcher != nullptr) {
             delete watcher;
             watcher = nullptr;
