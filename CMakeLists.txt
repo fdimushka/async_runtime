@@ -33,7 +33,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
 include(cmake/boost.cmake)
-include(cmake/uv.cmake)
+include(cmake/libuv.cmake)
 
 if (WITH_TRACE)
     include(cmake/trace.cmake)
@@ -51,10 +51,11 @@ file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
 include_directories(include/)
 include_directories(src/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${LIBUV_INCLUDE_DIR})
 
 add_library(${LIB_NAME} SHARED ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${Boost_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${Boost_LIBRARIES} ${LIBUV_LIBRARIES})
 
 if (WITH_TESTS)
     add_subdirectory(tests)
