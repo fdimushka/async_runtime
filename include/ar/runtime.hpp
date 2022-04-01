@@ -8,6 +8,7 @@
 #include "ar/awaiter.hpp"
 #include "ar/channel.hpp"
 #include "ar/executor.hpp"
+#include "ar/io_task.h"
 
 
 namespace AsyncRuntime {
@@ -34,6 +35,7 @@ namespace AsyncRuntime {
          * @brief
          */
         void Setup(/*...*/);
+        void Terminate();
 
 
         /**
@@ -60,7 +62,7 @@ namespace AsyncRuntime {
          */
         template <  class Callable,
                     class... Arguments  >
-        auto Async(Executor* ex, Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
+        auto Async(IExecutor* ex, Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
 
 
         /**
@@ -78,7 +80,7 @@ namespace AsyncRuntime {
          * @return
          */
         template<class CoroutineType>
-        std::shared_ptr<Result<typename CoroutineType::RetType>> Async(Executor* ex, CoroutineType & coroutine);
+        std::shared_ptr<Result<typename CoroutineType::RetType>> Async(IExecutor* ex, CoroutineType & coroutine);
 
 
         /**
@@ -89,6 +91,14 @@ namespace AsyncRuntime {
          */
         template<typename Rep, typename Period>
         ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime);
+
+
+        /**
+         * @brief
+         * @return
+         */
+        template<typename Method>
+        std::shared_ptr<Result<IOResult>> AsyncFs(Method method, IOFsStreamPtr stream);
 
 
         /**
@@ -114,13 +124,6 @@ namespace AsyncRuntime {
     private:
         /**
          * @brief
-         */
-        Executor* CreateExecutor(const std::string& name,
-                                 int max_processors_count=std::thread::hardware_concurrency());
-
-
-        /**
-         * @brief
          * @param task
          */
         void Post(Task * task);
@@ -130,7 +133,7 @@ namespace AsyncRuntime {
          * @brief
          * @param task
          */
-        void Post(Executor* ex, Task * task);
+        void Post(IExecutor* ex, Task * task);
 
 
         /**
@@ -139,10 +142,10 @@ namespace AsyncRuntime {
         void CreateDefaultExecutors();
 
 
-        std::unordered_map<ObjectID, Executor*>    executors;
-        Executor*                                  main_executor;
-        Executor*                                  io_executor;
-        bool                                       is_setup;
+        std::unordered_map<ObjectID, IExecutor*>    executors;
+        IExecutor*                                  main_executor;
+        IExecutor*                                  io_executor;
+        bool                                        is_setup;
     };
 
 
@@ -156,7 +159,7 @@ namespace AsyncRuntime {
 
 
     template<class Callable, class... Arguments>
-    auto Runtime::Async(Executor* ex, Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+    auto Runtime::Async(IExecutor* ex, Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
         auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         auto result = task->GetResult();
         Post(ex, task);
@@ -184,7 +187,7 @@ namespace AsyncRuntime {
 
 
     template<class CoroutineType>
-    std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(Executor* ex, CoroutineType & coroutine) {
+    std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(IExecutor* ex, CoroutineType & coroutine) {
         if(coroutine.GetState() != CoroutineState::kWaiting) {
             auto result = coroutine.GetResult();
             result->Wait();
@@ -207,6 +210,15 @@ namespace AsyncRuntime {
         return std::move(Async([](const std::chrono::duration<Rep, Period>& t){
             std::this_thread::sleep_for(t);
         }, rtime));
+    }
+
+
+    template<typename Method>
+    std::shared_ptr<Result<IOResult>> Runtime::AsyncFs(Method method, IOFsStreamPtr stream) {
+        auto task = MakeTask(method, stream);
+        auto result = task->GetResult();
+        Post(io_executor, task);
+        return result;
     }
 
 
@@ -246,6 +258,14 @@ namespace AsyncRuntime {
 
     /**
      * @brief
+     */
+    inline void Terminate() {
+        return Runtime::g_runtime.Terminate();
+    }
+
+
+    /**
+     * @brief
      * @tparam Callable
      * @tparam Arguments
      * @param f
@@ -278,6 +298,30 @@ namespace AsyncRuntime {
     template< typename Rep, typename Period >
     inline ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
         return Runtime::g_runtime.AsyncSleep(rtime);
+    }
+
+
+    /**
+     * @brief async open file
+     * @param stream
+     * @param filename
+     * @param flags
+     * @param mods
+     * @return
+     */
+    inline std::shared_ptr<Result<IOResult>> AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDONLY, int mods = S_IRUSR) {
+        return Runtime::g_runtime.AsyncFs<IOFsOpen>({filename, flags, mods}, stream);
+    }
+
+
+    /**
+     * @brief async read from file
+     * @param stream
+     * @param offset
+     * @return
+     */
+    inline std::shared_ptr<Result<IOResult>> AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1) {
+        return Runtime::g_runtime.AsyncFs<IOFsRead>({seek}, stream);
     }
 
 
