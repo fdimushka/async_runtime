@@ -11,7 +11,7 @@ void async_func(AR::CoroutineHandler* handler, AR::YieldVoid & yield) {
     AR::IOResult res = AR::Await(AR::AsyncFsOpen(io_stream, "../../examples/io.cpp"), handler);
 
     if(res == IO_SUCCESS) {
-        AR::Await(AR::AsyncFsRead(io_stream));
+        AR::Await(AR::AsyncFsRead(io_stream), handler);
         std::cout << io_stream->GetReadBufferSize() << std::endl;
     }else{
         std::cerr << "Error open file: " << res << std::endl;
