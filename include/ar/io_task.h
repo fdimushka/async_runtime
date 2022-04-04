@@ -21,7 +21,12 @@ namespace AsyncRuntime {
     };
 
 
-    struct IOFsWrite { };
+    struct IOFsWrite {
+        int64_t seek = -1;
+    };
+
+
+    struct IOFsClose { };
 
 
     typedef int     IOResult;
@@ -32,6 +37,8 @@ namespace AsyncRuntime {
 
     void FsOpenCb(uv_fs_s* req);
     void FsReadCb(uv_fs_s* req);
+    void FsWriteCb(uv_fs_s* req);
+    void FsCloseCb(uv_fs_s* req);
 
 
     template<typename Method>
@@ -85,8 +92,16 @@ namespace AsyncRuntime {
 
 
     template<>
+    inline void AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsClose>::CallMethod(uv_loop_s *loop) {
+        uv_file fd = stream->GetFd();
+        uv_fs_close(loop, &request, fd, FsCloseCb);
+    }
+
+
+    template<>
     inline void AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsRead>::CallMethod(uv_loop_s *loop) {
-        uv_buf_t *buf = stream->CreateReadBuffer();
+        auto &read_stream = stream->GetReadStream();
+        uv_buf_t *buf = read_stream.Next();
         uv_file fd = stream->GetFd();
         uv_fs_read(loop, &request, fd, buf, 1, method.seek, FsReadCb);
     }
@@ -94,7 +109,14 @@ namespace AsyncRuntime {
 
     template<>
     inline void AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsWrite>::CallMethod(uv_loop_s *loop) {
-
+        uv_file fd = stream->GetFd();
+        auto &write_stream = stream->GetWriteStream();
+        uv_buf_t *buf = write_stream.Next();
+        if(buf) {
+            uv_fs_write(loop, &request, fd, buf, 1, method.seek, FsWriteCb);
+        }else{
+            //write error
+        }
     }
 
 

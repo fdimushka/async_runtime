@@ -309,8 +309,18 @@ namespace AsyncRuntime {
      * @param mods
      * @return
      */
-    inline std::shared_ptr<Result<IOResult>> AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDONLY, int mods = S_IRUSR) {
+    inline std::shared_ptr<Result<IOResult>> AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDONLY | O_WRONLY | O_CREAT, int mods = S_IRWXU) {
         return Runtime::g_runtime.AsyncFs<IOFsOpen>({filename, flags, mods}, stream);
+    }
+
+
+    /**
+     * @brief async close file
+     * @param stream
+     * @return
+     */
+    inline std::shared_ptr<Result<IOResult>> AsyncFsClose(const IOFsStreamPtr& stream) {
+        return Runtime::g_runtime.AsyncFs<IOFsClose>({}, stream);
     }
 
 
@@ -322,6 +332,17 @@ namespace AsyncRuntime {
      */
     inline std::shared_ptr<Result<IOResult>> AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1) {
         return Runtime::g_runtime.AsyncFs<IOFsRead>({seek}, stream);
+    }
+
+
+    /**
+     * @brief async write to file
+     * @param stream
+     * @param offset
+     * @return
+     */
+    inline std::shared_ptr<Result<IOResult>> AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1) {
+        return Runtime::g_runtime.AsyncFs<IOFsWrite>({seek}, stream);
     }
 
 
