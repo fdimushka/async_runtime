@@ -3,10 +3,9 @@
 
 
 #include "ar/task.hpp"
-
-#include <utility>
 #include "ar/stream.hpp"
 
+#include "uv.h"
 
 namespace AsyncRuntime {
     struct IOFsOpen {
@@ -18,6 +17,7 @@ namespace AsyncRuntime {
 
     struct IOFsRead {
         int64_t seek = -1;
+        int64_t size = 0;
     };
 
 
@@ -29,7 +29,8 @@ namespace AsyncRuntime {
     struct IOFsClose { };
 
 
-    typedef int     IOResult;
+    typedef int                                     IOResult;
+    typedef std::shared_ptr<Result<IOResult>>       IOResultPtr;
 
 
 #define IO_SUCCESS 0
@@ -39,6 +40,10 @@ namespace AsyncRuntime {
     void FsReadCb(uv_fs_s* req);
     void FsWriteCb(uv_fs_s* req);
     void FsCloseCb(uv_fs_s* req);
+
+
+    const char* FSErrorMsg(int error);
+    const char* FSErrorName(int error);
 
 
     template<typename Method>
@@ -100,8 +105,7 @@ namespace AsyncRuntime {
 
     template<>
     inline void AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsRead>::CallMethod(uv_loop_s *loop) {
-        auto &read_stream = stream->GetReadStream();
-        uv_buf_t *buf = read_stream.Next();
+        uv_buf_t *buf = stream->Next();
         uv_file fd = stream->GetFd();
         uv_fs_read(loop, &request, fd, buf, 1, method.seek, FsReadCb);
     }
@@ -110,12 +114,11 @@ namespace AsyncRuntime {
     template<>
     inline void AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsWrite>::CallMethod(uv_loop_s *loop) {
         uv_file fd = stream->GetFd();
-        auto &write_stream = stream->GetWriteStream();
-        uv_buf_t *buf = write_stream.Next();
+        uv_buf_t *buf = stream->Next();
         if(buf) {
             uv_fs_write(loop, &request, fd, buf, 1, method.seek, FsWriteCb);
         }else{
-            //write error
+            Resolve(EIO);
         }
     }
 
@@ -123,12 +126,6 @@ namespace AsyncRuntime {
     template<typename Method>
     IOFsTaskImpl<Method>* IOFsTaskCast(void *task) {
         return static_cast<IOFsTaskImpl<Method>*>(task);
-    }
-
-
-    template<typename Method>
-    inline IOFsTaskImpl<Method>* MakeTask(Method & method, IOFsStreamPtr stream) {
-        return new IOFsTaskImpl<Method>(method, stream);
     }
 }
 

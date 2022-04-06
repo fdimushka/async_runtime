@@ -215,7 +215,7 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncFs(Method method, IOFsStreamPtr stream) {
-        auto task = MakeTask(method, stream);
+        auto *task = new IOFsTaskImpl<Method>(method, stream);
         auto result = task->GetResult();
         Post(io_executor, task);
         return result;
@@ -309,8 +309,8 @@ namespace AsyncRuntime {
      * @param mods
      * @return
      */
-    inline std::shared_ptr<Result<IOResult>> AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDONLY | O_WRONLY | O_CREAT, int mods = S_IRWXU) {
-        return Runtime::g_runtime.AsyncFs<IOFsOpen>({filename, flags, mods}, stream);
+    inline IOResultPtr AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
+        return Runtime::g_runtime.AsyncFs<IOFsOpen>(IOFsOpen{filename, flags, mode}, stream);
     }
 
 
@@ -319,8 +319,8 @@ namespace AsyncRuntime {
      * @param stream
      * @return
      */
-    inline std::shared_ptr<Result<IOResult>> AsyncFsClose(const IOFsStreamPtr& stream) {
-        return Runtime::g_runtime.AsyncFs<IOFsClose>({}, stream);
+    inline IOResultPtr AsyncFsClose(const IOFsStreamPtr& stream) {
+        return Runtime::g_runtime.AsyncFs<IOFsClose>(IOFsClose{}, stream);
     }
 
 
@@ -330,8 +330,8 @@ namespace AsyncRuntime {
      * @param offset
      * @return
      */
-    inline std::shared_ptr<Result<IOResult>> AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1) {
-        return Runtime::g_runtime.AsyncFs<IOFsRead>({seek}, stream);
+    inline IOResultPtr AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1, int64_t size = -1) {
+        return Runtime::g_runtime.AsyncFs<IOFsRead>(IOFsRead{seek, size}, stream);
     }
 
 
@@ -341,8 +341,8 @@ namespace AsyncRuntime {
      * @param offset
      * @return
      */
-    inline std::shared_ptr<Result<IOResult>> AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1) {
-        return Runtime::g_runtime.AsyncFs<IOFsWrite>({seek}, stream);
+    inline IOResultPtr AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1) {
+        return Runtime::g_runtime.AsyncFs<IOFsWrite>(IOFsWrite{seek}, stream);
     }
 
 

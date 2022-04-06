@@ -1,44 +1,61 @@
 #include "ar/ar.hpp"
 
 
-namespace AR = AsyncRuntime;
+using namespace AsyncRuntime;
 
 
-void async_func(AR::CoroutineHandler* handler, AR::YieldVoid & yield) {
+void async_io(CoroutineHandler* handler, YieldVoid & yield) {
+    //make input stream
+    auto in_stream = MakeStream();
+    int res = 0;
+
     yield();
-    AR::IOFsStreamPtr in_stream = std::make_shared<AR::IOFsStream>();
-    AR::IOResult res = AR::Await(AR::AsyncFsOpen(in_stream, "../../examples/runtime.cpp"), handler);
 
-    if(res == IO_SUCCESS) {
-        if(IO_SUCCESS == AR::Await(AR::AsyncFsRead(in_stream), handler)) {
-            AR::IOFsStreamPtr out_stream = std::make_shared<AR::IOFsStream>(in_stream->GetReadBuffer(),
-                                                                            in_stream->GetReadBufferSize());
-
-            AR::Await(AR::AsyncFsClose(in_stream), handler);
-
-            if (IO_SUCCESS == AR::Await(AR::AsyncFsOpen(out_stream, "tmp"), handler)) {
-                AR::Await(AR::AsyncFsWrite(out_stream), handler);
-                AR::Await(AR::AsyncFsClose(out_stream), handler);
-            }
-        }else{
-            AR::Await(AR::AsyncFsClose(in_stream), handler);
-        }
-    }else{
-        std::cerr << "Error open file: " << res << std::endl;
+    //async open file
+    if( (res = Await(AsyncFsOpen(in_stream, "../../examples/io.cpp"), handler)) != IO_SUCCESS ) {
+        std::cerr << "Error open file: " << FSErrorName(res) << ' ' << FSErrorMsg(res) << std::endl;
+        return;
     }
+
+    //async read file
+    if( (res = Await(AsyncFsRead(in_stream), handler)) != IO_SUCCESS ) {
+        std::cerr << "Error read file: " << FSErrorName(res) << ' ' << FSErrorMsg(res) << std::endl;
+        return;
+    }
+
+    //async close file
+    Await(AsyncFsClose(in_stream), handler);
+
+    //make output stream with data from input stream
+    auto out_stream = MakeStream(in_stream->GetBuffer(), in_stream->GetBufferSize());
+
+    //async open file
+    if( (res = Await(AsyncFsOpen(out_stream, "tmp"), handler)) != IO_SUCCESS ) {
+        std::cerr << "Error open file: " << FSErrorName(res) << ' ' << FSErrorMsg(res) << std::endl;
+        return;
+    }
+
+    //async write to file
+    if( (res = Await(AsyncFsWrite(out_stream), handler)) != IO_SUCCESS ) {
+        std::cerr << "Error write to file: " << FSErrorName(res) << ' ' << FSErrorMsg(res) << std::endl;
+        return;
+    }
+
+    //async close file
+    Await(AsyncFsClose(out_stream), handler);
 }
 
 
 int main() {
-    AR::SetupRuntime();
+    SetupRuntime();
 
-    AR::Coroutine coro = AR::MakeCoroutine(&async_func);
+    Coroutine coro = MakeCoroutine(&async_io);
 
     while (coro.Valid()) {
-        AR::Await(AR::Async(coro));
+        Await(Async(coro));
     }
 
-    AR::Terminate();
+    Terminate();
 
     return 0;
 }

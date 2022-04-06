@@ -20,6 +20,7 @@
 #include <boost/range/algorithm/nth_element.hpp>
 
 #include "ar/macros.hpp"
+#include "config.h"
 
 
 namespace AsyncRuntime {

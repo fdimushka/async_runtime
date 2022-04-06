@@ -6,8 +6,8 @@
 using namespace AsyncRuntime;
 
 
-IOStreamBuffer::IOStreamBuffer() : seek(0), length(0), allocated_length(0), allocated(false) { }
-IOStreamBuffer::IOStreamBuffer(const char *buf, int64_t len) : seek(0), length(len), allocated_length(len), allocated(true)
+IOFsStream::IOFsStream() : fd(-1), seek(0), length(0), allocated_length(0), allocated(false) { }
+IOFsStream::IOFsStream(const char *buf, int64_t len) : fd(-1), seek(0), length(len), allocated_length(len), allocated(true)
 {
     assert(length > 0);
     assert(allocated_length > 0);
@@ -25,15 +25,30 @@ IOStreamBuffer::IOStreamBuffer(const char *buf, int64_t len) : seek(0), length(l
 }
 
 
-IOStreamBuffer::~IOStreamBuffer()
+IOFsStream::~IOFsStream()
 {
     Flush();
 }
 
 
-uv_buf_t *IOStreamBuffer::Next(int64_t size)
+void IOFsStream::Flush()
+{
+    if(buffer != nullptr) {
+        free(buffer);
+        buffer = nullptr;
+    }
+
+    fd = -1;
+    allocated_length = 0;
+    length = 0;
+    seek = 0;
+}
+
+
+uv_buf_t *IOFsStream::Next(int64_t size)
 {
     if(!allocated) {
+        seek = length;
         if (allocated_length < seek + size) {
             allocated_length = seek + size;
 
@@ -49,9 +64,9 @@ uv_buf_t *IOStreamBuffer::Next(int64_t size)
         uv_buf.len = size;
 
         memset(uv_buf.base, 0, uv_buf.len);
-
-        seek += size;
     }else{
+        assert(length > 0);
+
         if(seek >= length)
             return nullptr;
 
@@ -65,32 +80,8 @@ uv_buf_t *IOStreamBuffer::Next(int64_t size)
 }
 
 
-void IOStreamBuffer::Flush()
+void IOFsStream::Begin()
 {
-    if(buffer != nullptr) {
-        free(buffer);
-        buffer = nullptr;
-    }
-
-    allocated_length = 0;
-    length = 0;
     seek = 0;
-}
-
-
-IOFsStream::IOFsStream() : fd(-1) { }
-IOFsStream::IOFsStream(const char* buf, int64_t len) : fd(-1), write_stream(buf, len) { }
-
-
-IOFsStream::~IOFsStream()
-{
-    Flush();
-}
-
-
-void IOFsStream::Flush()
-{
-    read_stream.Flush();
-    write_stream.Flush();
 }
 
