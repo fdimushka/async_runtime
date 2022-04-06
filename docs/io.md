@@ -12,12 +12,13 @@ Full-featured event loop backed by epoll, kqueue, IOCP, event ports.
 
 ### API (async fs io)
 * `class IOFsStream` - is primitive to implement a buffer for async reading and writing to fs.
+
 * `IOFsStreamPtr MakeStream()` - method for create empty stream for reading. Return shared pointer to stream object.
 * `IOFsStreamPtr MakeStream(const char *buffer, size_t length)` - method for create stream with data for writing. Return shared pointer to stream object.
 * `IOResultPtr AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags, int mode)` - method for async open file descriptor, `stream` - is shared pointer to file stream, `filename` - path to file, `flags`, `mode` - the file status flags and file access modes of the open file description shall be set according to the value of oflag ([see details - open(3)](https://linux.die.net/man/3/open)). Return shared pointer to promise result, if completed successfully resolve code - `int(0)` or error code, [see error details](http://docs.libuv.org/en/v1.x/errors.html), for parse error code use `const char* FSErrorMsg(int error)` or `const char* FSErrorName(int error)`.
 * `IOResultPtr AsyncFsClose(const IOFsStreamPtr& stream)` - method for async close a file, `stream` - is shared pointer to file stream. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
 * `IOResultPtr AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1, int64_t size = -1)` - method for async read from file, `stream` - is shared pointer to file stream, `seek` - offset reading (by default without offset), `size` - number of bytes to read (by default read all data from file). The read data will be written to the stream buffer. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
-* `IOResultPtr AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1)` - method for async write to file, stream` - is shared pointer to file stream, `seek` - offset writing (by default without offset). The write data will be reading from the stream buffer. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
+* `IOResultPtr AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1)` - method for async write to file, `stream` - is shared pointer to file stream, `seek` - offset writing (by default without offset). Write data will be reading from the stream buffer. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
 
 
 ### Usage example
