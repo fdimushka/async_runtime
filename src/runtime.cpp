@@ -1,4 +1,5 @@
 #include "ar/runtime.hpp"
+#include "ar/io_executor.hpp"
 
 
 using namespace AsyncRuntime;
@@ -9,34 +10,63 @@ using namespace AsyncRuntime;
 
 Runtime Runtime::g_runtime;
 
-Runtime::Runtime() : main_executor{nullptr}
+Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
 }
 
 
 Runtime::~Runtime()
 {
+    Terminate();
 }
 
 
 void Runtime::Setup(/*...*/)
 {
+    if(is_setup)
+        return;
+
     CreateDefaultExecutors();
+    is_setup = true;
 }
 
 
-Executor* Runtime::CreateExecutor(const std::string& name, int max_processors_count)
+void Runtime::Terminate()
 {
-    auto* wg = new Executor(name, max_processors_count);
-    executors.insert(std::make_pair(wg->GetID(), wg));
-    return wg;
+    if(!is_setup)
+        return;
+
+    if(main_executor != nullptr) {
+        delete main_executor;
+        main_executor = nullptr;
+    }
+
+
+    if(io_executor != nullptr) {
+        delete io_executor;
+        io_executor = nullptr;
+    }
+
+    executors.clear();
+
+    is_setup = false;
+}
+
+
+void Runtime::CheckRuntime()
+{
+    assert(is_setup);
+    assert(io_executor != nullptr);
+    assert(main_executor != nullptr);
 }
 
 
 void Runtime::CreateDefaultExecutors()
 {
-    main_executor = CreateExecutor(MAIN_EXECUTOR_NAME);
-    //io_executor = CreateExecutor(IO_EXECUTOR_NAME, 1);
+    main_executor = new Executor(MAIN_EXECUTOR_NAME);
+    io_executor = new IOExecutor(IO_EXECUTOR_NAME);
+    executors.insert(std::make_pair(main_executor->GetID(), main_executor));
+    executors.insert(std::make_pair(io_executor->GetID(), io_executor));
 }
 
 
@@ -53,7 +83,7 @@ void Runtime::Post(Task *task)
 }
 
 
-void Runtime::Post(Executor *executor, Task *task)
+void Runtime::Post(IExecutor *executor, Task *task)
 {
     assert(executor != nullptr);
 

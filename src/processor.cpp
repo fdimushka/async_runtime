@@ -37,6 +37,7 @@ void Processor::Run()
 void Processor::Terminate()
 {
     is_continue.store(false, std::memory_order_relaxed);
+    cv.notify_one();
 }
 
 
@@ -118,7 +119,7 @@ void Processor::Notify()
 void Processor::WaitTask()
 {
     std::unique_lock<std::mutex>  lock(mutex);
-    while(notify_count == 0) {
+    while(notify_count == 0 && is_continue.load(std::memory_order_relaxed)) {
         state.store(WAIT, std::memory_order_relaxed);
         if(executor->run_queue.empty())
             cv.wait_for(lock, std::chrono::milliseconds(1000));

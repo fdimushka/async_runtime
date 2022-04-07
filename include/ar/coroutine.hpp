@@ -221,7 +221,7 @@ namespace AsyncRuntime {
         BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
         BaseCoroutine(BaseCoroutine&& other) = delete;
         BaseCoroutine& operator =(BaseCoroutine&& other) = delete;
-        ~BaseCoroutine() = default;
+        virtual ~BaseCoroutine() = default;
 
 
         void operator() (const ExecutorState& executor_ = ExecutorState()) {
@@ -379,6 +379,7 @@ namespace AsyncRuntime {
         template<   class Fn,
                     class ...Arguments>
         explicit Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) { };
+        virtual ~Coroutine() = default;
     };
 
 

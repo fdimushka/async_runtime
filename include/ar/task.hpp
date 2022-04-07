@@ -16,7 +16,7 @@
 namespace AsyncRuntime {
     class Task;
     class Processor;
-    class Executor;
+    class IExecutor;
 
 
     /**
@@ -73,11 +73,13 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void Wait() {
+        Result<Ret>* Wait() {
             if(!resolved.load(std::memory_order_relaxed)) {
                 if (future.valid())
                     future.wait();
             }
+
+            return this;
         }
 
 
@@ -175,8 +177,9 @@ namespace AsyncRuntime {
      * @brief
      */
     struct ExecutorState {
-        Executor*  executor = nullptr;
+        IExecutor*  executor = nullptr;
         Processor*  processor = nullptr;
+        void*       data = nullptr;
     };
 
 
@@ -275,7 +278,7 @@ namespace AsyncRuntime {
      * @return
      */
     template<class Fn>
-    TaskImpl<Fn>* MakeTask(Fn &&f) {
+    inline TaskImpl<Fn>* MakeTask(Fn &&f) {
         return new TaskImpl(std::forward<Fn>(f));
     }
 

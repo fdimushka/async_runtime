@@ -4,13 +4,13 @@
 #include "ar/processor.hpp"
 
 namespace AsyncRuntime {
-    class IExecutor {
+    class IExecutor: public BaseObject {
     public:
         virtual void Post(Task* task) = 0;
     };
 
 
-    class Executor  : public IExecutor, public BaseObject {
+    class Executor  : public IExecutor {
         friend Processor;
     public:
         explicit Executor(const std::string & name_,
