@@ -30,6 +30,7 @@ namespace AsyncRuntime {
     private:
         void Loop();
 
+        std::condition_variable     cv;
         std::mutex                  fs_mutex;
         ThreadExecutor              loop_thread;
         std::string                 name;

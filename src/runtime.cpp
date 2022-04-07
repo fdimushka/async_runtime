@@ -26,9 +26,8 @@ void Runtime::Setup(/*...*/)
     if(is_setup)
         return;
 
-    is_setup = true;
-
     CreateDefaultExecutors();
+    is_setup = true;
 }
 
 
@@ -51,6 +50,14 @@ void Runtime::Terminate()
     executors.clear();
 
     is_setup = false;
+}
+
+
+void Runtime::CheckRuntime()
+{
+    assert(is_setup);
+    assert(io_executor != nullptr);
+    assert(main_executor != nullptr);
 }
 
 

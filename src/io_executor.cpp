@@ -16,6 +16,7 @@ static void ExitAsyncCb(uv_async_t* handle)
 
 IOExecutor::IOExecutor(const std::string & name_) : name(name_)
 {
+    loop = uv_loop_new();
     loop_thread.Submit([this] { Loop(); });
 }
 
@@ -29,7 +30,6 @@ IOExecutor::~IOExecutor()
 
 void IOExecutor::Loop()
 {
-    loop = uv_loop_new();
     uv_async_init(loop, &exit_handle, ExitAsyncCb);
     uv_run(loop, UV_RUN_DEFAULT);
 }

@@ -122,6 +122,8 @@ namespace AsyncRuntime {
         template<class Ret, class Res>
         Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
     private:
+        void CheckRuntime();
+
         /**
          * @brief
          * @param task
@@ -151,6 +153,7 @@ namespace AsyncRuntime {
 
     template<class Callable, class... Arguments>
     auto Runtime::Async(Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        CheckRuntime();
         auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         auto result = task->GetResult();
         Post(task);
@@ -160,6 +163,7 @@ namespace AsyncRuntime {
 
     template<class Callable, class... Arguments>
     auto Runtime::Async(IExecutor* ex, Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        CheckRuntime();
         auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         auto result = task->GetResult();
         Post(ex, task);
@@ -169,6 +173,7 @@ namespace AsyncRuntime {
 
     template<class CoroutineType>
     std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(CoroutineType & coroutine) {
+        CheckRuntime();
         if(coroutine.GetState() != CoroutineState::kWaiting) {
             auto result = coroutine.GetResult();
             result->Wait();
@@ -188,6 +193,7 @@ namespace AsyncRuntime {
 
     template<class CoroutineType>
     std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(IExecutor* ex, CoroutineType & coroutine) {
+        CheckRuntime();
         if(coroutine.GetState() != CoroutineState::kWaiting) {
             auto result = coroutine.GetResult();
             result->Wait();
@@ -207,6 +213,7 @@ namespace AsyncRuntime {
 
     template<typename Rep, typename Period>
     ResultVoidPtr Runtime::AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
+        CheckRuntime();
         return std::move(Async([](const std::chrono::duration<Rep, Period>& t){
             std::this_thread::sleep_for(t);
         }, rtime));
@@ -215,6 +222,7 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncFs(Method method, IOFsStreamPtr stream) {
+        CheckRuntime();
         auto *task = new IOFsTaskImpl<Method>(method, stream);
         auto result = task->GetResult();
         Post(io_executor, task);
@@ -224,6 +232,7 @@ namespace AsyncRuntime {
 
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
+        CheckRuntime();
         assert(result);
 
         result->Wait();
@@ -233,6 +242,7 @@ namespace AsyncRuntime {
 
     template<class Ret, class Res>
     Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
+        CheckRuntime();
         assert(result);
         assert(handler != nullptr);
 

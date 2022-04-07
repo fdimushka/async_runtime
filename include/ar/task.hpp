@@ -73,11 +73,13 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void Wait() {
+        Result<Ret>* Wait() {
             if(!resolved.load(std::memory_order_relaxed)) {
                 if (future.valid())
                     future.wait();
             }
+
+            return this;
         }
 
 

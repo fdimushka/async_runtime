@@ -36,7 +36,7 @@ SetupRuntime();
 ```
 Create file stream:
 ```C++
-auto in_stream = AR::MakeStream();
+auto in_stream = MakeStream();
 ```
 
 Async open file, call it in async function:
