@@ -1,4 +1,4 @@
-#include "ar/io_task.h"
+#include "ar/io_task.hpp"
 
 
 using namespace AsyncRuntime;
@@ -118,4 +118,52 @@ void AsyncRuntime::FsWriteCb(uv_fs_s *req)
             uv_fs_req_cleanup(req);
         }
     }
+}
+
+
+void AsyncRuntime::NetConnectionCb(uv_stream_t *server, int status)
+{
+    assert(server->data != nullptr);
+    auto task = IONetTaskCast<AsyncRuntime::TCPListen>(server->data);
+    auto &method = task->GetMethod();
+
+    TCPSessionPtr session = std::make_shared<TCPSession>(server, method.handle_connection);
+    session->Accept();
+    session->Run();
+}
+
+
+void AsyncRuntime::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
+{
+    assert(handle->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::NetRead>(handle->data);
+    task->GetStream()->Next(buf, size);
+}
+
+
+void AsyncRuntime::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
+{
+    assert(stream->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::NetRead>(stream->data);
+    auto &io_stream = task->GetStream();
+    if (nread == UV_EOF) {
+        io_stream->Begin();
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    } else if (nread >= 0) {
+        io_stream->length += nread;
+        uv_read_stop(stream);
+        io_stream->Begin();
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    }
+}
+
+
+void AsyncRuntime::NetCloseCb(uv_handle_t* handle)
+{
+    assert(handle->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::NetClose>(handle->data);
+    task->Resolve(IO_SUCCESS);
+    delete task;
 }

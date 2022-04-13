@@ -3,7 +3,7 @@
 
 
 #include "ar/executor.hpp"
-#include "ar/io_task.h"
+#include "ar/io_task.hpp"
 #include "uv.h"
 
 
@@ -24,17 +24,40 @@ namespace AsyncRuntime {
 
         /**
          * @brief
+         * @param handler
+         */
+        void RegistrationAsyncHandler(uv_async_t* handler);
+
+
+        /**
+         * @brief
+         */
+        void Run();
+
+
+        /**
+         * @brief
          * @param task
          */
         void Post(Task* task) override;
+
+
+        /**
+         * @brief
+         * @tparam Method
+         * @param task
+         */
+        void Post(IOTask *io_task);
     private:
         void Loop();
 
-        std::condition_variable     cv;
-        std::mutex                  fs_mutex;
-        ThreadExecutor              loop_thread;
-        std::string                 name;
-        uv_loop_t                   *loop;
+
+        std::condition_variable             cv;
+        ThreadExecutor                      loop_thread;
+        std::string                         name;
+        uv_loop_t                           *loop;
+        std::vector<uv_async_t *>           async_handlers;
+        static uv_async_t                   main_async_io_handle;
     };
 }
 

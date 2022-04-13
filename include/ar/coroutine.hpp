@@ -21,6 +21,7 @@ namespace AsyncRuntime {
         virtual void MakeResult() = 0;
         virtual Task* MakeExecTask() = 0;
         virtual void Suspend() = 0;
+        virtual const ExecutorState& GetExecutorState() const = 0;
     };
 
 
@@ -262,6 +263,10 @@ namespace AsyncRuntime {
             return s;
         }
 
+
+        const ExecutorState& GetExecutorState() const {
+            return executor;
+        }
 
         void MakeResult() override {
             yield.ResetResult();

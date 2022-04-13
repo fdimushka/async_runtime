@@ -14,6 +14,8 @@
 #include <thread>
 #include <condition_variable>
 
+#include <uv.h>
+
 
 namespace AsyncRuntime {
     class Executor;
@@ -73,6 +75,10 @@ namespace AsyncRuntime {
          * @return
          */
         State GetState();
+
+
+        const uv_async_t* GetAsyncIOHandler() const { return &async_io_handler; }
+        uv_async_t* GetAsyncIOHandler() { return &async_io_handler; }
     protected:
         void Work();
         void ExecuteTask(Task* task);
@@ -96,6 +102,7 @@ namespace AsyncRuntime {
         std::mutex                                  mutex;
 
         std::atomic_int                             notify_count;
+        uv_async_t                                  async_io_handler;
     };
 }
 

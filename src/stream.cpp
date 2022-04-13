@@ -80,6 +80,40 @@ uv_buf_t *IOFsStream::Next(int64_t size)
 }
 
 
+bool IOFsStream::Next(uv_buf_t* buf, int64_t size) {
+    if(!allocated) {
+        seek = length;
+        if (allocated_length < seek + size) {
+            allocated_length = seek + size;
+
+            //@todo add alignment
+            buffer = (char *) realloc(buffer, sizeof(char *) * allocated_length);
+
+            if (!buffer) {
+                RNT_ASSERT_MSG(false, "memory out of bound");
+            }
+        }
+
+        buf->base = buffer + seek;
+        buf->len = size;
+
+        memset(buf->base, 0, buf->len);
+    }else{
+        assert(length > 0);
+
+        if(seek >= length)
+            return false;
+
+        int64_t s = std::min(size, length - seek);
+        buf->base = buffer + seek;
+        buf->len = s;
+        seek += s;
+    }
+
+    return true;
+}
+
+
 void IOFsStream::Begin()
 {
     seek = 0;

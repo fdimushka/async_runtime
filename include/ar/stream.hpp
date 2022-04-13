@@ -53,6 +53,7 @@ namespace AsyncRuntime {
          * @return
          */
         uv_buf_t* Next(int64_t size = 1024);
+        bool Next(uv_buf_t* buf, int64_t size = 1024);
         void Begin();
 
 
@@ -65,6 +66,7 @@ namespace AsyncRuntime {
 
 
         friend void FsReadCb(uv_fs_s* req);
+        friend void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
     private:
         uv_file                 fd;
         int64_t                 seek = 0;
