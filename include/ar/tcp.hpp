@@ -28,8 +28,17 @@ namespace AsyncRuntime {
         uv_connect_t                    connect;
     };
 
-
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
+
+
+    struct NetAddrInfo {
+        std::string                     node;
+        std::string                     hostname;
+        struct addrinfo                 hints;
+        uv_getaddrinfo_t                resolver;
+    };
+
+    typedef std::shared_ptr<NetAddrInfo>    NetAddrInfoPtr;
 
     class TCPSession : public std::enable_shared_from_this<TCPSession> {
     public:
@@ -87,6 +96,14 @@ namespace AsyncRuntime {
      * @return
      */
     TCPServerPtr MakeTCPServer(const char* hostname, int port);
+
+
+    /**
+     * @brief
+     * @param addrname
+     * @return
+     */
+    NetAddrInfoPtr MakeNetAddrInfo(const char* node);
 }
 
 #endif //AR_SERVER_H

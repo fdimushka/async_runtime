@@ -36,10 +36,11 @@ namespace AsyncRuntime {
     };
 
 
-    struct IONetConnect {};
+    struct IONetConnect { };
     struct IONetRead { uv_tcp_t *socket; };
     struct IONetWrite { uv_tcp_t *socket; };
     struct IONetClose { uv_tcp_t *socket; };
+    struct IONetAddrInfo { };
 
 
     typedef int                                     IOResult;
@@ -60,6 +61,7 @@ namespace AsyncRuntime {
     void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
     void NetWriteCb(uv_write_t* req, int status);
     void NetCloseCb(uv_handle_t* handle);
+    void NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res);
 
     const char* FSErrorMsg(int error);
     const char* FSErrorName(int error);
@@ -213,8 +215,40 @@ namespace AsyncRuntime {
 
 
     template<>
+    class IONetTaskImpl<IONetAddrInfo> : public IOTask {
+    public:
+        explicit IONetTaskImpl(IONetAddrInfo m, const NetAddrInfoPtr & i) :
+                method(m),
+                info(i),
+                result(new Result<IOResult>() ) {
+        };
+
+
+        bool Execute(uv_loop_t *loop) {
+            return CallMethod(loop);
+        }
+
+
+        void Resolve(IOResult res) {
+            result->SetValue(res);
+        }
+
+
+        std::shared_ptr<Result<IOResult>> GetResult() { return result; }
+        const IONetAddrInfo& GetMethod() const { return method; }
+        const NetAddrInfoPtr& GetInfo() const { return info; }
+    private:
+        inline bool CallMethod(uv_loop_s *loop);
+
+        NetAddrInfoPtr                                           info;
+        std::shared_ptr<Result<IOResult>>                        result;
+        IONetAddrInfo                                            method;
+    };
+
+
+    template<>
     inline bool AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsOpen>::CallMethod(uv_loop_s *loop) {
-        uv_fs_open(loop, &request, method.filename, method.flags, method.mode, FsOpenCb);
+        uv_fs_open(loop, &request, method.filename, method.flags, method.mode, &FsOpenCb);
         return true;
     }
 
@@ -222,7 +256,7 @@ namespace AsyncRuntime {
     template<>
     inline bool AsyncRuntime::IOFsTaskImpl<AsyncRuntime::IOFsClose>::CallMethod(uv_loop_s *loop) {
         uv_file fd = stream->GetFd();
-        uv_fs_close(loop, &request, fd, FsCloseCb);
+        uv_fs_close(loop, &request, fd, &FsCloseCb);
         return true;
     }
 
@@ -232,7 +266,7 @@ namespace AsyncRuntime {
         stream->SetMode(IOStream::R);
         uv_buf_t *buf = stream->Next();
         uv_file fd = stream->GetFd();
-        uv_fs_read(loop, &request, fd, buf, 1, method.seek, FsReadCb);
+        uv_fs_read(loop, &request, fd, buf, 1, method.seek, &FsReadCb);
         return true;
     }
 
@@ -243,7 +277,7 @@ namespace AsyncRuntime {
         uv_file fd = stream->GetFd();
         uv_buf_t *buf = stream->Next();
         if(buf) {
-            uv_fs_write(loop, &request, fd, buf, 1, method.seek, FsWriteCb);
+            uv_fs_write(loop, &request, fd, buf, 1, method.seek, &FsWriteCb);
             return true;
         }else{
             Resolve(EIO);
@@ -265,7 +299,7 @@ namespace AsyncRuntime {
             return false;
         }
 
-        error = uv_listen((uv_stream_t*) tcp_server, 128 /*backlog*/, NetConnectionCb);
+        error = uv_listen((uv_stream_t*) tcp_server, 128 /*backlog*/, &NetConnectionCb);
         if (error) {
             Resolve(error);
             return false;
@@ -282,7 +316,7 @@ namespace AsyncRuntime {
         uv_tcp_init(loop, &connection->socket);
         uv_tcp_keepalive(&connection->socket, 1, connection->keepalive);
         uv_ip4_addr(connection->hostname.c_str(), connection->port, &connection->dest_addr);
-        int error = uv_tcp_connect(con, &connection->socket, (sockaddr*)&connection->dest_addr, NetConnectionCb);
+        int error = uv_tcp_connect(con, &connection->socket, (sockaddr*)&connection->dest_addr, &NetConnectionCb);
         if(error) {
             Resolve(error);
             return false;
@@ -298,7 +332,7 @@ namespace AsyncRuntime {
         stream->SetMode(IOStream::R);
         uv_tcp_t *tcp_client = method.socket;
         tcp_client->data = this;
-        int error = uv_read_start((uv_stream_t*) tcp_client, NetAllocCb, NetReadCb);
+        int error = uv_read_start((uv_stream_t*) tcp_client, &NetAllocCb, &NetReadCb);
         if(error) {
             Resolve(error);
             return false;
@@ -317,7 +351,7 @@ namespace AsyncRuntime {
         if(buf) {
             auto *write_req = (uv_write_t*)malloc(sizeof(uv_write_t));
             write_req->data = this;
-            int error = uv_write(write_req, client, buf, 1, NetWriteCb);
+            int error = uv_write(write_req, client, buf, 1, &NetWriteCb);
             if(error) {
                 Resolve(error);
                 return false;
@@ -334,7 +368,19 @@ namespace AsyncRuntime {
     inline bool AsyncRuntime::IONetTaskImpl<AsyncRuntime::IONetClose>::CallMethod(uv_loop_s *loop) {
         uv_tcp_t *tcp_client = method.socket;
         tcp_client->data = this;
-        uv_close((uv_handle_t*) tcp_client, NetCloseCb);
+        uv_close((uv_handle_t*) tcp_client, &NetCloseCb);
+        return true;
+    }
+
+
+    inline bool AsyncRuntime::IONetTaskImpl<AsyncRuntime::IONetAddrInfo>::CallMethod(uv_loop_s *loop) {
+        assert(info);
+        info->resolver.data = this;
+        int error = uv_getaddrinfo(loop, &info->resolver, &NetAddrInfoCb, info->node.c_str(), NULL, &info->hints);
+        if(error) {
+            Resolve(error);
+            return false;
+        }
         return true;
     }
 

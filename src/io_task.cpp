@@ -191,3 +191,21 @@ void AsyncRuntime::NetCloseCb(uv_handle_t* handle)
     task->Resolve(IO_SUCCESS);
     delete task;
 }
+
+
+void AsyncRuntime::NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+    assert(req->data != nullptr);
+    auto task = IONetTaskCast<AsyncRuntime::IONetAddrInfo>(req->data);
+
+    if (status >= 0) {
+        char addr[17] = {'\0'};
+        uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
+        task->GetInfo()->hostname = std::string {addr};
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    }else{
+        task->Resolve(status);
+        delete task;
+    }
+}

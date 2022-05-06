@@ -23,6 +23,18 @@ TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 }
 
 
+NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
+{
+    NetAddrInfoPtr info = std::make_shared<NetAddrInfo>();
+    info->node = std::string{node};
+    info->hints.ai_family = PF_INET;
+    info->hints.ai_socktype = SOCK_STREAM;
+    info->hints.ai_protocol = IPPROTO_TCP;
+    info->hints.ai_flags = 0;
+    return info;
+}
+
+
 TCPSession::TCPSession(uv_stream_t *server, const HandlerType & connection_handler) :
         fn(connection_handler),
         loop_(server->loop),

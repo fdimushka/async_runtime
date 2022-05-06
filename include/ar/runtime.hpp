@@ -121,6 +121,9 @@ namespace AsyncRuntime {
         std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
                                                    const IOStreamPtr& stream);
 
+        template<typename Method>
+        std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
+                                                   const NetAddrInfoPtr& info);
 
         template<typename Method>
         std::shared_ptr<Result<IOResult>> AsyncNet(Method method);
@@ -289,6 +292,17 @@ namespace AsyncRuntime {
                                                         const TCPConnectionPtr& connection) {
         CheckRuntime();
         auto *task = new IONetTaskImpl<Method>(method, connection);
+        auto result = task->GetResult();
+        io_executor->Post(task);
+        return result;
+    }
+
+
+    template<typename Method>
+    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
+                                                        const NetAddrInfoPtr& info) {
+        CheckRuntime();
+        auto *task = new IONetTaskImpl<Method>(method, info);
         auto result = task->GetResult();
         io_executor->Post(task);
         return result;
@@ -496,6 +510,16 @@ namespace AsyncRuntime {
 
     inline IOResultPtr AsyncClose(const TCPConnectionPtr & connection) {
         return Runtime::g_runtime.AsyncNet<IONetClose>(IONetClose{ &connection->socket });
+    }
+
+
+    /**
+     * @brief
+     * @param info
+     * @return
+     */
+    inline IOResultPtr AsyncNetAddrInfo(const NetAddrInfoPtr & info) {
+        return Runtime::g_runtime.AsyncNet<IONetAddrInfo>(IONetAddrInfo{  }, info);
     }
 
 
