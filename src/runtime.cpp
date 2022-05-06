@@ -60,28 +60,13 @@ void Runtime::CheckRuntime()
 }
 
 
-void Runtime::ApplyAsyncIOHandler(IOTask *task, CoroutineHandler *handler) {
-    if(handler != nullptr) {
-        const auto &ex_state = handler->GetExecutorState();
-        if (ex_state.processor != nullptr)
-            task->async_handle = ex_state.processor->GetAsyncIOHandler();
-    }
-}
-
-
 void Runtime::CreateDefaultExecutors()
 {
     main_executor = new Executor(MAIN_EXECUTOR_NAME);
     io_executor = new IOExecutor(IO_EXECUTOR_NAME);
 
-    for(auto *proc : main_executor->GetProcessors()) {
-        io_executor->RegistrationAsyncHandler(proc->GetAsyncIOHandler());
-    }
-
     executors.insert(std::make_pair(main_executor->GetID(), main_executor));
     executors.insert(std::make_pair(io_executor->GetID(), io_executor));
-
-    io_executor->Run();
 }
 
 

@@ -4,6 +4,16 @@
 using namespace AsyncRuntime;
 
 
+TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive)
+{
+    TCPConnectionPtr connection = std::make_shared<TCPConnection>();
+    connection->hostname = std::string{hostname};
+    connection->port = port;
+    connection->keepalive = keepalive;
+    return connection;
+}
+
+
 TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 {
     TCPServerPtr server = std::make_shared<TCPServer>();
@@ -13,9 +23,8 @@ TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 }
 
 
-TCPSession::TCPSession(uv_stream_t *server, const std::function<void(std::shared_ptr<TCPSession>)> & connection_handler) :
-        handler(connection_handler),
-        coroutine_handler_(nullptr),
+TCPSession::TCPSession(uv_stream_t *server, const HandlerType & connection_handler) :
+        fn(connection_handler),
         loop_(server->loop),
         server_(server),
         client_(nullptr),
@@ -48,8 +57,16 @@ void TCPSession::Run() {
 }
 
 
-void TCPSession::Invoke(CoroutineHandler *coroutine_handler) {
-    coroutine_handler_ = coroutine_handler;
-    if(handler)
-        handler(shared_from_this());
+void TCPSession::Invoke(CoroutineHandler *handler)
+{
+    if(fn)
+        fn(handler, shared_from_this());
+}
+
+
+void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, const std::shared_ptr<TCPSession> &session) {
+        //accept
+        yield();
+
+        session->Invoke(handler);
 }

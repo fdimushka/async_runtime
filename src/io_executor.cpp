@@ -6,7 +6,6 @@ using namespace AsyncRuntime;
 
 
 static uv_async_t   exit_handle;
-uv_async_t   IOExecutor::main_async_io_handle;
 
 
 static void ExitAsyncCb(uv_async_t* handle)
@@ -18,17 +17,29 @@ static void ExitAsyncCb(uv_async_t* handle)
 static void AsyncIOCb(uv_async_t* handle)
 {
     if(handle->data != nullptr) {
-        auto *task = (IOTask *) handle->data;
-        task->Execute(handle->loop);
-        handle->data = nullptr;
+        auto* ctx = (IOExecutor::AsyncHandlerCtx*)handle->data;
+        while(!ctx->run_queue.empty()) {
+            auto v = ctx->run_queue.pop();
+            if(v) {
+                auto *task = (IOTask *) v.value();
+                if(!task->Execute(handle->loop)) {
+                    delete task;
+                }
+            }
+        }
     }
 }
 
 
 IOExecutor::IOExecutor(const std::string & name_) : name(name_)
 {
-    async_handlers.push_back(&main_async_io_handle);
     loop = uv_default_loop();
+    async_handler.data = &async_handler_ctx;
+
+    uv_async_init(loop, &exit_handle, ExitAsyncCb);
+    uv_async_init(loop, &async_handler, AsyncIOCb);
+
+    loop_thread.Submit([this] { Loop(); });
 }
 
 
@@ -40,25 +51,9 @@ IOExecutor::~IOExecutor()
 }
 
 
-void IOExecutor::Run()
-{
-    uv_async_init(loop, &exit_handle, ExitAsyncCb);
-    for(auto *handler : async_handlers)
-        uv_async_init(loop, handler, AsyncIOCb);
-
-    loop_thread.Submit([this] { Loop(); });
-}
-
-
 void IOExecutor::Loop()
 {
     uv_run(loop, UV_RUN_DEFAULT);
-}
-
-
-void IOExecutor::RegistrationAsyncHandler(uv_async_t *handler)
-{
-    async_handlers.push_back(handler);
 }
 
 
@@ -70,12 +65,8 @@ void IOExecutor::Post(Task *task)
 
 void IOExecutor::Post(IOTask *io_task)
 {
-    if(io_task->async_handle != nullptr) {
-        io_task->async_handle->data = io_task;
-        uv_async_send(io_task->async_handle);
-    }else{
-        main_async_io_handle.data = io_task;
-        uv_async_send(&main_async_io_handle);
-    }
+    auto* ctx = (AsyncHandlerCtx*)async_handler.data;
+    ctx->run_queue.push(io_task);
+    uv_async_send(&async_handler);
 }
 

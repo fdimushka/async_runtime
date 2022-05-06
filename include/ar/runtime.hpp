@@ -100,8 +100,7 @@ namespace AsyncRuntime {
          */
         template<typename Method>
         std::shared_ptr<Result<IOResult>> AsyncFs(Method method,
-                                                  IOFsStreamPtr stream,
-                                                  CoroutineHandler* handler = nullptr);
+                                                  const IOStreamPtr& stream);
 
 
         /**
@@ -110,19 +109,22 @@ namespace AsyncRuntime {
          */
         template<typename Method>
         std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
-                                                   TCPServerPtr server,
-                                                   CoroutineHandler* handler = nullptr);
+                                                   const TCPServerPtr& server);
+
 
         template<typename Method>
         std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
-                                                   TCPSessionPtr session,
-                                                   IOFsStreamPtr stream,
-                                                   CoroutineHandler* handler = nullptr);
+                                                   const TCPConnectionPtr& connection);
+
 
         template<typename Method>
         std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
-                                                   TCPSessionPtr session,
-                                                   CoroutineHandler* handler = nullptr);
+                                                   const IOStreamPtr& stream);
+
+
+        template<typename Method>
+        std::shared_ptr<Result<IOResult>> AsyncNet(Method method);
+
 
         /**
          * @brief
@@ -151,7 +153,6 @@ namespace AsyncRuntime {
          */
         void Bind(const TCPServerPtr & server, int flags = 0);
     private:
-        void ApplyAsyncIOHandler(IOTask *task, CoroutineHandler* handler);
         void CheckRuntime();
 
         /**
@@ -175,7 +176,7 @@ namespace AsyncRuntime {
 
 
         std::unordered_map<ObjectID, IExecutor*>    executors;
-        Executor*                                   main_executor;
+        IExecutor*                                  main_executor;
         IOExecutor*                                 io_executor;
         bool                                        is_setup;
     };
@@ -252,12 +253,10 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncFs(Method method,
-                                                       IOFsStreamPtr stream,
-                                                       CoroutineHandler* handler) {
+                                                       const IOStreamPtr& stream) {
         CheckRuntime();
         auto *task = new IOFsTaskImpl<Method>(method, stream);
         auto result = task->GetResult();
-        ApplyAsyncIOHandler(task, handler);
         io_executor->Post(task);
         return result;
     }
@@ -265,12 +264,10 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
-                                                        TCPServerPtr server,
-                                                        CoroutineHandler* handler) {
+                                                        const TCPServerPtr& server) {
         CheckRuntime();
         auto *task = new IONetTaskImpl<Method>(method, server);
         auto result = task->GetResult();
-        ApplyAsyncIOHandler(task, handler);
         io_executor->Post(task);
         return result;
     }
@@ -278,13 +275,10 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
-                                                        TCPSessionPtr session,
-                                                        IOFsStreamPtr stream,
-                                                        CoroutineHandler* handler) {
+                                                        const IOStreamPtr& stream) {
         CheckRuntime();
-        auto *task = new IONetTaskImpl<Method>(method, session, stream);
+        auto *task = new IONetTaskImpl<Method>(method,  stream);
         auto result = task->GetResult();
-        ApplyAsyncIOHandler(task, handler);
         io_executor->Post(task);
         return result;
     }
@@ -292,16 +286,23 @@ namespace AsyncRuntime {
 
     template<typename Method>
     std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
-                                                        TCPSessionPtr session,
-                                                        CoroutineHandler* handler) {
+                                                        const TCPConnectionPtr& connection) {
         CheckRuntime();
-        auto *task = new IONetTaskImpl<Method>(method, session);
+        auto *task = new IONetTaskImpl<Method>(method, connection);
         auto result = task->GetResult();
-        ApplyAsyncIOHandler(task, handler);
         io_executor->Post(task);
         return result;
     }
 
+
+    template<typename Method>
+    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method) {
+        CheckRuntime();
+        auto *task = new IONetTaskImpl<Method>(method);
+        auto result = task->GetResult();
+        io_executor->Post(task);
+        return result;
+    }
 
 
     template<class Ret>
@@ -395,7 +396,7 @@ namespace AsyncRuntime {
      * @param mods
      * @return
      */
-    inline IOResultPtr AsyncFsOpen(const IOFsStreamPtr& stream, const char* filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
+    inline IOResultPtr AsyncFsOpen(const IOStreamPtr& stream, const char* filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
         return Runtime::g_runtime.AsyncFs<IOFsOpen>(IOFsOpen{filename, flags, mode}, stream);
     }
 
@@ -405,7 +406,7 @@ namespace AsyncRuntime {
      * @param stream
      * @return
      */
-    inline IOResultPtr AsyncFsClose(const IOFsStreamPtr& stream) {
+    inline IOResultPtr AsyncFsClose(const IOStreamPtr& stream) {
         return Runtime::g_runtime.AsyncFs<IOFsClose>(IOFsClose{}, stream);
     }
 
@@ -416,7 +417,7 @@ namespace AsyncRuntime {
      * @param offset
      * @return
      */
-    inline IOResultPtr AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1, int64_t size = -1) {
+    inline IOResultPtr AsyncFsRead(const IOStreamPtr& stream, int64_t seek = -1, int64_t size = -1) {
         return Runtime::g_runtime.AsyncFs<IOFsRead>(IOFsRead{seek, size}, stream);
     }
 
@@ -427,18 +428,18 @@ namespace AsyncRuntime {
      * @param offset
      * @return
      */
-    inline IOResultPtr AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1) {
+    inline IOResultPtr AsyncFsWrite(const IOStreamPtr& stream, int64_t seek = -1) {
         return Runtime::g_runtime.AsyncFs<IOFsWrite>(IOFsWrite{seek}, stream);
     }
 
 
     /**
      * @brief
-     * @param server
+     * @param handle_connection
      * @return
      */
-    inline IOResultPtr AsyncListen(const TCPServerPtr& server, const std::function<void(TCPSessionPtr)>& handle_connection) {
-        return Runtime::g_runtime.AsyncNet<TCPListen>(TCPListen{ 0, handle_connection }, server);
+    inline IOResultPtr AsyncConnect(const TCPConnectionPtr& connection) {
+        return Runtime::g_runtime.AsyncNet<IONetConnect>(IONetConnect{  }, connection);
     }
 
 
@@ -447,8 +448,39 @@ namespace AsyncRuntime {
      * @param server
      * @return
      */
-    inline IOResultPtr AsyncRead(const TCPSessionPtr & session, const IOFsStreamPtr & stream) {
-        return Runtime::g_runtime.AsyncNet<NetRead>(NetRead{ }, session, stream);
+    inline IOResultPtr AsyncListen(const TCPServerPtr& server, const TCPSession::HandlerType & handle_connection) {
+        return Runtime::g_runtime.AsyncNet<IONetListen>(IONetListen{ 0, handle_connection }, server);
+    }
+
+
+    /**
+     * @brief
+     * @param server
+     * @return
+     */
+    inline IOResultPtr AsyncRead(const TCPSessionPtr & session, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncNet<IONetRead>(IONetRead{ session->GetClient() }, stream);
+    }
+
+
+    inline IOResultPtr AsyncRead(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncNet<IONetRead>(IONetRead{ &connection->socket }, stream);
+    }
+
+
+    /**
+     * @brief
+     * @param session
+     * @param stream
+     * @return
+     */
+    inline IOResultPtr AsyncWrite(const TCPSessionPtr & session, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncNet<IONetWrite>(IONetWrite{ session->GetClient() }, stream);
+    }
+
+
+    inline IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncNet<IONetWrite>(IONetWrite{ &connection->socket }, stream);
     }
 
 
@@ -458,7 +490,12 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncClose(const TCPSessionPtr & session) {
-        return Runtime::g_runtime.AsyncNet<NetClose>(NetClose{ }, session);
+        return Runtime::g_runtime.AsyncNet<IONetClose>(IONetClose{ session->GetClient()});
+    }
+
+
+    inline IOResultPtr AsyncClose(const TCPConnectionPtr & connection) {
+        return Runtime::g_runtime.AsyncNet<IONetClose>(IONetClose{ &connection->socket });
     }
 
 
@@ -488,21 +525,16 @@ namespace AsyncRuntime {
     }
 
 
-    template< class Ret >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result, const TCPSessionPtr & session) {
-        return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, session->GetCoroutineHandler());
-    }
-
-
+    /**
+     * @brief
+     * @tparam Ret
+     * @param result
+     * @param handler
+     * @return
+     */
     template< class Ret >
     inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
         return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
-    }
-
-
-    template< class Ret >
-    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, const TCPSessionPtr & session) {
-        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, session->GetCoroutineHandler());
     }
 }
 

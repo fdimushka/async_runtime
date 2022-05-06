@@ -131,7 +131,7 @@ public:
     }
 
 
-    IOFsStreamPtr stream;
+    IOStreamPtr stream;
 };
 
 

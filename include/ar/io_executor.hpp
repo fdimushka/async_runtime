@@ -12,6 +12,10 @@ namespace AsyncRuntime {
 
     class IOExecutor : public IExecutor {
     public:
+        struct AsyncHandlerCtx {
+            WorkStealQueue<IOTask *>       run_queue;
+        };
+
         explicit IOExecutor(const std::string & name_);
         ~IOExecutor() override;
 
@@ -20,19 +24,6 @@ namespace AsyncRuntime {
         IOExecutor(IOExecutor&&) = delete;
         IOExecutor& operator =(const IOExecutor&) = delete;
         IOExecutor& operator =(IOExecutor&&) = delete;
-
-
-        /**
-         * @brief
-         * @param handler
-         */
-        void RegistrationAsyncHandler(uv_async_t* handler);
-
-
-        /**
-         * @brief
-         */
-        void Run();
 
 
         /**
@@ -52,12 +43,11 @@ namespace AsyncRuntime {
         void Loop();
 
 
-        std::condition_variable             cv;
         ThreadExecutor                      loop_thread;
         std::string                         name;
         uv_loop_t                           *loop;
-        std::vector<uv_async_t *>           async_handlers;
-        static uv_async_t                   main_async_io_handle;
+        uv_async_t                          async_handler;
+        AsyncHandlerCtx                     async_handler_ctx;
     };
 }
 
