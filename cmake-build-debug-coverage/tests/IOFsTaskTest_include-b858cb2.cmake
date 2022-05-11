@@ -1,5 +1,0 @@
-if(EXISTS "/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/IOFsTaskTest_tests-b858cb2.cmake")
-  include("/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/IOFsTaskTest_tests-b858cb2.cmake")
-else()
-  add_test(IOFsTaskTest_NOT_BUILT-b858cb2 IOFsTaskTest_NOT_BUILT-b858cb2)
-endif()

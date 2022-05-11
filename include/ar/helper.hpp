@@ -16,9 +16,6 @@
 #include <map>
 #include <unordered_map>
 
-#include <boost/circular_buffer.hpp>
-#include <boost/range/algorithm/nth_element.hpp>
-
 #include "ar/macros.hpp"
 #include "config.h"
 

@@ -1,6 +1,7 @@
 #include "ar/stack.hpp"
 
 #include <mutex>
+#include <unistd.h>
 
 extern "C" {
 #include <sys/resource.h>

@@ -1,6 +1,5 @@
 #include "trace.h"
 #include "ar/helper.hpp"
-#include "base64.h"
 
 #ifdef USE_TRACE
 #include "TraceSchema_generated.h"
@@ -10,7 +9,6 @@
 
 #include <regex>
 #include <fstream>
-#include <boost/algorithm/string/replace.hpp>
 
 using namespace AsyncRuntime;
 

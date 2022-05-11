@@ -1,6 +1,7 @@
 #include "ar/stream.hpp"
 #include <algorithm>
 #include <numeric>
+#include <cstring>
 
 
 using namespace AsyncRuntime;
@@ -21,7 +22,7 @@ IOStream::IOStream(const char *buf, int64_t len) : fd(-1), seek(0), length(len),
         RNT_ASSERT_MSG( false, "memory out of bound");
     }
 
-    memcpy(buffer, buf, sizeof(char*) * allocated_length);
+    std::memcpy(buffer, buf, sizeof(char*) * allocated_length);
 }
 
 

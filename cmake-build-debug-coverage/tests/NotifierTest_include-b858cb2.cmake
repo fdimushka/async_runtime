@@ -1,5 +1,0 @@
-if(EXISTS "/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/NotifierTest_tests-b858cb2.cmake")
-  include("/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/NotifierTest_tests-b858cb2.cmake")
-else()
-  add_test(NotifierTest_NOT_BUILT-b858cb2 NotifierTest_NOT_BUILT-b858cb2)
-endif()
