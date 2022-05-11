@@ -14,6 +14,8 @@
 #include <thread>
 #include <condition_variable>
 
+#include <uv.h>
+
 
 namespace AsyncRuntime {
     class Executor;

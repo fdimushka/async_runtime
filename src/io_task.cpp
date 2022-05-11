@@ -1,4 +1,4 @@
-#include "ar/io_task.h"
+#include "ar/io_task.hpp"
 
 
 using namespace AsyncRuntime;
@@ -35,7 +35,6 @@ void AsyncRuntime::FsOpenCb(uv_fs_s* req)
 
     uv_fs_req_cleanup(req);
     assert(req->path == nullptr);
-
     delete task;
 }
 
@@ -50,7 +49,6 @@ void AsyncRuntime::FsCloseCb(uv_fs_s* req)
     stream->SetFd(-1);
     stream->Begin();
     task->Resolve(IO_SUCCESS);
-
     delete task;
 }
 
@@ -117,5 +115,97 @@ void AsyncRuntime::FsWriteCb(uv_fs_s *req)
             delete task;
             uv_fs_req_cleanup(req);
         }
+    }
+}
+
+
+void AsyncRuntime::NetConnectionCb(uv_stream_t *server, int status)
+{
+    assert(server->data != nullptr);
+    auto task = IONetTaskCast<AsyncRuntime::IONetListen>(server->data);
+    auto &method = task->GetMethod();
+
+    TCPSessionPtr session = std::make_shared<TCPSession>(server, method.handle_connection);
+    session->Accept();
+    session->Run();
+}
+
+
+void AsyncRuntime::NetConnectionCb(uv_connect_t* connection, int status)
+{
+    assert(connection->data != nullptr);
+    auto task = IONetTaskCast<AsyncRuntime::IONetConnect>(connection->data);
+
+    if (status >= 0) {
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    }else{
+        task->Resolve(status);
+        delete task;
+    }
+}
+
+
+void AsyncRuntime::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
+{
+    assert(handle->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::IONetRead>(handle->data);
+    task->GetStream()->Next(buf, size);
+}
+
+
+void AsyncRuntime::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
+{
+    assert(stream->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::IONetRead>(stream->data);
+    auto &io_stream = task->GetStream();
+    uv_read_stop(stream);
+
+    if (nread >= 0) {
+        io_stream->length += nread;
+    }
+//    else if (nread == UV_EOF) {
+//
+//    }
+
+    io_stream->Begin();
+    task->Resolve(IO_SUCCESS);
+    delete task;
+}
+
+
+void AsyncRuntime::NetWriteCb(uv_write_t* req, int status)
+{
+    auto task = IONetTaskCast<AsyncRuntime::IONetWrite>(req->data);
+    assert(req->type == UV_WRITE);
+    task->Resolve(IO_SUCCESS);
+    delete task;
+    free(req);
+}
+
+
+void AsyncRuntime::NetCloseCb(uv_handle_t* handle)
+{
+    assert(handle->data != nullptr);
+    auto *task = IONetTaskCast<AsyncRuntime::IONetClose>(handle->data);
+    task->Resolve(IO_SUCCESS);
+    delete task;
+}
+
+
+void AsyncRuntime::NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+    assert(req->data != nullptr);
+    auto task = IONetTaskCast<AsyncRuntime::IONetAddrInfo>(req->data);
+
+    if (status >= 0) {
+        char addr[17] = {'\0'};
+        uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
+        task->GetInfo()->hostname = std::string {addr};
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    }else{
+        task->Resolve(status);
+        delete task;
     }
 }

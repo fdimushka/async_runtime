@@ -3,7 +3,7 @@
 
 
 #include "ar/executor.hpp"
-#include "ar/io_task.h"
+#include "ar/io_task.hpp"
 #include "uv.h"
 
 
@@ -12,6 +12,10 @@ namespace AsyncRuntime {
 
     class IOExecutor : public IExecutor {
     public:
+        struct AsyncHandlerCtx {
+            WorkStealQueue<IOTask *>       run_queue;
+        };
+
         explicit IOExecutor(const std::string & name_);
         ~IOExecutor() override;
 
@@ -27,14 +31,23 @@ namespace AsyncRuntime {
          * @param task
          */
         void Post(Task* task) override;
+
+
+        /**
+         * @brief
+         * @tparam Method
+         * @param task
+         */
+        void Post(IOTask *io_task);
     private:
         void Loop();
 
-        std::condition_variable     cv;
-        std::mutex                  fs_mutex;
-        ThreadExecutor              loop_thread;
-        std::string                 name;
-        uv_loop_t                   *loop;
+
+        ThreadExecutor                      loop_thread;
+        std::string                         name;
+        uv_loop_t                           *loop;
+        uv_async_t                          async_handler;
+        AsyncHandlerCtx                     async_handler_ctx;
     };
 }
 

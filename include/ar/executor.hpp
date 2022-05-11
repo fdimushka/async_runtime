@@ -31,6 +31,13 @@ namespace AsyncRuntime {
          * @param task
          */
         void Post(Task* task) override;
+
+
+        /**
+         * @brief
+         * @return
+         */
+        const std::vector<Processor*>& GetProcessors() const { return processors; }
     private:
         void Spawn();
         void RunQueuePush(Task *task);

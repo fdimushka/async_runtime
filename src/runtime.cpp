@@ -36,15 +36,14 @@ void Runtime::Terminate()
     if(!is_setup)
         return;
 
-    if(main_executor != nullptr) {
-        delete main_executor;
-        main_executor = nullptr;
-    }
-
-
     if(io_executor != nullptr) {
         delete io_executor;
         io_executor = nullptr;
+    }
+
+    if(main_executor != nullptr) {
+        delete main_executor;
+        main_executor = nullptr;
     }
 
     executors.clear();
@@ -65,6 +64,7 @@ void Runtime::CreateDefaultExecutors()
 {
     main_executor = new Executor(MAIN_EXECUTOR_NAME);
     io_executor = new IOExecutor(IO_EXECUTOR_NAME);
+
     executors.insert(std::make_pair(main_executor->GetID(), main_executor));
     executors.insert(std::make_pair(io_executor->GetID(), io_executor));
 }
@@ -86,6 +86,5 @@ void Runtime::Post(Task *task)
 void Runtime::Post(IExecutor *executor, Task *task)
 {
     assert(executor != nullptr);
-
     executor->Post(task);
 }
