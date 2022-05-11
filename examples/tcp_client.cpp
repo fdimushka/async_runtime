@@ -1,4 +1,3 @@
-#include <curl/curl.h>
 #include "ar/ar.hpp"
 
 

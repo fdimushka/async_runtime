@@ -29,6 +29,6 @@ set( TARGETS_ALL ${TARGETS_SINGLE_FILE})
 foreach( name ${TARGETS_SINGLE_FILE} )
     message( STATUS "Example: ${name}" )
     add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp )
-    target_link_libraries(${name} ar pthread curl)
+    target_link_libraries(${name} ar pthread)
 endforeach()
 
