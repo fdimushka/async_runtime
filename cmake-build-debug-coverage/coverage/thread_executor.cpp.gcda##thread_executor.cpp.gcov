@@ -1,0 +1,68 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/thread_executor.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/thread_executor.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/thread_executor.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/thread_executor.hpp"
+        -:    2:
+        -:    3:using namespace AsyncRuntime;
+        -:    4:
+        -:    5:
+      17*:    6:ThreadExecutor::~ThreadExecutor()
+        -:    7:{
+       17:    8:    Join();
+      17*:    9:}
+------------------
+_ZN12AsyncRuntime14ThreadExecutorD0Ev:
+function _ZN12AsyncRuntime14ThreadExecutorD0Ev called 0 returned 0% blocks executed 0%
+    #####:    6:ThreadExecutor::~ThreadExecutor()
+        -:    7:{
+        -:    8:    Join();
+    #####:    9:}
+    %%%%%:    9-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime14ThreadExecutorD2Ev:
+function _ZN12AsyncRuntime14ThreadExecutorD2Ev called 17 returned 100% blocks executed 100%
+       17:    6:ThreadExecutor::~ThreadExecutor()
+        -:    7:{
+       17:    8:    Join();
+       17:    8-block  0
+call    0 returned 17
+       17:    9:}
+call    0 returned 17
+------------------
+        -:   10:
+        -:   11:
+function _ZN12AsyncRuntime14ThreadExecutor4JoinEv called 34 returned 100% blocks executed 100%
+       34:   12:void ThreadExecutor::Join()
+        -:   13:{
+       51:   14:    for(auto& thread : threads)
+       34:   14-block  0
+call    0 returned 34
+call    1 returned 34
+       17:   14-block  1
+call    2 returned 17
+       17:   14-block  2
+call    3 returned 17
+       51:   14-block  3
+call    4 returned 51
+branch  5 taken 17
+branch  6 taken 34 (fallthrough)
+        -:   15:    {
+       17:   16:        if(thread.joinable())
+call    0 returned 17
+branch  1 taken 17 (fallthrough)
+branch  2 taken 0
+       17:   17:            thread.join();
+       17:   17-block  0
+call    0 returned 17
+branch  1 taken 17 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   18:    }
+        -:   19:
+       34:   20:    threads.clear();
+       34:   20-block  0
+call    0 returned 34
+       34:   21:}
+        -:   22:

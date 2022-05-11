@@ -1,0 +1,5 @@
+if(EXISTS "/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/CoroutineTest_tests-b858cb2.cmake")
+  include("/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/CoroutineTest_tests-b858cb2.cmake")
+else()
+  add_test(CoroutineTest_NOT_BUILT-b858cb2 CoroutineTest_NOT_BUILT-b858cb2)
+endif()

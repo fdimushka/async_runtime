@@ -1,0 +1,488 @@
+        -:    0:Source:/usr/include/boost/iterator/iterator_adaptor.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcda
+        -:    0:Runs:1
+        -:    1:// (C) Copyright David Abrahams 2002.
+        -:    2:// (C) Copyright Jeremy Siek    2002.
+        -:    3:// (C) Copyright Thomas Witt    2002.
+        -:    4:// Distributed under the Boost Software License, Version 1.0. (See
+        -:    5:// accompanying file LICENSE_1_0.txt or copy at
+        -:    6:// http://www.boost.org/LICENSE_1_0.txt)
+        -:    7:#ifndef BOOST_ITERATOR_ADAPTOR_23022003THW_HPP
+        -:    8:#define BOOST_ITERATOR_ADAPTOR_23022003THW_HPP
+        -:    9:
+        -:   10:#include <boost/static_assert.hpp>
+        -:   11:
+        -:   12:#include <boost/core/use_default.hpp>
+        -:   13:
+        -:   14:#include <boost/iterator/iterator_categories.hpp>
+        -:   15:#include <boost/iterator/iterator_facade.hpp>
+        -:   16:#include <boost/iterator/detail/enable_if.hpp>
+        -:   17:
+        -:   18:#include <boost/mpl/and.hpp>
+        -:   19:#include <boost/mpl/not.hpp>
+        -:   20:#include <boost/mpl/or.hpp>
+        -:   21:
+        -:   22:#include <boost/type_traits/is_same.hpp>
+        -:   23:#include <boost/type_traits/is_convertible.hpp>
+        -:   24:
+        -:   25:#ifdef BOOST_ITERATOR_REF_CONSTNESS_KILLS_WRITABILITY
+        -:   26:# include <boost/type_traits/remove_reference.hpp>
+        -:   27:#endif
+        -:   28:
+        -:   29:#include <boost/type_traits/add_reference.hpp>
+        -:   30:#include <boost/iterator/detail/config_def.hpp>
+        -:   31:
+        -:   32:#include <boost/iterator/iterator_traits.hpp>
+        -:   33:
+        -:   34:namespace boost {
+        -:   35:namespace iterators {
+        -:   36:
+        -:   37:  // Used as a default template argument internally, merely to
+        -:   38:  // indicate "use the default", this can also be passed by users
+        -:   39:  // explicitly in order to specify that the default should be used.
+        -:   40:  using boost::use_default;
+        -:   41:
+        -:   42:} // namespace iterators
+        -:   43:
+        -:   44:// the incompleteness of use_default causes massive problems for
+        -:   45:// is_convertible (naturally).  This workaround is fortunately not
+        -:   46:// needed for vc6/vc7.
+        -:   47:template<class To>
+        -:   48:struct is_convertible<use_default,To>
+        -:   49:  : mpl::false_ {};
+        -:   50:
+        -:   51:namespace iterators {
+        -:   52:
+        -:   53:  namespace detail
+        -:   54:  {
+        -:   55:
+        -:   56:    //
+        -:   57:    // Result type used in enable_if_convertible meta function.
+        -:   58:    // This can be an incomplete type, as only pointers to
+        -:   59:    // enable_if_convertible< ... >::type are used.
+        -:   60:    // We could have used void for this, but conversion to
+        -:   61:    // void* is just to easy.
+        -:   62:    //
+        -:   63:    struct enable_type;
+        -:   64:  }
+        -:   65:
+        -:   66:
+        -:   67:  //
+        -:   68:  // enable_if for use in adapted iterators constructors.
+        -:   69:  //
+        -:   70:  // In order to provide interoperability between adapted constant and
+        -:   71:  // mutable iterators, adapted iterators will usually provide templated
+        -:   72:  // conversion constructors of the following form
+        -:   73:  //
+        -:   74:  // template <class BaseIterator>
+        -:   75:  // class adapted_iterator :
+        -:   76:  //   public iterator_adaptor< adapted_iterator<Iterator>, Iterator >
+        -:   77:  // {
+        -:   78:  // public:
+        -:   79:  //
+        -:   80:  //   ...
+        -:   81:  //
+        -:   82:  //   template <class OtherIterator>
+        -:   83:  //   adapted_iterator(
+        -:   84:  //       OtherIterator const& it
+        -:   85:  //     , typename enable_if_convertible<OtherIterator, Iterator>::type* = 0);
+        -:   86:  //
+        -:   87:  //   ...
+        -:   88:  // };
+        -:   89:  //
+        -:   90:  // enable_if_convertible is used to remove those overloads from the overload
+        -:   91:  // set that cannot be instantiated. For all practical purposes only overloads
+        -:   92:  // for constant/mutable interaction will remain. This has the advantage that
+        -:   93:  // meta functions like boost::is_convertible do not return false positives,
+        -:   94:  // as they can only look at the signature of the conversion constructor
+        -:   95:  // and not at the actual instantiation.
+        -:   96:  //
+        -:   97:  // enable_if_interoperable can be safely used in user code. It falls back to
+        -:   98:  // always enabled for compilers that don't support enable_if or is_convertible.
+        -:   99:  // There is no need for compiler specific workarounds in user code.
+        -:  100:  //
+        -:  101:  // The operators implementation relies on boost::is_convertible not returning
+        -:  102:  // false positives for user/library defined iterator types. See comments
+        -:  103:  // on operator implementation for consequences.
+        -:  104:  //
+        -:  105:#  if defined(BOOST_NO_IS_CONVERTIBLE) || defined(BOOST_NO_SFINAE)
+        -:  106:
+        -:  107:  template <class From, class To>
+        -:  108:  struct enable_if_convertible
+        -:  109:  {
+        -:  110:      typedef boost::iterators::detail::enable_type type;
+        -:  111:  };
+        -:  112:
+        -:  113:#  elif BOOST_WORKAROUND(_MSC_FULL_VER, BOOST_TESTED_AT(13102292))
+        -:  114:
+        -:  115:  // For some reason vc7.1 needs us to "cut off" instantiation
+        -:  116:  // of is_convertible in a few cases.
+        -:  117:  template<typename From, typename To>
+        -:  118:  struct enable_if_convertible
+        -:  119:    : iterators::enable_if<
+        -:  120:        mpl::or_<
+        -:  121:            is_same<From,To>
+        -:  122:          , is_convertible<From, To>
+        -:  123:        >
+        -:  124:      , boost::iterators::detail::enable_type
+        -:  125:    >
+        -:  126:  {};
+        -:  127:
+        -:  128:#  else
+        -:  129:
+        -:  130:  template<typename From, typename To>
+        -:  131:  struct enable_if_convertible
+        -:  132:    : iterators::enable_if<
+        -:  133:          is_convertible<From, To>
+        -:  134:        , boost::iterators::detail::enable_type
+        -:  135:      >
+        -:  136:  {};
+        -:  137:
+        -:  138:# endif
+        -:  139:
+        -:  140:  //
+        -:  141:  // Default template argument handling for iterator_adaptor
+        -:  142:  //
+        -:  143:  namespace detail
+        -:  144:  {
+        -:  145:    // If T is use_default, return the result of invoking
+        -:  146:    // DefaultNullaryFn, otherwise return T.
+        -:  147:    template <class T, class DefaultNullaryFn>
+        -:  148:    struct ia_dflt_help
+        -:  149:      : mpl::eval_if<
+        -:  150:            is_same<T, use_default>
+        -:  151:          , DefaultNullaryFn
+        -:  152:          , mpl::identity<T>
+        -:  153:        >
+        -:  154:    {
+        -:  155:    };
+        -:  156:
+        -:  157:    // A metafunction which computes an iterator_adaptor's base class,
+        -:  158:    // a specialization of iterator_facade.
+        -:  159:    template <
+        -:  160:        class Derived
+        -:  161:      , class Base
+        -:  162:      , class Value
+        -:  163:      , class Traversal
+        -:  164:      , class Reference
+        -:  165:      , class Difference
+        -:  166:    >
+        -:  167:    struct iterator_adaptor_base
+        -:  168:    {
+        -:  169:        typedef iterator_facade<
+        -:  170:            Derived
+        -:  171:
+        -:  172:# ifdef BOOST_ITERATOR_REF_CONSTNESS_KILLS_WRITABILITY
+        -:  173:          , typename boost::iterators::detail::ia_dflt_help<
+        -:  174:                Value
+        -:  175:              , mpl::eval_if<
+        -:  176:                    is_same<Reference,use_default>
+        -:  177:                  , iterator_value<Base>
+        -:  178:                  , remove_reference<Reference>
+        -:  179:                >
+        -:  180:            >::type
+        -:  181:# else
+        -:  182:          , typename boost::iterators::detail::ia_dflt_help<
+        -:  183:                Value, iterator_value<Base>
+        -:  184:            >::type
+        -:  185:# endif
+        -:  186:
+        -:  187:          , typename boost::iterators::detail::ia_dflt_help<
+        -:  188:                Traversal
+        -:  189:              , iterator_traversal<Base>
+        -:  190:            >::type
+        -:  191:
+        -:  192:          , typename boost::iterators::detail::ia_dflt_help<
+        -:  193:                Reference
+        -:  194:              , mpl::eval_if<
+        -:  195:                    is_same<Value,use_default>
+        -:  196:                  , iterator_reference<Base>
+        -:  197:                  , add_reference<Value>
+        -:  198:                >
+        -:  199:            >::type
+        -:  200:
+        -:  201:          , typename boost::iterators::detail::ia_dflt_help<
+        -:  202:                Difference, iterator_difference<Base>
+        -:  203:            >::type
+        -:  204:        >
+        -:  205:        type;
+        -:  206:    };
+        -:  207:
+        -:  208:    // workaround for aC++ CR JAGaf33512
+        -:  209:    template <class Tr1, class Tr2>
+        -:  210:    inline void iterator_adaptor_assert_traversal ()
+        -:  211:    {
+        -:  212:      BOOST_STATIC_ASSERT((is_convertible<Tr1, Tr2>::value));
+        -:  213:    }
+        -:  214:  }
+        -:  215:
+        -:  216:  //
+        -:  217:  // Iterator Adaptor
+        -:  218:  //
+        -:  219:  // The parameter ordering changed slightly with respect to former
+        -:  220:  // versions of iterator_adaptor The idea is that when the user needs
+        -:  221:  // to fiddle with the reference type it is highly likely that the
+        -:  222:  // iterator category has to be adjusted as well.  Any of the
+        -:  223:  // following four template arguments may be ommitted or explicitly
+        -:  224:  // replaced by use_default.
+        -:  225:  //
+        -:  226:  //   Value - if supplied, the value_type of the resulting iterator, unless
+        -:  227:  //      const. If const, a conforming compiler strips constness for the
+        -:  228:  //      value_type. If not supplied, iterator_traits<Base>::value_type is used
+        -:  229:  //
+        -:  230:  //   Category - the traversal category of the resulting iterator. If not
+        -:  231:  //      supplied, iterator_traversal<Base>::type is used.
+        -:  232:  //
+        -:  233:  //   Reference - the reference type of the resulting iterator, and in
+        -:  234:  //      particular, the result type of operator*(). If not supplied but
+        -:  235:  //      Value is supplied, Value& is used. Otherwise
+        -:  236:  //      iterator_traits<Base>::reference is used.
+        -:  237:  //
+        -:  238:  //   Difference - the difference_type of the resulting iterator. If not
+        -:  239:  //      supplied, iterator_traits<Base>::difference_type is used.
+        -:  240:  //
+        -:  241:  template <
+        -:  242:      class Derived
+        -:  243:    , class Base
+        -:  244:    , class Value        = use_default
+        -:  245:    , class Traversal    = use_default
+        -:  246:    , class Reference    = use_default
+        -:  247:    , class Difference   = use_default
+        -:  248:  >
+        -:  249:  class iterator_adaptor
+        -:  250:    : public boost::iterators::detail::iterator_adaptor_base<
+        -:  251:        Derived, Base, Value, Traversal, Reference, Difference
+        -:  252:      >::type
+        -:  253:  {
+        -:  254:      friend class iterator_core_access;
+        -:  255:
+        -:  256:   protected:
+        -:  257:      typedef typename boost::iterators::detail::iterator_adaptor_base<
+        -:  258:          Derived, Base, Value, Traversal, Reference, Difference
+        -:  259:      >::type super_t;
+        -:  260:   public:
+        -:  261:      iterator_adaptor() {}
+        -:  262:
+    #####:  263:      explicit iterator_adaptor(Base const &iter)
+    #####:  264:          : m_iterator(iter)
+        -:  265:      {
+    #####:  266:      }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_EC2ERKSI_:
+function _ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_EC2ERKSI_ called 0 returned 0% blocks executed 0%
+    #####:  263:      explicit iterator_adaptor(Base const &iter)
+    #####:  264:          : m_iterator(iter)
+        -:  265:      {
+    #####:  266:      }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_EC2ERKSK_:
+function _ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_EC2ERKSK_ called 0 returned 0% blocks executed 0%
+    #####:  263:      explicit iterator_adaptor(Base const &iter)
+    #####:  264:          : m_iterator(iter)
+    %%%%%:  264-block  0
+call    0 never executed
+        -:  265:      {
+    #####:  266:      }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEEC2ERKSF_:
+function _ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEEC2ERKSF_ called 0 returned 0% blocks executed 0%
+    #####:  263:      explicit iterator_adaptor(Base const &iter)
+    #####:  264:          : m_iterator(iter)
+        -:  265:      {
+    #####:  266:      }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEEC2ERKSH_:
+function _ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEEC2ERKSH_ called 0 returned 0% blocks executed 0%
+    #####:  263:      explicit iterator_adaptor(Base const &iter)
+    #####:  264:          : m_iterator(iter)
+    %%%%%:  264-block  0
+call    0 never executed
+        -:  265:      {
+    #####:  266:      }
+------------------
+        -:  267:
+        -:  268:      typedef Base base_type;
+        -:  269:
+    #####:  270:      Base const& base() const
+    #####:  271:        { return m_iterator; }
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E4baseEv:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E4baseEv called 0 returned 0% blocks executed 0%
+    #####:  270:      Base const& base() const
+    #####:  271:        { return m_iterator; }
+    %%%%%:  271-block  0
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E4baseEv:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E4baseEv called 0 returned 0% blocks executed 0%
+    #####:  270:      Base const& base() const
+    #####:  271:        { return m_iterator; }
+    %%%%%:  271-block  0
+------------------
+        -:  272:
+        -:  273:   protected:
+        -:  274:      // for convenience in derived classes
+        -:  275:      typedef iterator_adaptor<Derived,Base,Value,Traversal,Reference,Difference> iterator_adaptor_;
+        -:  276:
+        -:  277:      //
+        -:  278:      // lvalue access to the Base object for Derived
+        -:  279:      //
+    #####:  280:      Base const& base_reference() const
+    #####:  281:        { return m_iterator; }
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv:
+function _ZNK5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  280:      Base const& base_reference() const
+    #####:  281:        { return m_iterator; }
+    %%%%%:  281-block  0
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E14base_referenceEv:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  280:      Base const& base_reference() const
+    #####:  281:        { return m_iterator; }
+    %%%%%:  281-block  0
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E14base_referenceEv:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  280:      Base const& base_reference() const
+    #####:  281:        { return m_iterator; }
+    %%%%%:  281-block  0
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv:
+function _ZNK5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  280:      Base const& base_reference() const
+    #####:  281:        { return m_iterator; }
+    %%%%%:  281-block  0
+------------------
+        -:  282:
+    #####:  283:      Base& base_reference()
+    #####:  284:        { return m_iterator; }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv:
+function _ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEESF_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  283:      Base& base_reference()
+    #####:  284:        { return m_iterator; }
+    %%%%%:  284-block  0
+------------------
+_ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv:
+function _ZN5boost9iterators16iterator_adaptorINS_7archive9iterators15transform_widthINS3_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEESH_cNS0_25single_pass_traversal_tagEcNS_11use_defaultEE14base_referenceEv called 0 returned 0% blocks executed 0%
+    #####:  283:      Base& base_reference()
+    #####:  284:        { return m_iterator; }
+    %%%%%:  284-block  0
+------------------
+        -:  285:
+        -:  286:   private:
+        -:  287:      //
+        -:  288:      // Core iterator interface for iterator_facade.  This is private
+        -:  289:      // to prevent temptation for Derived classes to use it, which
+        -:  290:      // will often result in an error.  Derived classes should use
+        -:  291:      // base_reference(), above, to get direct access to m_iterator.
+        -:  292:      //
+        -:  293:      typename super_t::reference dereference() const
+        -:  294:        { return *m_iterator; }
+        -:  295:
+        -:  296:      template <
+        -:  297:      class OtherDerived, class OtherIterator, class V, class C, class R, class D
+        -:  298:      >
+    #####:  299:      bool equal(iterator_adaptor<OtherDerived, OtherIterator, V, C, R, D> const& x) const
+        -:  300:      {
+        -:  301:        // Maybe readd with same_distance
+        -:  302:        //           BOOST_STATIC_ASSERT(
+        -:  303:        //               (detail::same_category_and_difference<Derived,OtherDerived>::value)
+        -:  304:        //               );
+    #####:  305:          return m_iterator == x.base();
+        -:  306:      }
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E5equalISK_SI_cSJ_cSJ_EEbRKNS1_IT_T0_T1_T2_T3_T4_EE:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E5equalISK_SI_cSJ_cSJ_EEbRKNS1_IT_T0_T1_T2_T3_T4_EE called 0 returned 0% blocks executed 0%
+    #####:  299:      bool equal(iterator_adaptor<OtherDerived, OtherIterator, V, C, R, D> const& x) const
+        -:  300:      {
+        -:  301:        // Maybe readd with same_distance
+        -:  302:        //           BOOST_STATIC_ASSERT(
+        -:  303:        //               (detail::same_category_and_difference<Derived,OtherDerived>::value)
+        -:  304:        //               );
+    #####:  305:          return m_iterator == x.base();
+    %%%%%:  305-block  0
+call    0 never executed
+call    1 never executed
+        -:  306:      }
+------------------
+_ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E5equalISM_SK_cSL_cSL_EEbRKNS1_IT_T0_T1_T2_T3_T4_EE:
+function _ZNK5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E5equalISM_SK_cSL_cSL_EEbRKNS1_IT_T0_T1_T2_T3_T4_EE called 0 returned 0% blocks executed 0%
+    #####:  299:      bool equal(iterator_adaptor<OtherDerived, OtherIterator, V, C, R, D> const& x) const
+        -:  300:      {
+        -:  301:        // Maybe readd with same_distance
+        -:  302:        //           BOOST_STATIC_ASSERT(
+        -:  303:        //               (detail::same_category_and_difference<Derived,OtherDerived>::value)
+        -:  304:        //               );
+    #####:  305:          return m_iterator == x.base();
+    %%%%%:  305-block  0
+call    0 never executed
+call    1 never executed
+        -:  306:      }
+------------------
+        -:  307:
+        -:  308:      typedef typename iterator_category_to_traversal<
+        -:  309:          typename super_t::iterator_category
+        -:  310:      >::type my_traversal;
+        -:  311:
+        -:  312:# define BOOST_ITERATOR_ADAPTOR_ASSERT_TRAVERSAL(cat) \
+        -:  313:      boost::iterators::detail::iterator_adaptor_assert_traversal<my_traversal, cat>();
+        -:  314:
+        -:  315:      void advance(typename super_t::difference_type n)
+        -:  316:      {
+        -:  317:          BOOST_ITERATOR_ADAPTOR_ASSERT_TRAVERSAL(random_access_traversal_tag)
+        -:  318:          m_iterator += n;
+        -:  319:      }
+        -:  320:
+    #####:  321:      void increment() { ++m_iterator; }
+------------------
+_ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E9incrementEv:
+function _ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESJ_EESI_cSJ_cSJ_E9incrementEv called 0 returned 0% blocks executed 0%
+    #####:  321:      void increment() { ++m_iterator; }
+    %%%%%:  321-block  0
+call    0 never executed
+------------------
+_ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E9incrementEv:
+function _ZN5boost9iterators16iterator_adaptorINS0_18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS4_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESL_EESK_cSL_cSL_E9incrementEv called 0 returned 0% blocks executed 0%
+    #####:  321:      void increment() { ++m_iterator; }
+    %%%%%:  321-block  0
+call    0 never executed
+------------------
+        -:  322:
+        -:  323:      void decrement()
+        -:  324:      {
+        -:  325:          BOOST_ITERATOR_ADAPTOR_ASSERT_TRAVERSAL(bidirectional_traversal_tag)
+        -:  326:           --m_iterator;
+        -:  327:      }
+        -:  328:
+        -:  329:      template <
+        -:  330:          class OtherDerived, class OtherIterator, class V, class C, class R, class D
+        -:  331:      >
+        -:  332:      typename super_t::difference_type distance_to(
+        -:  333:          iterator_adaptor<OtherDerived, OtherIterator, V, C, R, D> const& y) const
+        -:  334:      {
+        -:  335:          BOOST_ITERATOR_ADAPTOR_ASSERT_TRAVERSAL(random_access_traversal_tag)
+        -:  336:          // Maybe readd with same_distance
+        -:  337:          //           BOOST_STATIC_ASSERT(
+        -:  338:          //               (detail::same_category_and_difference<Derived,OtherDerived>::value)
+        -:  339:          //               );
+        -:  340:          return y.base() - m_iterator;
+        -:  341:      }
+        -:  342:
+        -:  343:# undef BOOST_ITERATOR_ADAPTOR_ASSERT_TRAVERSAL
+        -:  344:
+        -:  345:   private: // data members
+        -:  346:      Base m_iterator;
+        -:  347:  };
+        -:  348:
+        -:  349:} // namespace iterators
+        -:  350:
+        -:  351:using iterators::iterator_adaptor;
+        -:  352:using iterators::enable_if_convertible;
+        -:  353:
+        -:  354:} // namespace boost
+        -:  355:
+        -:  356:#include <boost/iterator/detail/config_undef.hpp>
+        -:  357:
+        -:  358:#endif // BOOST_ITERATOR_ADAPTOR_23022003THW_HPP

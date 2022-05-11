@@ -1,0 +1,1461 @@
+        -:    0:Source:/usr/include/c++/11/functional
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/examples/CMakeFiles/tcp_client.dir/tcp_client.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/examples/CMakeFiles/tcp_client.dir/tcp_client.cpp.gcda
+        -:    0:Runs:1
+        -:    1:// <functional> -*- C++ -*-
+        -:    2:
+        -:    3:// Copyright (C) 2001-2021 Free Software Foundation, Inc.
+        -:    4://
+        -:    5:// This file is part of the GNU ISO C++ Library.  This library is free
+        -:    6:// software; you can redistribute it and/or modify it under the
+        -:    7:// terms of the GNU General Public License as published by the
+        -:    8:// Free Software Foundation; either version 3, or (at your option)
+        -:    9:// any later version.
+        -:   10:
+        -:   11:// This library is distributed in the hope that it will be useful,
+        -:   12:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   13:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   14:// GNU General Public License for more details.
+        -:   15:
+        -:   16:// Under Section 7 of GPL version 3, you are granted additional
+        -:   17:// permissions described in the GCC Runtime Library Exception, version
+        -:   18:// 3.1, as published by the Free Software Foundation.
+        -:   19:
+        -:   20:// You should have received a copy of the GNU General Public License and
+        -:   21:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   22:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   23:// <http://www.gnu.org/licenses/>.
+        -:   24:
+        -:   25:/*
+        -:   26: * Copyright (c) 1997
+        -:   27: * Silicon Graphics Computer Systems, Inc.
+        -:   28: *
+        -:   29: * Permission to use, copy, modify, distribute and sell this software
+        -:   30: * and its documentation for any purpose is hereby granted without fee,
+        -:   31: * provided that the above copyright notice appear in all copies and
+        -:   32: * that both that copyright notice and this permission notice appear
+        -:   33: * in supporting documentation.  Silicon Graphics makes no
+        -:   34: * representations about the suitability of this software for any
+        -:   35: * purpose.  It is provided "as is" without express or implied warranty.
+        -:   36: *
+        -:   37: */
+        -:   38:
+        -:   39:/** @file include/functional
+        -:   40: *  This is a Standard C++ Library header.
+        -:   41: */
+        -:   42:
+        -:   43:#ifndef _GLIBCXX_FUNCTIONAL
+        -:   44:#define _GLIBCXX_FUNCTIONAL 1
+        -:   45:
+        -:   46:#pragma GCC system_header
+        -:   47:
+        -:   48:#include <bits/c++config.h>
+        -:   49:#include <bits/stl_function.h>
+        -:   50:
+        -:   51:#if __cplusplus >= 201103L
+        -:   52:
+        -:   53:#include <new>
+        -:   54:#include <tuple>
+        -:   55:#include <type_traits>
+        -:   56:#include <bits/functional_hash.h>
+        -:   57:#include <bits/invoke.h>
+        -:   58:#include <bits/refwrap.h>	// std::reference_wrapper and _Mem_fn_traits
+        -:   59:#include <bits/std_function.h>	// std::function
+        -:   60:#if __cplusplus > 201402L
+        -:   61:# include <unordered_map>
+        -:   62:# include <vector>
+        -:   63:# include <array>
+        -:   64:# include <utility>
+        -:   65:# include <bits/stl_algo.h>
+        -:   66:#endif
+        -:   67:#if __cplusplus > 201703L
+        -:   68:# include <bits/ranges_cmp.h>
+        -:   69:# include <compare>
+        -:   70:#endif
+        -:   71:
+        -:   72:#endif // C++11
+        -:   73:
+        -:   74:namespace std _GLIBCXX_VISIBILITY(default)
+        -:   75:{
+        -:   76:_GLIBCXX_BEGIN_NAMESPACE_VERSION
+        -:   77:
+        -:   78:  /** @brief The type of placeholder objects defined by libstdc++.
+        -:   79:   *  @ingroup binders
+        -:   80:   */
+        -:   81:  template<int _Num> struct _Placeholder { };
+        -:   82:
+        -:   83:#if __cplusplus >= 201103L
+        -:   84:
+        -:   85:#if __cplusplus >= 201703L
+        -:   86:# define __cpp_lib_invoke 201411L
+        -:   87:# if __cplusplus > 201703L
+        -:   88:#  define __cpp_lib_constexpr_functional 201907L
+        -:   89:# endif
+        -:   90:
+        -:   91:  /// Invoke a callable object.
+        -:   92:  template<typename _Callable, typename... _Args>
+        -:   93:    inline _GLIBCXX20_CONSTEXPR invoke_result_t<_Callable, _Args...>
+        -:   94:    invoke(_Callable&& __fn, _Args&&... __args)
+        -:   95:    noexcept(is_nothrow_invocable_v<_Callable, _Args...>)
+        -:   96:    {
+        -:   97:      return std::__invoke(std::forward<_Callable>(__fn),
+        -:   98:			   std::forward<_Args>(__args)...);
+        -:   99:    }
+        -:  100:#endif // C++17
+        -:  101:
+        -:  102:  template<typename _MemFunPtr,
+        -:  103:	   bool __is_mem_fn = is_member_function_pointer<_MemFunPtr>::value>
+        -:  104:    class _Mem_fn_base
+        -:  105:    : public _Mem_fn_traits<_MemFunPtr>::__maybe_type
+        -:  106:    {
+        -:  107:      using _Traits = _Mem_fn_traits<_MemFunPtr>;
+        -:  108:
+        -:  109:      using _Arity = typename _Traits::__arity;
+        -:  110:      using _Varargs = typename _Traits::__vararg;
+        -:  111:
+        -:  112:      template<typename _Func, typename... _BoundArgs>
+        -:  113:	friend struct _Bind_check_arity;
+        -:  114:
+        -:  115:      _MemFunPtr _M_pmf;
+        -:  116:
+        -:  117:    public:
+        -:  118:
+        -:  119:      using result_type = typename _Traits::__result_type;
+        -:  120:
+        -:  121:      explicit constexpr
+        -:  122:      _Mem_fn_base(_MemFunPtr __pmf) noexcept : _M_pmf(__pmf) { }
+        -:  123:
+        -:  124:      template<typename... _Args>
+        -:  125:	_GLIBCXX20_CONSTEXPR
+        -:  126:	auto
+        -:  127:	operator()(_Args&&... __args) const
+        -:  128:	noexcept(noexcept(
+        -:  129:	      std::__invoke(_M_pmf, std::forward<_Args>(__args)...)))
+        -:  130:	-> decltype(std::__invoke(_M_pmf, std::forward<_Args>(__args)...))
+        -:  131:	{ return std::__invoke(_M_pmf, std::forward<_Args>(__args)...); }
+        -:  132:    };
+        -:  133:
+        -:  134:  // Partial specialization for member object pointers.
+        -:  135:  template<typename _MemObjPtr>
+        -:  136:    class _Mem_fn_base<_MemObjPtr, false>
+        -:  137:    {
+        -:  138:      using _Arity = integral_constant<size_t, 0>;
+        -:  139:      using _Varargs = false_type;
+        -:  140:
+        -:  141:      template<typename _Func, typename... _BoundArgs>
+        -:  142:	friend struct _Bind_check_arity;
+        -:  143:
+        -:  144:      _MemObjPtr _M_pm;
+        -:  145:
+        -:  146:    public:
+        -:  147:      explicit constexpr
+        -:  148:      _Mem_fn_base(_MemObjPtr __pm) noexcept : _M_pm(__pm) { }
+        -:  149:
+        -:  150:      template<typename _Tp>
+        -:  151:	_GLIBCXX20_CONSTEXPR
+        -:  152:	auto
+        -:  153:	operator()(_Tp&& __obj) const
+        -:  154:	noexcept(noexcept(std::__invoke(_M_pm, std::forward<_Tp>(__obj))))
+        -:  155:	-> decltype(std::__invoke(_M_pm, std::forward<_Tp>(__obj)))
+        -:  156:	{ return std::__invoke(_M_pm, std::forward<_Tp>(__obj)); }
+        -:  157:    };
+        -:  158:
+        -:  159:  template<typename _MemberPointer>
+        -:  160:    struct _Mem_fn; // undefined
+        -:  161:
+        -:  162:  template<typename _Res, typename _Class>
+        -:  163:    struct _Mem_fn<_Res _Class::*>
+        -:  164:    : _Mem_fn_base<_Res _Class::*>
+        -:  165:    {
+        -:  166:      using _Mem_fn_base<_Res _Class::*>::_Mem_fn_base;
+        -:  167:    };
+        -:  168:
+        -:  169:  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+        -:  170:  // 2048.  Unnecessary mem_fn overloads
+        -:  171:  /**
+        -:  172:   *  @brief Returns a function object that forwards to the member
+        -:  173:   *  pointer @a pm.
+        -:  174:   *  @ingroup functors
+        -:  175:   */
+        -:  176:  template<typename _Tp, typename _Class>
+        -:  177:    _GLIBCXX20_CONSTEXPR
+        -:  178:    inline _Mem_fn<_Tp _Class::*>
+        -:  179:    mem_fn(_Tp _Class::* __pm) noexcept
+        -:  180:    {
+        -:  181:      return _Mem_fn<_Tp _Class::*>(__pm);
+        -:  182:    }
+        -:  183:
+        -:  184:  /**
+        -:  185:   *  @brief Determines if the given type _Tp is a function object that
+        -:  186:   *  should be treated as a subexpression when evaluating calls to
+        -:  187:   *  function objects returned by bind().
+        -:  188:   *
+        -:  189:   *  C++11 [func.bind.isbind].
+        -:  190:   *  @ingroup binders
+        -:  191:   */
+        -:  192:  template<typename _Tp>
+        -:  193:    struct is_bind_expression
+        -:  194:    : public false_type { };
+        -:  195:
+        -:  196:  /**
+        -:  197:   *  @brief Determines if the given type _Tp is a placeholder in a
+        -:  198:   *  bind() expression and, if so, which placeholder it is.
+        -:  199:   *
+        -:  200:   *  C++11 [func.bind.isplace].
+        -:  201:   *  @ingroup binders
+        -:  202:   */
+        -:  203:  template<typename _Tp>
+        -:  204:    struct is_placeholder
+        -:  205:    : public integral_constant<int, 0>
+        -:  206:    { };
+        -:  207:
+        -:  208:#if __cplusplus > 201402L
+        -:  209:  template <typename _Tp> inline constexpr bool is_bind_expression_v
+        -:  210:    = is_bind_expression<_Tp>::value;
+        -:  211:  template <typename _Tp> inline constexpr int is_placeholder_v
+        -:  212:    = is_placeholder<_Tp>::value;
+        -:  213:#endif // C++17
+        -:  214:
+        -:  215:  /** @namespace std::placeholders
+        -:  216:   *  @brief ISO C++ 2011 namespace for std::bind placeholders.
+        -:  217:   *  @ingroup binders
+        -:  218:   */
+        -:  219:  namespace placeholders
+        -:  220:  {
+        -:  221:  /* Define a large number of placeholders. There is no way to
+        -:  222:   * simplify this with variadic templates, because we're introducing
+        -:  223:   * unique names for each.
+        -:  224:   */
+        -:  225:    extern const _Placeholder<1> _1;
+        -:  226:    extern const _Placeholder<2> _2;
+        -:  227:    extern const _Placeholder<3> _3;
+        -:  228:    extern const _Placeholder<4> _4;
+        -:  229:    extern const _Placeholder<5> _5;
+        -:  230:    extern const _Placeholder<6> _6;
+        -:  231:    extern const _Placeholder<7> _7;
+        -:  232:    extern const _Placeholder<8> _8;
+        -:  233:    extern const _Placeholder<9> _9;
+        -:  234:    extern const _Placeholder<10> _10;
+        -:  235:    extern const _Placeholder<11> _11;
+        -:  236:    extern const _Placeholder<12> _12;
+        -:  237:    extern const _Placeholder<13> _13;
+        -:  238:    extern const _Placeholder<14> _14;
+        -:  239:    extern const _Placeholder<15> _15;
+        -:  240:    extern const _Placeholder<16> _16;
+        -:  241:    extern const _Placeholder<17> _17;
+        -:  242:    extern const _Placeholder<18> _18;
+        -:  243:    extern const _Placeholder<19> _19;
+        -:  244:    extern const _Placeholder<20> _20;
+        -:  245:    extern const _Placeholder<21> _21;
+        -:  246:    extern const _Placeholder<22> _22;
+        -:  247:    extern const _Placeholder<23> _23;
+        -:  248:    extern const _Placeholder<24> _24;
+        -:  249:    extern const _Placeholder<25> _25;
+        -:  250:    extern const _Placeholder<26> _26;
+        -:  251:    extern const _Placeholder<27> _27;
+        -:  252:    extern const _Placeholder<28> _28;
+        -:  253:    extern const _Placeholder<29> _29;
+        -:  254:  }
+        -:  255:
+        -:  256:  /**
+        -:  257:   *  Partial specialization of is_placeholder that provides the placeholder
+        -:  258:   *  number for the placeholder objects defined by libstdc++.
+        -:  259:   *  @ingroup binders
+        -:  260:   */
+        -:  261:  template<int _Num>
+        -:  262:    struct is_placeholder<_Placeholder<_Num> >
+        -:  263:    : public integral_constant<int, _Num>
+        -:  264:    { };
+        -:  265:
+        -:  266:  template<int _Num>
+        -:  267:    struct is_placeholder<const _Placeholder<_Num> >
+        -:  268:    : public integral_constant<int, _Num>
+        -:  269:    { };
+        -:  270:
+        -:  271:
+        -:  272:  // Like tuple_element_t but SFINAE-friendly.
+        -:  273:  template<std::size_t __i, typename _Tuple>
+        -:  274:    using _Safe_tuple_element_t
+        -:  275:      = typename enable_if<(__i < tuple_size<_Tuple>::value),
+        -:  276:			   tuple_element<__i, _Tuple>>::type::type;
+        -:  277:
+        -:  278:  /**
+        -:  279:   *  Maps an argument to bind() into an actual argument to the bound
+        -:  280:   *  function object [func.bind.bind]/10. Only the first parameter should
+        -:  281:   *  be specified: the rest are used to determine among the various
+        -:  282:   *  implementations. Note that, although this class is a function
+        -:  283:   *  object, it isn't entirely normal because it takes only two
+        -:  284:   *  parameters regardless of the number of parameters passed to the
+        -:  285:   *  bind expression. The first parameter is the bound argument and
+        -:  286:   *  the second parameter is a tuple containing references to the
+        -:  287:   *  rest of the arguments.
+        -:  288:   */
+        -:  289:  template<typename _Arg,
+        -:  290:	   bool _IsBindExp = is_bind_expression<_Arg>::value,
+        -:  291:	   bool _IsPlaceholder = (is_placeholder<_Arg>::value > 0)>
+        -:  292:    class _Mu;
+        -:  293:
+        -:  294:  /**
+        -:  295:   *  If the argument is reference_wrapper<_Tp>, returns the
+        -:  296:   *  underlying reference.
+        -:  297:   *  C++11 [func.bind.bind] p10 bullet 1.
+        -:  298:   */
+        -:  299:  template<typename _Tp>
+        -:  300:    class _Mu<reference_wrapper<_Tp>, false, false>
+        -:  301:    {
+        -:  302:    public:
+        -:  303:      /* Note: This won't actually work for const volatile
+        -:  304:       * reference_wrappers, because reference_wrapper::get() is const
+        -:  305:       * but not volatile-qualified. This might be a defect in the TR.
+        -:  306:       */
+        -:  307:      template<typename _CVRef, typename _Tuple>
+        -:  308:	_GLIBCXX20_CONSTEXPR
+        -:  309:	_Tp&
+        -:  310:	operator()(_CVRef& __arg, _Tuple&) const volatile
+        -:  311:	{ return __arg.get(); }
+        -:  312:    };
+        -:  313:
+        -:  314:  /**
+        -:  315:   *  If the argument is a bind expression, we invoke the underlying
+        -:  316:   *  function object with the same cv-qualifiers as we are given and
+        -:  317:   *  pass along all of our arguments (unwrapped).
+        -:  318:   *  C++11 [func.bind.bind] p10 bullet 2.
+        -:  319:   */
+        -:  320:  template<typename _Arg>
+        -:  321:    class _Mu<_Arg, true, false>
+        -:  322:    {
+        -:  323:    public:
+        -:  324:      template<typename _CVArg, typename... _Args>
+        -:  325:	_GLIBCXX20_CONSTEXPR
+        -:  326:	auto
+        -:  327:	operator()(_CVArg& __arg,
+        -:  328:		   tuple<_Args...>& __tuple) const volatile
+        -:  329:	-> decltype(__arg(declval<_Args>()...))
+        -:  330:	{
+        -:  331:	  // Construct an index tuple and forward to __call
+        -:  332:	  typedef typename _Build_index_tuple<sizeof...(_Args)>::__type
+        -:  333:	    _Indexes;
+        -:  334:	  return this->__call(__arg, __tuple, _Indexes());
+        -:  335:	}
+        -:  336:
+        -:  337:    private:
+        -:  338:      // Invokes the underlying function object __arg by unpacking all
+        -:  339:      // of the arguments in the tuple.
+        -:  340:      template<typename _CVArg, typename... _Args, std::size_t... _Indexes>
+        -:  341:	_GLIBCXX20_CONSTEXPR
+        -:  342:	auto
+        -:  343:	__call(_CVArg& __arg, tuple<_Args...>& __tuple,
+        -:  344:	       const _Index_tuple<_Indexes...>&) const volatile
+        -:  345:	-> decltype(__arg(declval<_Args>()...))
+        -:  346:	{
+        -:  347:	  return __arg(std::get<_Indexes>(std::move(__tuple))...);
+        -:  348:	}
+        -:  349:    };
+        -:  350:
+        -:  351:  /**
+        -:  352:   *  If the argument is a placeholder for the Nth argument, returns
+        -:  353:   *  a reference to the Nth argument to the bind function object.
+        -:  354:   *  C++11 [func.bind.bind] p10 bullet 3.
+        -:  355:   */
+        -:  356:  template<typename _Arg>
+        -:  357:    class _Mu<_Arg, false, true>
+        -:  358:    {
+        -:  359:    public:
+        -:  360:      template<typename _Tuple>
+        -:  361:	_GLIBCXX20_CONSTEXPR
+        -:  362:	_Safe_tuple_element_t<(is_placeholder<_Arg>::value - 1), _Tuple>&&
+        7:  363:	operator()(const volatile _Arg&, _Tuple& __tuple) const volatile
+        -:  364:	{
+        -:  365:	  return
+        7:  366:	    ::std::get<(is_placeholder<_Arg>::value - 1)>(std::move(__tuple));
+        -:  367:	}
+------------------
+_ZNVKSt3_MuISt12_PlaceholderILi1EELb0ELb1EEclISt5tupleIJRN12AsyncRuntime13ExecutorStateEEEEEONSt9enable_ifIXltLm0EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm0ESB_EE4type4typeERVKS1_RSB_:
+function _ZNVKSt3_MuISt12_PlaceholderILi1EELb0ELb1EEclISt5tupleIJRN12AsyncRuntime13ExecutorStateEEEEEONSt9enable_ifIXltLm0EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm0ESB_EE4type4typeERVKS1_RSB_ called 5 returned 100% blocks executed 100%
+        5:  363:	operator()(const volatile _Arg&, _Tuple& __tuple) const volatile
+        -:  364:	{
+        -:  365:	  return
+        5:  366:	    ::std::get<(is_placeholder<_Arg>::value - 1)>(std::move(__tuple));
+        5:  366-block  0
+call    0 returned 5
+call    1 returned 5
+        -:  367:	}
+------------------
+_ZNVKSt3_MuISt12_PlaceholderILi2EELb0ELb1EEclISt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS5_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEONSt9enable_ifIXltLm1EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm1ESL_EE4type4typeERVKS1_RSL_:
+function _ZNVKSt3_MuISt12_PlaceholderILi2EELb0ELb1EEclISt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS5_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEONSt9enable_ifIXltLm1EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm1ESL_EE4type4typeERVKS1_RSL_ called 1 returned 100% blocks executed 100%
+        1:  363:	operator()(const volatile _Arg&, _Tuple& __tuple) const volatile
+        -:  364:	{
+        -:  365:	  return
+        1:  366:	    ::std::get<(is_placeholder<_Arg>::value - 1)>(std::move(__tuple));
+        1:  366-block  0
+call    0 returned 1
+call    1 returned 1
+        -:  367:	}
+------------------
+_ZNVKSt3_MuISt12_PlaceholderILi1EELb0ELb1EEclISt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS5_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEONSt9enable_ifIXltLm0EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm0ESL_EE4type4typeERVKS1_RSL_:
+function _ZNVKSt3_MuISt12_PlaceholderILi1EELb0ELb1EEclISt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS5_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEONSt9enable_ifIXltLm0EsrSt10tuple_sizeIT_E5valueESt13tuple_elementILm0ESL_EE4type4typeERVKS1_RSL_ called 1 returned 100% blocks executed 100%
+        1:  363:	operator()(const volatile _Arg&, _Tuple& __tuple) const volatile
+        -:  364:	{
+        -:  365:	  return
+        1:  366:	    ::std::get<(is_placeholder<_Arg>::value - 1)>(std::move(__tuple));
+        1:  366-block  0
+call    0 returned 1
+call    1 returned 1
+        -:  367:	}
+------------------
+        -:  368:    };
+        -:  369:
+        -:  370:  /**
+        -:  371:   *  If the argument is just a value, returns a reference to that
+        -:  372:   *  value. The cv-qualifiers on the reference are determined by the caller.
+        -:  373:   *  C++11 [func.bind.bind] p10 bullet 4.
+        -:  374:   */
+        -:  375:  template<typename _Arg>
+        -:  376:    class _Mu<_Arg, false, false>
+        -:  377:    {
+        -:  378:    public:
+        -:  379:      template<typename _CVArg, typename _Tuple>
+        -:  380:	_GLIBCXX20_CONSTEXPR
+        -:  381:	_CVArg&&
+        8:  382:	operator()(_CVArg&& __arg, _Tuple&) const volatile
+        8:  383:	{ return std::forward<_CVArg>(__arg); }
+------------------
+_ZNVKSt3_MuIPN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELb0ELb0EEclIRSC_St5tupleIJRNS0_13ExecutorStateEEEEEOT_SL_RT0_:
+function _ZNVKSt3_MuIPN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELb0ELb0EEclIRSC_St5tupleIJRNS0_13ExecutorStateEEEEEOT_SL_RT0_ called 5 returned 100% blocks executed 100%
+        5:  382:	operator()(_CVArg&& __arg, _Tuple&) const volatile
+        5:  383:	{ return std::forward<_CVArg>(__arg); }
+        5:  383-block  0
+call    0 returned 5
+------------------
+_ZNVKSt3_MuIiLb0ELb0EEclIRiSt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS4_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEOT_SJ_RT0_:
+function _ZNVKSt3_MuIiLb0ELb0EEclIRiSt5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNS4_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEEEEEOT_SJ_RT0_ called 1 returned 100% blocks executed 100%
+        1:  382:	operator()(_CVArg&& __arg, _Tuple&) const volatile
+        1:  383:	{ return std::forward<_CVArg>(__arg); }
+        1:  383-block  0
+call    0 returned 1
+------------------
+_ZNVKSt3_MuINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEELb0ELb0EEclIRS5_St5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNSA_5YieldIS5_EEEEEEOT_SJ_RT0_:
+function _ZNVKSt3_MuINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEELb0ELb0EEclIRS5_St5tupleIJOPN12AsyncRuntime16CoroutineHandlerERNSA_5YieldIS5_EEEEEEOT_SJ_RT0_ called 2 returned 100% blocks executed 100%
+        2:  382:	operator()(_CVArg&& __arg, _Tuple&) const volatile
+        2:  383:	{ return std::forward<_CVArg>(__arg); }
+        2:  383-block  0
+call    0 returned 2
+------------------
+        -:  384:    };
+        -:  385:
+        -:  386:  // std::get<I> for volatile-qualified tuples
+        -:  387:  template<std::size_t _Ind, typename... _Tp>
+        -:  388:    inline auto
+        -:  389:    __volget(volatile tuple<_Tp...>& __tuple)
+        -:  390:    -> __tuple_element_t<_Ind, tuple<_Tp...>> volatile&
+        -:  391:    { return std::get<_Ind>(const_cast<tuple<_Tp...>&>(__tuple)); }
+        -:  392:
+        -:  393:  // std::get<I> for const-volatile-qualified tuples
+        -:  394:  template<std::size_t _Ind, typename... _Tp>
+        -:  395:    inline auto
+        -:  396:    __volget(const volatile tuple<_Tp...>& __tuple)
+        -:  397:    -> __tuple_element_t<_Ind, tuple<_Tp...>> const volatile&
+        -:  398:    { return std::get<_Ind>(const_cast<const tuple<_Tp...>&>(__tuple)); }
+        -:  399:
+        -:  400:  /// Type of the function object returned from bind().
+        -:  401:  template<typename _Signature>
+        -:  402:    class _Bind;
+        -:  403:
+        -:  404:   template<typename _Functor, typename... _Bound_args>
+        -:  405:    class _Bind<_Functor(_Bound_args...)>
+        -:  406:    : public _Weak_result_type<_Functor>
+        -:  407:    {
+        -:  408:      typedef typename _Build_index_tuple<sizeof...(_Bound_args)>::__type
+        -:  409:	_Bound_indexes;
+        -:  410:
+        -:  411:      _Functor _M_f;
+        -:  412:      tuple<_Bound_args...> _M_bound_args;
+        -:  413:
+        -:  414:      // Call unqualified
+        -:  415:      template<typename _Result, typename... _Args, std::size_t... _Indexes>
+        -:  416:	_GLIBCXX20_CONSTEXPR
+        -:  417:	_Result
+        6:  418:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>)
+        -:  419:	{
+       15:  420:	  return std::__invoke(_M_f,
+      15*:  421:	      _Mu<_Bound_args>()(std::get<_Indexes>(_M_bound_args), __args)...
+       5*:  422:	      );
+        -:  423:	}
+------------------
+_ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEE6__callIvJRSC_EJLm0ELm1EEEET_OSt5tupleIJDpT0_EESt12_Index_tupleIJXspT1_EEE:
+function _ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEE6__callIvJRSC_EJLm0ELm1EEEET_OSt5tupleIJDpT0_EESt12_Index_tupleIJXspT1_EEE called 5 returned 100% blocks executed 89%
+        5:  418:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>)
+        -:  419:	{
+       10:  420:	  return std::__invoke(_M_f,
+call    0 returned 5
+call    1 returned 5
+call    2 returned 5
+branch  3 taken 5 (fallthrough)
+branch  4 taken 0 (throw)
+       10:  421:	      _Mu<_Bound_args>()(std::get<_Indexes>(_M_bound_args), __args)...
+        5:  421-block  0
+call    0 returned 5
+call    1 returned 5
+    $$$$$:  421-block  1
+        5:  422:	      );
+        5:  422-block  0
+        5:  422-block  1
+        -:  423:	}
+------------------
+_ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EE6__callIvJOS2_SB_EJLm0ELm1ELm2ELm3ELm4EEEET_OSt5tupleIJDpT0_EESt12_Index_tupleIJXspT1_EEE:
+function _ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EE6__callIvJOS2_SB_EJLm0ELm1ELm2ELm3ELm4EEEET_OSt5tupleIJDpT0_EESt12_Index_tupleIJXspT1_EEE called 1 returned 0% blocks executed 67%
+        1:  418:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>)
+        -:  419:	{
+        5:  420:	  return std::__invoke(_M_f,
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 1
+call    4 returned 1
+call    5 returned 0
+branch  6 taken 0 (fallthrough)
+branch  7 taken 0 (throw)
+       5*:  421:	      _Mu<_Bound_args>()(std::get<_Indexes>(_M_bound_args), __args)...
+        1:  421-block  0
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 1
+call    4 returned 1
+    $$$$$:  421-block  1
+    $$$$$:  421-block  2
+    $$$$$:  421-block  3
+    $$$$$:  421-block  4
+    #####:  422:	      );
+    %%%%%:  422-block  0
+    %%%%%:  422-block  1
+        -:  423:	}
+------------------
+        -:  424:
+        -:  425:      // Call as const
+        -:  426:      template<typename _Result, typename... _Args, std::size_t... _Indexes>
+        -:  427:	_GLIBCXX20_CONSTEXPR
+        -:  428:	_Result
+        -:  429:	__call_c(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>) const
+        -:  430:	{
+        -:  431:	  return std::__invoke(_M_f,
+        -:  432:	      _Mu<_Bound_args>()(std::get<_Indexes>(_M_bound_args), __args)...
+        -:  433:	      );
+        -:  434:	}
+        -:  435:
+        -:  436:      // Call as volatile
+        -:  437:      template<typename _Result, typename... _Args, std::size_t... _Indexes>
+        -:  438:	_Result
+        -:  439:	__call_v(tuple<_Args...>&& __args,
+        -:  440:		 _Index_tuple<_Indexes...>) volatile
+        -:  441:	{
+        -:  442:	  return std::__invoke(_M_f,
+        -:  443:	      _Mu<_Bound_args>()(__volget<_Indexes>(_M_bound_args), __args)...
+        -:  444:	      );
+        -:  445:	}
+        -:  446:
+        -:  447:      // Call as const volatile
+        -:  448:      template<typename _Result, typename... _Args, std::size_t... _Indexes>
+        -:  449:	_Result
+        -:  450:	__call_c_v(tuple<_Args...>&& __args,
+        -:  451:		   _Index_tuple<_Indexes...>) const volatile
+        -:  452:	{
+        -:  453:	  return std::__invoke(_M_f,
+        -:  454:	      _Mu<_Bound_args>()(__volget<_Indexes>(_M_bound_args), __args)...
+        -:  455:	      );
+        -:  456:	}
+        -:  457:
+        -:  458:      template<typename _BoundArg, typename _CallArgs>
+        -:  459:	using _Mu_type = decltype(
+        -:  460:	    _Mu<typename remove_cv<_BoundArg>::type>()(
+        -:  461:	      std::declval<_BoundArg&>(), std::declval<_CallArgs&>()) );
+        -:  462:
+        -:  463:      template<typename _Fn, typename _CallArgs, typename... _BArgs>
+        -:  464:	using _Res_type_impl
+        -:  465:	  = typename result_of< _Fn&(_Mu_type<_BArgs, _CallArgs>&&...) >::type;
+        -:  466:
+        -:  467:      template<typename _CallArgs>
+        -:  468:	using _Res_type = _Res_type_impl<_Functor, _CallArgs, _Bound_args...>;
+        -:  469:
+        -:  470:      template<typename _CallArgs>
+        -:  471:	using __dependent = typename
+        -:  472:	  enable_if<bool(tuple_size<_CallArgs>::value+1), _Functor>::type;
+        -:  473:
+        -:  474:      template<typename _CallArgs, template<class> class __cv_quals>
+        -:  475:	using _Res_type_cv = _Res_type_impl<
+        -:  476:	  typename __cv_quals<__dependent<_CallArgs>>::type,
+        -:  477:	  _CallArgs,
+        -:  478:	  typename __cv_quals<_Bound_args>::type...>;
+        -:  479:
+        -:  480:     public:
+        -:  481:      template<typename... _Args>
+        -:  482:	explicit _GLIBCXX20_CONSTEXPR
+        -:  483:	_Bind(const _Functor& __f, _Args&&... __args)
+        -:  484:	: _M_f(__f), _M_bound_args(std::forward<_Args>(__args)...)
+        -:  485:	{ }
+        -:  486:
+        -:  487:      template<typename... _Args>
+        -:  488:	explicit _GLIBCXX20_CONSTEXPR
+        6:  489:	_Bind(_Functor&& __f, _Args&&... __args)
+        6:  490:	: _M_f(std::move(__f)), _M_bound_args(std::forward<_Args>(__args)...)
+        6:  491:	{ }
+------------------
+_ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEEC2IJSH_RKSJ_EEEOSG_DpOT_:
+function _ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEEC2IJSH_RKSJ_EEEOSG_DpOT_ called 5 returned 100% blocks executed 100%
+        5:  489:	_Bind(_Functor&& __f, _Args&&... __args)
+        5:  490:	: _M_f(std::move(__f)), _M_bound_args(std::forward<_Args>(__args)...)
+        5:  490-block  0
+call    0 returned 5
+call    1 returned 5
+call    2 returned 5
+call    3 returned 5
+        5:  491:	{ }
+------------------
+_ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEC2IJRKSH_RKSI_RS9_iSQ_EEEOSF_DpOT_:
+function _ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEC2IJRKSH_RKSI_RS9_iSQ_EEEOSF_DpOT_ called 1 returned 100% blocks executed 100%
+        1:  489:	_Bind(_Functor&& __f, _Args&&... __args)
+        1:  490:	: _M_f(std::move(__f)), _M_bound_args(std::forward<_Args>(__args)...)
+        1:  490-block  0
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 1
+call    4 returned 1
+call    5 returned 1
+call    6 returned 1
+        1:  491:	{ }
+------------------
+        -:  492:
+function _ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEC2ERKSK_ called 1 returned 100% blocks executed 100%
+        1:  493:      _Bind(const _Bind&) = default;
+        1:  493-block  0
+call    0 returned 1
+function _ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEC2EOSK_ called 1 returned 100% blocks executed 100%
+        1:  494:      _Bind(_Bind&&) = default;
+        1:  494-block  0
+call    0 returned 1
+        -:  495:
+        -:  496:      // Call unqualified
+        -:  497:      template<typename... _Args,
+        -:  498:	       typename _Result = _Res_type<tuple<_Args...>>>
+        -:  499:	_GLIBCXX20_CONSTEXPR
+        -:  500:	_Result
+        6:  501:	operator()(_Args&&... __args)
+        -:  502:	{
+       6*:  503:	  return this->__call<_Result>(
+        -:  504:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+       5*:  505:	      _Bound_indexes());
+        -:  506:	}
+------------------
+_ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEEclIJRSC_EvEET0_DpOT_:
+function _ZNSt5_BindIFMN12AsyncRuntime13BaseCoroutineINS0_19BasicFixedSizeStackINS0_11StackTraitsEEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEFvRKNS0_13ExecutorStateEEPSB_St12_PlaceholderILi1EEEEclIJRSC_EvEET0_DpOT_ called 5 returned 100% blocks executed 100%
+        5:  501:	operator()(_Args&&... __args)
+        -:  502:	{
+        5:  503:	  return this->__call<_Result>(
+        5:  503-block  0
+call    0 returned 5
+call    1 returned 5
+call    2 returned 5
+branch  3 taken 5 (fallthrough)
+branch  4 taken 0 (throw)
+        -:  504:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        5:  505:	      _Bound_indexes());
+        5:  505-block  0
+        5:  505-block  1
+        -:  506:	}
+------------------
+_ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEclIJS2_SB_EvEET0_DpOT_:
+function _ZNSt5_BindIFPFvPN12AsyncRuntime16CoroutineHandlerERNS0_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS9_iSD_ESt12_PlaceholderILi1EESG_ILi2EES9_iS9_EEclIJS2_SB_EvEET0_DpOT_ called 1 returned 0% blocks executed 71%
+        1:  501:	operator()(_Args&&... __args)
+        -:  502:	{
+       1*:  503:	  return this->__call<_Result>(
+        1:  503-block  0
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 0
+branch  4 taken 0 (fallthrough)
+branch  5 taken 0 (throw)
+        -:  504:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+    #####:  505:	      _Bound_indexes());
+    %%%%%:  505-block  0
+    %%%%%:  505-block  1
+        -:  506:	}
+------------------
+        -:  507:
+        -:  508:      // Call as const
+        -:  509:      template<typename... _Args,
+        -:  510:	       typename _Result = _Res_type_cv<tuple<_Args...>, add_const>>
+        -:  511:	_GLIBCXX20_CONSTEXPR
+        -:  512:	_Result
+        -:  513:	operator()(_Args&&... __args) const
+        -:  514:	{
+        -:  515:	  return this->__call_c<_Result>(
+        -:  516:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  517:	      _Bound_indexes());
+        -:  518:	}
+        -:  519:
+        -:  520:#if __cplusplus > 201402L
+        -:  521:# define _GLIBCXX_DEPR_BIND \
+        -:  522:      [[deprecated("std::bind does not support volatile in C++17")]]
+        -:  523:#else
+        -:  524:# define _GLIBCXX_DEPR_BIND
+        -:  525:#endif
+        -:  526:      // Call as volatile
+        -:  527:      template<typename... _Args,
+        -:  528:	       typename _Result = _Res_type_cv<tuple<_Args...>, add_volatile>>
+        -:  529:	_GLIBCXX_DEPR_BIND
+        -:  530:	_Result
+        -:  531:	operator()(_Args&&... __args) volatile
+        -:  532:	{
+        -:  533:	  return this->__call_v<_Result>(
+        -:  534:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  535:	      _Bound_indexes());
+        -:  536:	}
+        -:  537:
+        -:  538:      // Call as const volatile
+        -:  539:      template<typename... _Args,
+        -:  540:	       typename _Result = _Res_type_cv<tuple<_Args...>, add_cv>>
+        -:  541:	_GLIBCXX_DEPR_BIND
+        -:  542:	_Result
+        -:  543:	operator()(_Args&&... __args) const volatile
+        -:  544:	{
+        -:  545:	  return this->__call_c_v<_Result>(
+        -:  546:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  547:	      _Bound_indexes());
+        -:  548:	}
+        -:  549:    };
+        -:  550:
+        -:  551:  /// Type of the function object returned from bind<R>().
+        -:  552:  template<typename _Result, typename _Signature>
+        -:  553:    class _Bind_result;
+        -:  554:
+        -:  555:  template<typename _Result, typename _Functor, typename... _Bound_args>
+        -:  556:    class _Bind_result<_Result, _Functor(_Bound_args...)>
+        -:  557:    {
+        -:  558:      typedef typename _Build_index_tuple<sizeof...(_Bound_args)>::__type
+        -:  559:	_Bound_indexes;
+        -:  560:
+        -:  561:      _Functor _M_f;
+        -:  562:      tuple<_Bound_args...> _M_bound_args;
+        -:  563:
+        -:  564:      // Call unqualified
+        -:  565:      template<typename _Res, typename... _Args, std::size_t... _Indexes>
+        -:  566:	_GLIBCXX20_CONSTEXPR
+        -:  567:	_Res
+        -:  568:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>)
+        -:  569:	{
+        -:  570:	  return std::__invoke_r<_Res>(_M_f, _Mu<_Bound_args>()
+        -:  571:		      (std::get<_Indexes>(_M_bound_args), __args)...);
+        -:  572:	}
+        -:  573:
+        -:  574:      // Call as const
+        -:  575:      template<typename _Res, typename... _Args, std::size_t... _Indexes>
+        -:  576:	_GLIBCXX20_CONSTEXPR
+        -:  577:	_Res
+        -:  578:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>) const
+        -:  579:	{
+        -:  580:	  return std::__invoke_r<_Res>(_M_f, _Mu<_Bound_args>()
+        -:  581:		      (std::get<_Indexes>(_M_bound_args), __args)...);
+        -:  582:	}
+        -:  583:
+        -:  584:      // Call as volatile
+        -:  585:      template<typename _Res, typename... _Args, std::size_t... _Indexes>
+        -:  586:	_GLIBCXX20_CONSTEXPR
+        -:  587:	_Res
+        -:  588:	__call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>) volatile
+        -:  589:	{
+        -:  590:	  return std::__invoke_r<_Res>(_M_f, _Mu<_Bound_args>()
+        -:  591:		      (__volget<_Indexes>(_M_bound_args), __args)...);
+        -:  592:	}
+        -:  593:
+        -:  594:      // Call as const volatile
+        -:  595:      template<typename _Res, typename... _Args, std::size_t... _Indexes>
+        -:  596:	_GLIBCXX20_CONSTEXPR
+        -:  597:	_Res
+        -:  598:	__call(tuple<_Args...>&& __args,
+        -:  599:	       _Index_tuple<_Indexes...>) const volatile
+        -:  600:	{
+        -:  601:	  return std::__invoke_r<_Res>(_M_f, _Mu<_Bound_args>()
+        -:  602:		      (__volget<_Indexes>(_M_bound_args), __args)...);
+        -:  603:	}
+        -:  604:
+        -:  605:    public:
+        -:  606:      typedef _Result result_type;
+        -:  607:
+        -:  608:      template<typename... _Args>
+        -:  609:	explicit _GLIBCXX20_CONSTEXPR
+        -:  610:	_Bind_result(const _Functor& __f, _Args&&... __args)
+        -:  611:	: _M_f(__f), _M_bound_args(std::forward<_Args>(__args)...)
+        -:  612:	{ }
+        -:  613:
+        -:  614:      template<typename... _Args>
+        -:  615:	explicit _GLIBCXX20_CONSTEXPR
+        -:  616:	_Bind_result(_Functor&& __f, _Args&&... __args)
+        -:  617:	: _M_f(std::move(__f)), _M_bound_args(std::forward<_Args>(__args)...)
+        -:  618:	{ }
+        -:  619:
+        -:  620:      _Bind_result(const _Bind_result&) = default;
+        -:  621:      _Bind_result(_Bind_result&&) = default;
+        -:  622:
+        -:  623:      // Call unqualified
+        -:  624:      template<typename... _Args>
+        -:  625:	_GLIBCXX20_CONSTEXPR
+        -:  626:	result_type
+        -:  627:	operator()(_Args&&... __args)
+        -:  628:	{
+        -:  629:	  return this->__call<_Result>(
+        -:  630:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  631:	      _Bound_indexes());
+        -:  632:	}
+        -:  633:
+        -:  634:      // Call as const
+        -:  635:      template<typename... _Args>
+        -:  636:	_GLIBCXX20_CONSTEXPR
+        -:  637:	result_type
+        -:  638:	operator()(_Args&&... __args) const
+        -:  639:	{
+        -:  640:	  return this->__call<_Result>(
+        -:  641:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  642:	      _Bound_indexes());
+        -:  643:	}
+        -:  644:
+        -:  645:      // Call as volatile
+        -:  646:      template<typename... _Args>
+        -:  647:	_GLIBCXX_DEPR_BIND
+        -:  648:	result_type
+        -:  649:	operator()(_Args&&... __args) volatile
+        -:  650:	{
+        -:  651:	  return this->__call<_Result>(
+        -:  652:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  653:	      _Bound_indexes());
+        -:  654:	}
+        -:  655:
+        -:  656:      // Call as const volatile
+        -:  657:      template<typename... _Args>
+        -:  658:	_GLIBCXX_DEPR_BIND
+        -:  659:	result_type
+        -:  660:	operator()(_Args&&... __args) const volatile
+        -:  661:	{
+        -:  662:	  return this->__call<_Result>(
+        -:  663:	      std::forward_as_tuple(std::forward<_Args>(__args)...),
+        -:  664:	      _Bound_indexes());
+        -:  665:	}
+        -:  666:    };
+        -:  667:#undef _GLIBCXX_DEPR_BIND
+        -:  668:
+        -:  669:  /**
+        -:  670:   *  @brief Class template _Bind is always a bind expression.
+        -:  671:   *  @ingroup binders
+        -:  672:   */
+        -:  673:  template<typename _Signature>
+        -:  674:    struct is_bind_expression<_Bind<_Signature> >
+        -:  675:    : public true_type { };
+        -:  676:
+        -:  677:  /**
+        -:  678:   *  @brief Class template _Bind is always a bind expression.
+        -:  679:   *  @ingroup binders
+        -:  680:   */
+        -:  681:  template<typename _Signature>
+        -:  682:    struct is_bind_expression<const _Bind<_Signature> >
+        -:  683:    : public true_type { };
+        -:  684:
+        -:  685:  /**
+        -:  686:   *  @brief Class template _Bind is always a bind expression.
+        -:  687:   *  @ingroup binders
+        -:  688:   */
+        -:  689:  template<typename _Signature>
+        -:  690:    struct is_bind_expression<volatile _Bind<_Signature> >
+        -:  691:    : public true_type { };
+        -:  692:
+        -:  693:  /**
+        -:  694:   *  @brief Class template _Bind is always a bind expression.
+        -:  695:   *  @ingroup binders
+        -:  696:   */
+        -:  697:  template<typename _Signature>
+        -:  698:    struct is_bind_expression<const volatile _Bind<_Signature>>
+        -:  699:    : public true_type { };
+        -:  700:
+        -:  701:  /**
+        -:  702:   *  @brief Class template _Bind_result is always a bind expression.
+        -:  703:   *  @ingroup binders
+        -:  704:   */
+        -:  705:  template<typename _Result, typename _Signature>
+        -:  706:    struct is_bind_expression<_Bind_result<_Result, _Signature>>
+        -:  707:    : public true_type { };
+        -:  708:
+        -:  709:  /**
+        -:  710:   *  @brief Class template _Bind_result is always a bind expression.
+        -:  711:   *  @ingroup binders
+        -:  712:   */
+        -:  713:  template<typename _Result, typename _Signature>
+        -:  714:    struct is_bind_expression<const _Bind_result<_Result, _Signature>>
+        -:  715:    : public true_type { };
+        -:  716:
+        -:  717:  /**
+        -:  718:   *  @brief Class template _Bind_result is always a bind expression.
+        -:  719:   *  @ingroup binders
+        -:  720:   */
+        -:  721:  template<typename _Result, typename _Signature>
+        -:  722:    struct is_bind_expression<volatile _Bind_result<_Result, _Signature>>
+        -:  723:    : public true_type { };
+        -:  724:
+        -:  725:  /**
+        -:  726:   *  @brief Class template _Bind_result is always a bind expression.
+        -:  727:   *  @ingroup binders
+        -:  728:   */
+        -:  729:  template<typename _Result, typename _Signature>
+        -:  730:    struct is_bind_expression<const volatile _Bind_result<_Result, _Signature>>
+        -:  731:    : public true_type { };
+        -:  732:
+        -:  733:  template<typename _Func, typename... _BoundArgs>
+        -:  734:    struct _Bind_check_arity { };
+        -:  735:
+        -:  736:  template<typename _Ret, typename... _Args, typename... _BoundArgs>
+        -:  737:    struct _Bind_check_arity<_Ret (*)(_Args...), _BoundArgs...>
+        -:  738:    {
+        -:  739:      static_assert(sizeof...(_BoundArgs) == sizeof...(_Args),
+        -:  740:                   "Wrong number of arguments for function");
+        -:  741:    };
+        -:  742:
+        -:  743:  template<typename _Ret, typename... _Args, typename... _BoundArgs>
+        -:  744:    struct _Bind_check_arity<_Ret (*)(_Args......), _BoundArgs...>
+        -:  745:    {
+        -:  746:      static_assert(sizeof...(_BoundArgs) >= sizeof...(_Args),
+        -:  747:                   "Wrong number of arguments for function");
+        -:  748:    };
+        -:  749:
+        -:  750:  template<typename _Tp, typename _Class, typename... _BoundArgs>
+        -:  751:    struct _Bind_check_arity<_Tp _Class::*, _BoundArgs...>
+        -:  752:    {
+        -:  753:      using _Arity = typename _Mem_fn<_Tp _Class::*>::_Arity;
+        -:  754:      using _Varargs = typename _Mem_fn<_Tp _Class::*>::_Varargs;
+        -:  755:      static_assert(_Varargs::value
+        -:  756:		    ? sizeof...(_BoundArgs) >= _Arity::value + 1
+        -:  757:		    : sizeof...(_BoundArgs) == _Arity::value + 1,
+        -:  758:		    "Wrong number of arguments for pointer-to-member");
+        -:  759:    };
+        -:  760:
+        -:  761:  // Trait type used to remove std::bind() from overload set via SFINAE
+        -:  762:  // when first argument has integer type, so that std::bind() will
+        -:  763:  // not be a better match than ::bind() from the BSD Sockets API.
+        -:  764:  template<typename _Tp, typename _Tp2 = typename decay<_Tp>::type>
+        -:  765:    using __is_socketlike = __or_<is_integral<_Tp2>, is_enum<_Tp2>>;
+        -:  766:
+        -:  767:  template<bool _SocketLike, typename _Func, typename... _BoundArgs>
+        -:  768:    struct _Bind_helper
+        -:  769:    : _Bind_check_arity<typename decay<_Func>::type, _BoundArgs...>
+        -:  770:    {
+        -:  771:      typedef typename decay<_Func>::type __func_type;
+        -:  772:      typedef _Bind<__func_type(typename decay<_BoundArgs>::type...)> type;
+        -:  773:    };
+        -:  774:
+        -:  775:  // Partial specialization for is_socketlike == true, does not define
+        -:  776:  // nested type so std::bind() will not participate in overload resolution
+        -:  777:  // when the first argument might be a socket file descriptor.
+        -:  778:  template<typename _Func, typename... _BoundArgs>
+        -:  779:    struct _Bind_helper<true, _Func, _BoundArgs...>
+        -:  780:    { };
+        -:  781:
+        -:  782:  /**
+        -:  783:   *  @brief Function template for std::bind.
+        -:  784:   *  @ingroup binders
+        -:  785:   */
+        -:  786:  template<typename _Func, typename... _BoundArgs>
+        -:  787:    inline _GLIBCXX20_CONSTEXPR typename
+        -:  788:    _Bind_helper<__is_socketlike<_Func>::value, _Func, _BoundArgs...>::type
+        6:  789:    bind(_Func&& __f, _BoundArgs&&... __args)
+        -:  790:    {
+        -:  791:      typedef _Bind_helper<false, _Func, _BoundArgs...> __helper_type;
+        -:  792:      return typename __helper_type::type(std::forward<_Func>(__f),
+        6:  793:					  std::forward<_BoundArgs>(__args)...);
+        -:  794:    }
+        -:  795:
+        -:  796:  template<typename _Result, typename _Func, typename... _BoundArgs>
+        -:  797:    struct _Bindres_helper
+        -:  798:    : _Bind_check_arity<typename decay<_Func>::type, _BoundArgs...>
+        -:  799:    {
+        -:  800:      typedef typename decay<_Func>::type __functor_type;
+        -:  801:      typedef _Bind_result<_Result,
+        -:  802:			   __functor_type(typename decay<_BoundArgs>::type...)>
+        -:  803:	type;
+        -:  804:    };
+        -:  805:
+        -:  806:  /**
+        -:  807:   *  @brief Function template for std::bind<R>.
+        -:  808:   *  @ingroup binders
+        -:  809:   */
+        -:  810:  template<typename _Result, typename _Func, typename... _BoundArgs>
+        -:  811:    inline _GLIBCXX20_CONSTEXPR
+        -:  812:    typename _Bindres_helper<_Result, _Func, _BoundArgs...>::type
+        -:  813:    bind(_Func&& __f, _BoundArgs&&... __args)
+        -:  814:    {
+        -:  815:      typedef _Bindres_helper<_Result, _Func, _BoundArgs...> __helper_type;
+        -:  816:      return typename __helper_type::type(std::forward<_Func>(__f),
+        -:  817:					  std::forward<_BoundArgs>(__args)...);
+        -:  818:    }
+        -:  819:
+        -:  820:#if __cplusplus > 201703L
+        -:  821:#define __cpp_lib_bind_front 201907L
+        -:  822:
+        -:  823:  template<typename _Fd, typename... _BoundArgs>
+        -:  824:    struct _Bind_front
+        -:  825:    {
+        -:  826:      static_assert(is_move_constructible_v<_Fd>);
+        -:  827:      static_assert((is_move_constructible_v<_BoundArgs> && ...));
+        -:  828:
+        -:  829:      // First parameter is to ensure this constructor is never used
+        -:  830:      // instead of the copy/move constructor.
+        -:  831:      template<typename _Fn, typename... _Args>
+        -:  832:	explicit constexpr
+        -:  833:	_Bind_front(int, _Fn&& __fn, _Args&&... __args)
+        -:  834:	noexcept(__and_<is_nothrow_constructible<_Fd, _Fn>,
+        -:  835:			is_nothrow_constructible<_BoundArgs, _Args>...>::value)
+        -:  836:	: _M_fd(std::forward<_Fn>(__fn)),
+        -:  837:	  _M_bound_args(std::forward<_Args>(__args)...)
+        -:  838:	{ static_assert(sizeof...(_Args) == sizeof...(_BoundArgs)); }
+        -:  839:
+        -:  840:      _Bind_front(const _Bind_front&) = default;
+        -:  841:      _Bind_front(_Bind_front&&) = default;
+        -:  842:      _Bind_front& operator=(const _Bind_front&) = default;
+        -:  843:      _Bind_front& operator=(_Bind_front&&) = default;
+        -:  844:      ~_Bind_front() = default;
+        -:  845:
+        -:  846:      template<typename... _CallArgs>
+        -:  847:	constexpr
+        -:  848:	invoke_result_t<_Fd&, _BoundArgs&..., _CallArgs...>
+        -:  849:	operator()(_CallArgs&&... __call_args) &
+        -:  850:	noexcept(is_nothrow_invocable_v<_Fd&, _BoundArgs&..., _CallArgs...>)
+        -:  851:	{
+        -:  852:	  return _S_call(*this, _BoundIndices(),
+        -:  853:	      std::forward<_CallArgs>(__call_args)...);
+        -:  854:	}
+        -:  855:
+        -:  856:      template<typename... _CallArgs>
+        -:  857:	constexpr
+        -:  858:	invoke_result_t<const _Fd&, const _BoundArgs&..., _CallArgs...>
+        -:  859:	operator()(_CallArgs&&... __call_args) const &
+        -:  860:	noexcept(is_nothrow_invocable_v<const _Fd&, const _BoundArgs&...,
+        -:  861:					_CallArgs...>)
+        -:  862:	{
+        -:  863:	  return _S_call(*this, _BoundIndices(),
+        -:  864:	      std::forward<_CallArgs>(__call_args)...);
+        -:  865:	}
+        -:  866:
+        -:  867:      template<typename... _CallArgs>
+        -:  868:	constexpr
+        -:  869:	invoke_result_t<_Fd, _BoundArgs..., _CallArgs...>
+        -:  870:	operator()(_CallArgs&&... __call_args) &&
+        -:  871:	noexcept(is_nothrow_invocable_v<_Fd, _BoundArgs..., _CallArgs...>)
+        -:  872:	{
+        -:  873:	  return _S_call(std::move(*this), _BoundIndices(),
+        -:  874:	      std::forward<_CallArgs>(__call_args)...);
+        -:  875:	}
+        -:  876:
+        -:  877:      template<typename... _CallArgs>
+        -:  878:	constexpr
+        -:  879:	invoke_result_t<const _Fd, const _BoundArgs..., _CallArgs...>
+        -:  880:	operator()(_CallArgs&&... __call_args) const &&
+        -:  881:	noexcept(is_nothrow_invocable_v<const _Fd, const _BoundArgs...,
+        -:  882:					_CallArgs...>)
+        -:  883:	{
+        -:  884:	  return _S_call(std::move(*this), _BoundIndices(),
+        -:  885:	      std::forward<_CallArgs>(__call_args)...);
+        -:  886:	}
+        -:  887:
+        -:  888:    private:
+        -:  889:      using _BoundIndices = index_sequence_for<_BoundArgs...>;
+        -:  890:
+        -:  891:      template<typename _Tp, size_t... _Ind, typename... _CallArgs>
+        -:  892:	static constexpr
+        -:  893:	decltype(auto)
+        -:  894:	_S_call(_Tp&& __g, index_sequence<_Ind...>, _CallArgs&&... __call_args)
+        -:  895:	{
+        -:  896:	  return std::invoke(std::forward<_Tp>(__g)._M_fd,
+        -:  897:	      std::get<_Ind>(std::forward<_Tp>(__g)._M_bound_args)...,
+        -:  898:	      std::forward<_CallArgs>(__call_args)...);
+        -:  899:	}
+        -:  900:
+        -:  901:      _Fd _M_fd;
+        -:  902:      std::tuple<_BoundArgs...> _M_bound_args;
+        -:  903:    };
+        -:  904:
+        -:  905:  template<typename _Fn, typename... _Args>
+        -:  906:    using _Bind_front_t
+        -:  907:      = _Bind_front<decay_t<_Fn>, decay_t<_Args>...>;
+        -:  908:
+        -:  909:  template<typename _Fn, typename... _Args>
+        -:  910:    constexpr _Bind_front_t<_Fn, _Args...>
+        -:  911:    bind_front(_Fn&& __fn, _Args&&... __args)
+        -:  912:    noexcept(is_nothrow_constructible_v<_Bind_front_t<_Fn, _Args...>,
+        -:  913:					int, _Fn, _Args...>)
+        -:  914:    {
+        -:  915:      return _Bind_front_t<_Fn, _Args...>(0, std::forward<_Fn>(__fn),
+        -:  916:					  std::forward<_Args>(__args)...);
+        -:  917:    }
+        -:  918:#endif
+        -:  919:
+        -:  920:#if __cplusplus >= 201402L
+        -:  921:  /// Generalized negator.
+        -:  922:  template<typename _Fn>
+        -:  923:    class _Not_fn
+        -:  924:    {
+        -:  925:      template<typename _Fn2, typename... _Args>
+        -:  926:	using __inv_res_t = typename __invoke_result<_Fn2, _Args...>::type;
+        -:  927:
+        -:  928:      template<typename _Tp>
+        -:  929:	static decltype(!std::declval<_Tp>())
+        -:  930:	_S_not() noexcept(noexcept(!std::declval<_Tp>()));
+        -:  931:
+        -:  932:    public:
+        -:  933:      template<typename _Fn2>
+        -:  934:	constexpr
+        -:  935:	_Not_fn(_Fn2&& __fn, int)
+        -:  936:	: _M_fn(std::forward<_Fn2>(__fn)) { }
+        -:  937:
+        -:  938:      _Not_fn(const _Not_fn& __fn) = default;
+        -:  939:      _Not_fn(_Not_fn&& __fn) = default;
+        -:  940:      ~_Not_fn() = default;
+        -:  941:
+        -:  942:      // Macro to define operator() with given cv-qualifiers ref-qualifiers,
+        -:  943:      // forwarding _M_fn and the function arguments with the same qualifiers,
+        -:  944:      // and deducing the return type and exception-specification.
+        -:  945:#define _GLIBCXX_NOT_FN_CALL_OP( _QUALS )				\
+        -:  946:      template<typename... _Args>					\
+        -:  947:	_GLIBCXX20_CONSTEXPR						\
+        -:  948:	decltype(_S_not<__inv_res_t<_Fn _QUALS, _Args...>>())		\
+        -:  949:	operator()(_Args&&... __args) _QUALS				\
+        -:  950:	noexcept(__is_nothrow_invocable<_Fn _QUALS, _Args...>::value	\
+        -:  951:	    && noexcept(_S_not<__inv_res_t<_Fn _QUALS, _Args...>>()))	\
+        -:  952:	{								\
+        -:  953:	  return !std::__invoke(std::forward< _Fn _QUALS >(_M_fn),	\
+        -:  954:				std::forward<_Args>(__args)...);	\
+        -:  955:	}
+        -:  956:      _GLIBCXX_NOT_FN_CALL_OP( & )
+        -:  957:      _GLIBCXX_NOT_FN_CALL_OP( const & )
+        -:  958:      _GLIBCXX_NOT_FN_CALL_OP( && )
+        -:  959:      _GLIBCXX_NOT_FN_CALL_OP( const && )
+        -:  960:#undef _GLIBCXX_NOT_FN_CALL_OP
+        -:  961:
+        -:  962:    private:
+        -:  963:      _Fn _M_fn;
+        -:  964:    };
+        -:  965:
+        -:  966:  template<typename _Tp, typename _Pred>
+        -:  967:    struct __is_byte_like : false_type { };
+        -:  968:
+        -:  969:  template<typename _Tp>
+        -:  970:    struct __is_byte_like<_Tp, equal_to<_Tp>>
+        -:  971:    : __bool_constant<sizeof(_Tp) == 1 && is_integral<_Tp>::value> { };
+        -:  972:
+        -:  973:  template<typename _Tp>
+        -:  974:    struct __is_byte_like<_Tp, equal_to<void>>
+        -:  975:    : __bool_constant<sizeof(_Tp) == 1 && is_integral<_Tp>::value> { };
+        -:  976:
+        -:  977:#if __cplusplus >= 201703L
+        -:  978:  // Declare std::byte (full definition is in <cstddef>).
+        -:  979:  enum class byte : unsigned char;
+        -:  980:
+        -:  981:  template<>
+        -:  982:    struct __is_byte_like<byte, equal_to<byte>>
+        -:  983:    : true_type { };
+        -:  984:
+        -:  985:  template<>
+        -:  986:    struct __is_byte_like<byte, equal_to<void>>
+        -:  987:    : true_type { };
+        -:  988:
+        -:  989:#define __cpp_lib_not_fn 201603
+        -:  990:  /// [func.not_fn] Function template not_fn
+        -:  991:  template<typename _Fn>
+        -:  992:    _GLIBCXX20_CONSTEXPR
+        -:  993:    inline auto
+        -:  994:    not_fn(_Fn&& __fn)
+        -:  995:    noexcept(std::is_nothrow_constructible<std::decay_t<_Fn>, _Fn&&>::value)
+        -:  996:    {
+        -:  997:      return _Not_fn<std::decay_t<_Fn>>{std::forward<_Fn>(__fn), 0};
+        -:  998:    }
+        -:  999:
+        -: 1000:  // Searchers
+        -: 1001:#define __cpp_lib_boyer_moore_searcher 201603
+        -: 1002:
+        -: 1003:  template<typename _ForwardIterator1, typename _BinaryPredicate = equal_to<>>
+        -: 1004:    class default_searcher
+        -: 1005:    {
+        -: 1006:    public:
+        -: 1007:      _GLIBCXX20_CONSTEXPR
+        -: 1008:      default_searcher(_ForwardIterator1 __pat_first,
+        -: 1009:		       _ForwardIterator1 __pat_last,
+        -: 1010:		       _BinaryPredicate __pred = _BinaryPredicate())
+        -: 1011:      : _M_m(__pat_first, __pat_last, std::move(__pred))
+        -: 1012:      { }
+        -: 1013:
+        -: 1014:      template<typename _ForwardIterator2>
+        -: 1015:	_GLIBCXX20_CONSTEXPR
+        -: 1016:	pair<_ForwardIterator2, _ForwardIterator2>
+        -: 1017:	operator()(_ForwardIterator2 __first, _ForwardIterator2 __last) const
+        -: 1018:	{
+        -: 1019:	  _ForwardIterator2 __first_ret =
+        -: 1020:	    std::search(__first, __last, std::get<0>(_M_m), std::get<1>(_M_m),
+        -: 1021:			std::get<2>(_M_m));
+        -: 1022:	  auto __ret = std::make_pair(__first_ret, __first_ret);
+        -: 1023:	  if (__ret.first != __last)
+        -: 1024:	    std::advance(__ret.second, std::distance(std::get<0>(_M_m),
+        -: 1025:						     std::get<1>(_M_m)));
+        -: 1026:	  return __ret;
+        -: 1027:	}
+        -: 1028:
+        -: 1029:    private:
+        -: 1030:      tuple<_ForwardIterator1, _ForwardIterator1, _BinaryPredicate> _M_m;
+        -: 1031:    };
+        -: 1032:
+        -: 1033:  template<typename _Key, typename _Tp, typename _Hash, typename _Pred>
+        -: 1034:    struct __boyer_moore_map_base
+        -: 1035:    {
+        -: 1036:      template<typename _RAIter>
+        -: 1037:	__boyer_moore_map_base(_RAIter __pat, size_t __patlen,
+        -: 1038:			       _Hash&& __hf, _Pred&& __pred)
+        -: 1039:	: _M_bad_char{ __patlen, std::move(__hf), std::move(__pred) }
+        -: 1040:	{
+        -: 1041:	  if (__patlen > 0)
+        -: 1042:	    for (__diff_type __i = 0; __i < __patlen - 1; ++__i)
+        -: 1043:	      _M_bad_char[__pat[__i]] = __patlen - 1 - __i;
+        -: 1044:	}
+        -: 1045:
+        -: 1046:      using __diff_type = _Tp;
+        -: 1047:
+        -: 1048:      __diff_type
+        -: 1049:      _M_lookup(_Key __key, __diff_type __not_found) const
+        -: 1050:      {
+        -: 1051:	auto __iter = _M_bad_char.find(__key);
+        -: 1052:	if (__iter == _M_bad_char.end())
+        -: 1053:	  return __not_found;
+        -: 1054:	return __iter->second;
+        -: 1055:      }
+        -: 1056:
+        -: 1057:      _Pred
+        -: 1058:      _M_pred() const { return _M_bad_char.key_eq(); }
+        -: 1059:
+        -: 1060:      _GLIBCXX_STD_C::unordered_map<_Key, _Tp, _Hash, _Pred> _M_bad_char;
+        -: 1061:    };
+        -: 1062:
+        -: 1063:  template<typename _Tp, size_t _Len, typename _Pred>
+        -: 1064:    struct __boyer_moore_array_base
+        -: 1065:    {
+        -: 1066:      template<typename _RAIter, typename _Unused>
+        -: 1067:	__boyer_moore_array_base(_RAIter __pat, size_t __patlen,
+        -: 1068:				 _Unused&&, _Pred&& __pred)
+        -: 1069:	: _M_bad_char{ array<_Tp, _Len>{}, std::move(__pred) }
+        -: 1070:	{
+        -: 1071:	  std::get<0>(_M_bad_char).fill(__patlen);
+        -: 1072:	  if (__patlen > 0)
+        -: 1073:	    for (__diff_type __i = 0; __i < __patlen - 1; ++__i)
+        -: 1074:	      {
+        -: 1075:		auto __ch = __pat[__i];
+        -: 1076:		using _UCh = make_unsigned_t<decltype(__ch)>;
+        -: 1077:		auto __uch = static_cast<_UCh>(__ch);
+        -: 1078:		std::get<0>(_M_bad_char)[__uch] = __patlen - 1 - __i;
+        -: 1079:	      }
+        -: 1080:	}
+        -: 1081:
+        -: 1082:      using __diff_type = _Tp;
+        -: 1083:
+        -: 1084:      template<typename _Key>
+        -: 1085:	__diff_type
+        -: 1086:	_M_lookup(_Key __key, __diff_type __not_found) const
+        -: 1087:	{
+        -: 1088:	  auto __ukey = static_cast<make_unsigned_t<_Key>>(__key);
+        -: 1089:	  if (__ukey >= _Len)
+        -: 1090:	    return __not_found;
+        -: 1091:	  return std::get<0>(_M_bad_char)[__ukey];
+        -: 1092:	}
+        -: 1093:
+        -: 1094:      const _Pred&
+        -: 1095:      _M_pred() const { return std::get<1>(_M_bad_char); }
+        -: 1096:
+        -: 1097:      tuple<array<_Tp, _Len>, _Pred> _M_bad_char;
+        -: 1098:    };
+        -: 1099:
+        -: 1100:  // Use __boyer_moore_array_base when pattern consists of narrow characters
+        -: 1101:  // (or std::byte) and uses std::equal_to as the predicate.
+        -: 1102:  template<typename _RAIter, typename _Hash, typename _Pred,
+        -: 1103:           typename _Val = typename iterator_traits<_RAIter>::value_type,
+        -: 1104:	   typename _Diff = typename iterator_traits<_RAIter>::difference_type>
+        -: 1105:    using __boyer_moore_base_t
+        -: 1106:      = conditional_t<__is_byte_like<_Val, _Pred>::value,
+        -: 1107:		      __boyer_moore_array_base<_Diff, 256, _Pred>,
+        -: 1108:		      __boyer_moore_map_base<_Val, _Diff, _Hash, _Pred>>;
+        -: 1109:
+        -: 1110:  template<typename _RAIter, typename _Hash
+        -: 1111:	     = hash<typename iterator_traits<_RAIter>::value_type>,
+        -: 1112:	   typename _BinaryPredicate = equal_to<>>
+        -: 1113:    class boyer_moore_searcher
+        -: 1114:    : __boyer_moore_base_t<_RAIter, _Hash, _BinaryPredicate>
+        -: 1115:    {
+        -: 1116:      using _Base = __boyer_moore_base_t<_RAIter, _Hash, _BinaryPredicate>;
+        -: 1117:      using typename _Base::__diff_type;
+        -: 1118:
+        -: 1119:    public:
+        -: 1120:      boyer_moore_searcher(_RAIter __pat_first, _RAIter __pat_last,
+        -: 1121:			   _Hash __hf = _Hash(),
+        -: 1122:			   _BinaryPredicate __pred = _BinaryPredicate());
+        -: 1123:
+        -: 1124:      template<typename _RandomAccessIterator2>
+        -: 1125:        pair<_RandomAccessIterator2, _RandomAccessIterator2>
+        -: 1126:	operator()(_RandomAccessIterator2 __first,
+        -: 1127:		   _RandomAccessIterator2 __last) const;
+        -: 1128:
+        -: 1129:    private:
+        -: 1130:      bool
+        -: 1131:      _M_is_prefix(_RAIter __word, __diff_type __len,
+        -: 1132:		   __diff_type __pos)
+        -: 1133:      {
+        -: 1134:	const auto& __pred = this->_M_pred();
+        -: 1135:	__diff_type __suffixlen = __len - __pos;
+        -: 1136:	for (__diff_type __i = 0; __i < __suffixlen; ++__i)
+        -: 1137:	  if (!__pred(__word[__i], __word[__pos + __i]))
+        -: 1138:	    return false;
+        -: 1139:	return true;
+        -: 1140:      }
+        -: 1141:
+        -: 1142:      __diff_type
+        -: 1143:      _M_suffix_length(_RAIter __word, __diff_type __len,
+        -: 1144:		       __diff_type __pos)
+        -: 1145:      {
+        -: 1146:	const auto& __pred = this->_M_pred();
+        -: 1147:	__diff_type __i = 0;
+        -: 1148:	while (__pred(__word[__pos - __i], __word[__len - 1 - __i])
+        -: 1149:	       && __i < __pos)
+        -: 1150:	  {
+        -: 1151:	    ++__i;
+        -: 1152:	  }
+        -: 1153:	return __i;
+        -: 1154:      }
+        -: 1155:
+        -: 1156:      template<typename _Tp>
+        -: 1157:	__diff_type
+        -: 1158:	_M_bad_char_shift(_Tp __c) const
+        -: 1159:	{ return this->_M_lookup(__c, _M_pat_end - _M_pat); }
+        -: 1160:
+        -: 1161:      _RAIter _M_pat;
+        -: 1162:      _RAIter _M_pat_end;
+        -: 1163:      _GLIBCXX_STD_C::vector<__diff_type> _M_good_suffix;
+        -: 1164:    };
+        -: 1165:
+        -: 1166:  template<typename _RAIter, typename _Hash
+        -: 1167:	     = hash<typename iterator_traits<_RAIter>::value_type>,
+        -: 1168:	   typename _BinaryPredicate = equal_to<>>
+        -: 1169:    class boyer_moore_horspool_searcher
+        -: 1170:    : __boyer_moore_base_t<_RAIter, _Hash, _BinaryPredicate>
+        -: 1171:    {
+        -: 1172:      using _Base = __boyer_moore_base_t<_RAIter, _Hash, _BinaryPredicate>;
+        -: 1173:      using typename _Base::__diff_type;
+        -: 1174:
+        -: 1175:    public:
+        -: 1176:      boyer_moore_horspool_searcher(_RAIter __pat,
+        -: 1177:				    _RAIter __pat_end,
+        -: 1178:				    _Hash __hf = _Hash(),
+        -: 1179:				    _BinaryPredicate __pred
+        -: 1180:				    = _BinaryPredicate())
+        -: 1181:      : _Base(__pat, __pat_end - __pat, std::move(__hf), std::move(__pred)),
+        -: 1182:	_M_pat(__pat), _M_pat_end(__pat_end)
+        -: 1183:      { }
+        -: 1184:
+        -: 1185:      template<typename _RandomAccessIterator2>
+        -: 1186:        pair<_RandomAccessIterator2, _RandomAccessIterator2>
+        -: 1187:	operator()(_RandomAccessIterator2 __first,
+        -: 1188:		   _RandomAccessIterator2 __last) const
+        -: 1189:	{
+        -: 1190:	  const auto& __pred = this->_M_pred();
+        -: 1191:	  auto __patlen = _M_pat_end - _M_pat;
+        -: 1192:	  if (__patlen == 0)
+        -: 1193:	    return std::make_pair(__first, __first);
+        -: 1194:	  auto __len = __last - __first;
+        -: 1195:	  while (__len >= __patlen)
+        -: 1196:	    {
+        -: 1197:	      for (auto __scan = __patlen - 1;
+        -: 1198:		   __pred(__first[__scan], _M_pat[__scan]); --__scan)
+        -: 1199:		if (__scan == 0)
+        -: 1200:		  return std::make_pair(__first, __first + __patlen);
+        -: 1201:	      auto __shift = _M_bad_char_shift(__first[__patlen - 1]);
+        -: 1202:	      __len -= __shift;
+        -: 1203:	      __first += __shift;
+        -: 1204:	    }
+        -: 1205:	  return std::make_pair(__last, __last);
+        -: 1206:	}
+        -: 1207:
+        -: 1208:    private:
+        -: 1209:      template<typename _Tp>
+        -: 1210:	__diff_type
+        -: 1211:	_M_bad_char_shift(_Tp __c) const
+        -: 1212:	{ return this->_M_lookup(__c, _M_pat_end - _M_pat); }
+        -: 1213:
+        -: 1214:      _RAIter _M_pat;
+        -: 1215:      _RAIter _M_pat_end;
+        -: 1216:    };
+        -: 1217:
+        -: 1218:  template<typename _RAIter, typename _Hash, typename _BinaryPredicate>
+        -: 1219:    boyer_moore_searcher<_RAIter, _Hash, _BinaryPredicate>::
+        -: 1220:    boyer_moore_searcher(_RAIter __pat, _RAIter __pat_end,
+        -: 1221:			 _Hash __hf, _BinaryPredicate __pred)
+        -: 1222:    : _Base(__pat, __pat_end - __pat, std::move(__hf), std::move(__pred)),
+        -: 1223:      _M_pat(__pat), _M_pat_end(__pat_end), _M_good_suffix(__pat_end - __pat)
+        -: 1224:    {
+        -: 1225:      auto __patlen = __pat_end - __pat;
+        -: 1226:      if (__patlen == 0)
+        -: 1227:	return;
+        -: 1228:      __diff_type __last_prefix = __patlen - 1;
+        -: 1229:      for (__diff_type __p = __patlen - 1; __p >= 0; --__p)
+        -: 1230:	{
+        -: 1231:	  if (_M_is_prefix(__pat, __patlen, __p + 1))
+        -: 1232:	    __last_prefix = __p + 1;
+        -: 1233:	  _M_good_suffix[__p] = __last_prefix + (__patlen - 1 - __p);
+        -: 1234:	}
+        -: 1235:      for (__diff_type __p = 0; __p < __patlen - 1; ++__p)
+        -: 1236:	{
+        -: 1237:	  auto __slen = _M_suffix_length(__pat, __patlen, __p);
+        -: 1238:	  auto __pos = __patlen - 1 - __slen;
+        -: 1239:	  if (!__pred(__pat[__p - __slen], __pat[__pos]))
+        -: 1240:	    _M_good_suffix[__pos] = __patlen - 1 - __p + __slen;
+        -: 1241:	}
+        -: 1242:    }
+        -: 1243:
+        -: 1244:  template<typename _RAIter, typename _Hash, typename _BinaryPredicate>
+        -: 1245:  template<typename _RandomAccessIterator2>
+        -: 1246:    pair<_RandomAccessIterator2, _RandomAccessIterator2>
+        -: 1247:    boyer_moore_searcher<_RAIter, _Hash, _BinaryPredicate>::
+        -: 1248:    operator()(_RandomAccessIterator2 __first,
+        -: 1249:	       _RandomAccessIterator2 __last) const
+        -: 1250:    {
+        -: 1251:      auto __patlen = _M_pat_end - _M_pat;
+        -: 1252:      if (__patlen == 0)
+        -: 1253:	return std::make_pair(__first, __first);
+        -: 1254:      const auto& __pred = this->_M_pred();
+        -: 1255:      __diff_type __i = __patlen - 1;
+        -: 1256:      auto __stringlen = __last - __first;
+        -: 1257:      while (__i < __stringlen)
+        -: 1258:	{
+        -: 1259:	  __diff_type __j = __patlen - 1;
+        -: 1260:	  while (__j >= 0 && __pred(__first[__i], _M_pat[__j]))
+        -: 1261:	    {
+        -: 1262:	      --__i;
+        -: 1263:	      --__j;
+        -: 1264:	    }
+        -: 1265:	  if (__j < 0)
+        -: 1266:	    {
+        -: 1267:	      const auto __match = __first + __i + 1;
+        -: 1268:	      return std::make_pair(__match, __match + __patlen);
+        -: 1269:	    }
+        -: 1270:	  __i += std::max(_M_bad_char_shift(__first[__i]),
+        -: 1271:			  _M_good_suffix[__j]);
+        -: 1272:	}
+        -: 1273:      return std::make_pair(__last, __last);
+        -: 1274:    }
+        -: 1275:
+        -: 1276:#endif // C++17
+        -: 1277:#endif // C++14
+        -: 1278:#endif // C++11
+        -: 1279:
+        -: 1280:_GLIBCXX_END_NAMESPACE_VERSION
+        -: 1281:} // namespace std
+        -: 1282:
+        -: 1283:#endif // _GLIBCXX_FUNCTIONAL

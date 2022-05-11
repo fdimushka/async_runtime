@@ -1,0 +1,289 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/examples/tcp_client.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/examples/CMakeFiles/tcp_client.dir/tcp_client.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/examples/CMakeFiles/tcp_client.dir/tcp_client.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/ar.hpp"
+        -:    2:
+        -:    3:
+        -:    4:using namespace AsyncRuntime;
+        -:    5:
+        -:    6:
+function _Z9async_tcpPN12AsyncRuntime16CoroutineHandlerERNS_5YieldINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERKS8_iSC_ called 1 returned 0% blocks executed 33%
+        1:    7:void async_tcp(CoroutineHandler* handler, Yield<std::string>& yield, const std::string& host, int port, const std::string& req)
+        -:    8:{
+        1:    9:    auto connection = MakeTCPConnection(host.c_str(), port);
+        1:    9-block  0
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        -:   10:
+        1:   11:    yield( {} );
+        1:   11-block  0
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   11-block  1
+call    4 returned 1
+    $$$$$:   11-block  2
+call    5 never executed
+    $$$$$:   11-block  3
+        -:   12:
+        1:   13:    int ret = Await(AsyncConnect(connection), handler);
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   13-block  0
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   13-block  1
+call    6 returned 1
+    $$$$$:   13-block  2
+call    7 never executed
+    $$$$$:   13-block  3
+        1:   14:    if(ret == IO_SUCCESS) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   15:        auto req_stream = MakeStream(req.c_str(), req.size());
+        1:   15-block  0
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+branch  3 taken 1 (fallthrough)
+branch  4 taken 0 (throw)
+        1:   16:        auto res_stream = MakeStream();
+        1:   16-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   17:        ret = Await(AsyncWrite(connection, req_stream), handler);
+        1:   17-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   17-block  1
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   17-block  2
+call    6 returned 1
+    $$$$$:   17-block  3
+call    7 never executed
+    $$$$$:   17-block  4
+        1:   18:        if(ret != IO_SUCCESS){
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   19:            std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
+    %%%%%:   19-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   19-block  1
+call    3 never executed
+branch  4 never executed
+branch  5 never executed
+    %%%%%:   19-block  2
+call    6 never executed
+branch  7 never executed
+branch  8 never executed
+    %%%%%:   19-block  3
+call    9 never executed
+branch 10 never executed
+branch 11 never executed
+        -:   20:        }
+        -:   21:
+        1:   22:        ret = Await(AsyncRead(connection, res_stream), handler);
+        1:   22-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   22-block  1
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   22-block  2
+call    6 returned 1
+    $$$$$:   22-block  3
+call    7 never executed
+    $$$$$:   22-block  4
+        1:   23:        if(ret != IO_SUCCESS){
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   24:            std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
+    %%%%%:   24-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   24-block  1
+call    3 never executed
+branch  4 never executed
+branch  5 never executed
+    %%%%%:   24-block  2
+call    6 never executed
+branch  7 never executed
+branch  8 never executed
+    %%%%%:   24-block  3
+call    9 never executed
+branch 10 never executed
+branch 11 never executed
+    #####:   25:            yield( {} );
+    %%%%%:   25-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   25-block  1
+call    4 never executed
+    $$$$$:   25-block  2
+call    5 never executed
+    $$$$$:   25-block  3
+        -:   26:        }else{
+        1:   27:            Await(AsyncClose(connection), handler);
+        1:   27-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   27-block  1
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   27-block  2
+call    6 returned 1
+    $$$$$:   27-block  3
+call    7 never executed
+    $$$$$:   27-block  4
+       1*:   28:            yield( { res_stream->GetBuffer() } );
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   28-block  0
+call    6 returned 0
+branch  7 taken 0 (fallthrough)
+branch  8 taken 0 (throw)
+    %%%%%:   28-block  1
+call    9 never executed
+call   10 never executed
+    $$$$$:   28-block  2
+call   11 never executed
+    $$$$$:   28-block  3
+    $$$$$:   28-block  4
+call   12 never executed
+    $$$$$:   28-block  5
+        -:   29:        }
+    #####:   30:    }else{
+    %%%%%:   30-block  0
+call    0 never executed
+call    1 never executed
+    $$$$$:   30-block  1
+call    2 never executed
+    $$$$$:   30-block  2
+call    3 never executed
+    #####:   31:        std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
+    %%%%%:   31-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   31-block  1
+call    3 never executed
+branch  4 never executed
+branch  5 never executed
+    %%%%%:   31-block  2
+call    6 never executed
+branch  7 never executed
+branch  8 never executed
+    %%%%%:   31-block  3
+call    9 never executed
+branch 10 never executed
+branch 11 never executed
+    #####:   32:        yield( {} );
+    %%%%%:   32-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   32-block  1
+call    4 never executed
+    $$$$$:   32-block  2
+call    5 never executed
+    $$$$$:   32-block  3
+        -:   33:    }
+    #####:   34:}
+    %%%%%:   34-block  0
+call    0 never executed
+    $$$$$:   34-block  1
+call    1 never executed
+        -:   35:
+        -:   36:
+function main called 1 returned 100% blocks executed 50%
+        1:   37:int main() {
+        1:   38:    SetupRuntime();
+        1:   38-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   39:    std::string req = "GET / HTTP/1.1\r\n"
+        -:   40:                      "Host: example.com\r\n"
+        -:   41:                      "User-Agent: ar example tcp server\r\n"
+        1:   42:                      "Accept: */*\r\n\r\n";
+        1:   42-block  0
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+    $$$$$:   42-block  1
+        -:   43:
+        1:   44:    std::string host = "93.184.216.34";
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+    $$$$$:   44-block  0
+        1:   45:    auto coro = MakeCoroutine<std::string>(&async_tcp, host, 80, req);
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+    $$$$$:   45-block  0
+    $$$$$:   45-block  1
+        1:   46:    std::string result = Await(Async(coro));
+        1:   46-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   46-block  1
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+    $$$$$:   46-block  2
+        1:   47:    std::cout << result << std::endl;
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   47-block  0
+call    3 returned 1
+branch  4 taken 1 (fallthrough)
+branch  5 taken 0 (throw)
+        1:   48:    Terminate();
+        1:   48-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:   49:    return 0;
+        1:   50:}
+        1:   50-block  0
+call    0 returned 1
+call    1 returned 1
+call    2 returned 1
+call    3 returned 1
+    $$$$$:   50-block  1
+call    4 never executed
+    $$$$$:   50-block  2
+call    5 never executed
+    $$$$$:   50-block  3
+call    6 never executed
+    $$$$$:   50-block  4
+call    7 never executed

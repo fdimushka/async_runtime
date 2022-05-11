@@ -1,0 +1,55 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/include/ar/object.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/io_executor.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/io_executor.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef AR_DUMMY_H
+        -:    2:#define AR_DUMMY_H
+        -:    3:
+        -:    4:#include <iostream>
+        -:    5:#include <functional>
+        -:    6:#include <vector>
+        -:    7:#include <queue>
+        -:    8:#include <optional>
+        -:    9:#include <mutex>
+        -:   10:#include <condition_variable>
+        -:   11:#include <algorithm>
+        -:   12:#include <climits>
+        -:   13:#include <atomic>
+        -:   14:#include <memory>
+        -:   15:
+        -:   16:
+        -:   17:namespace AsyncRuntime {
+        -:   18:    typedef std::uintptr_t ObjectID;
+        -:   19:
+        -:   20:
+        -:   21:    class BaseObject {
+        -:   22:    public:
+function _ZN12AsyncRuntime10BaseObjectC2Ev called 0 returned 0% blocks executed 0%
+    #####:   23:        BaseObject() { id = reinterpret_cast<std::uintptr_t>(this); }
+    #####:   24:        virtual ~BaseObject() = default;
+------------------
+_ZN12AsyncRuntime10BaseObjectD0Ev:
+function _ZN12AsyncRuntime10BaseObjectD0Ev called 0 returned 0% blocks executed 0%
+    #####:   24:        virtual ~BaseObject() = default;
+    %%%%%:   24-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime10BaseObjectD2Ev:
+function _ZN12AsyncRuntime10BaseObjectD2Ev called 0 returned 0% blocks executed 0%
+    #####:   24:        virtual ~BaseObject() = default;
+------------------
+        -:   25:
+        -:   26:
+        -:   27:        /**
+        -:   28:         * @brief
+        -:   29:         * @return
+        -:   30:         */
+        -:   31:        ObjectID GetID() const { return id; }
+        -:   32:
+        -:   33:    protected:
+        -:   34:        ObjectID id;
+        -:   35:    };
+        -:   36:}
+        -:   37:
+        -:   38:#endif //AR_DUMMY_H

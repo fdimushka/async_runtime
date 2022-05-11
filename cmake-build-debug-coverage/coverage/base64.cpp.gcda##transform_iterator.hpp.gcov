@@ -1,0 +1,213 @@
+        -:    0:Source:/usr/include/boost/iterator/transform_iterator.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcda
+        -:    0:Runs:1
+        -:    1:// (C) Copyright David Abrahams 2002.
+        -:    2:// (C) Copyright Jeremy Siek    2002.
+        -:    3:// (C) Copyright Thomas Witt    2002.
+        -:    4:// Distributed under the Boost Software License, Version 1.0. (See
+        -:    5:// accompanying file LICENSE_1_0.txt or copy at
+        -:    6:// http://www.boost.org/LICENSE_1_0.txt)
+        -:    7:#ifndef BOOST_TRANSFORM_ITERATOR_23022003THW_HPP
+        -:    8:#define BOOST_TRANSFORM_ITERATOR_23022003THW_HPP
+        -:    9:
+        -:   10:#include <boost/iterator/detail/enable_if.hpp>
+        -:   11:#include <boost/iterator/iterator_adaptor.hpp>
+        -:   12:#include <boost/iterator/iterator_categories.hpp>
+        -:   13:#include <boost/mpl/not.hpp>
+        -:   14:#include <boost/mpl/bool.hpp>
+        -:   15:#include <boost/type_traits/function_traits.hpp>
+        -:   16:#include <boost/type_traits/is_const.hpp>
+        -:   17:#include <boost/type_traits/is_class.hpp>
+        -:   18:#include <boost/type_traits/is_function.hpp>
+        -:   19:#include <boost/type_traits/is_reference.hpp>
+        -:   20:#include <boost/type_traits/remove_const.hpp>
+        -:   21:#include <boost/type_traits/remove_reference.hpp>
+        -:   22:#include <boost/utility/result_of.hpp>
+        -:   23:
+        -:   24:#include <iterator>
+        -:   25:
+        -:   26:#if BOOST_WORKAROUND(BOOST_MSVC, BOOST_TESTED_AT(1310))
+        -:   27:# include <boost/type_traits/is_base_and_derived.hpp>
+        -:   28:#endif
+        -:   29:
+        -:   30:#include <boost/iterator/detail/config_def.hpp>
+        -:   31:
+        -:   32:
+        -:   33:namespace boost {
+        -:   34:namespace iterators {
+        -:   35:
+        -:   36:  template <class UnaryFunction, class Iterator, class Reference = use_default, class Value = use_default>
+        -:   37:  class transform_iterator;
+        -:   38:
+        -:   39:  namespace detail
+        -:   40:  {
+        -:   41:    // Compute the iterator_adaptor instantiation to be used for transform_iterator
+        -:   42:    template <class UnaryFunc, class Iterator, class Reference, class Value>
+        -:   43:    struct transform_iterator_base
+        -:   44:    {
+        -:   45:     private:
+        -:   46:        // By default, dereferencing the iterator yields the same as
+        -:   47:        // the function.
+        -:   48:        typedef typename ia_dflt_help<
+        -:   49:            Reference
+        -:   50:#ifdef BOOST_RESULT_OF_USE_TR1
+        -:   51:          , result_of<const UnaryFunc(typename std::iterator_traits<Iterator>::reference)>
+        -:   52:#else
+        -:   53:          , result_of<const UnaryFunc&(typename std::iterator_traits<Iterator>::reference)>
+        -:   54:#endif
+        -:   55:        >::type reference;
+        -:   56:
+        -:   57:        // To get the default for Value: remove any reference on the
+        -:   58:        // result type, but retain any constness to signal
+        -:   59:        // non-writability.  Note that if we adopt Thomas' suggestion
+        -:   60:        // to key non-writability *only* on the Reference argument,
+        -:   61:        // we'd need to strip constness here as well.
+        -:   62:        typedef typename ia_dflt_help<
+        -:   63:            Value
+        -:   64:          , remove_reference<reference>
+        -:   65:        >::type cv_value_type;
+        -:   66:
+        -:   67:     public:
+        -:   68:        typedef iterator_adaptor<
+        -:   69:            transform_iterator<UnaryFunc, Iterator, Reference, Value>
+        -:   70:          , Iterator
+        -:   71:          , cv_value_type
+        -:   72:          , use_default    // Leave the traversal category alone
+        -:   73:          , reference
+        -:   74:        > type;
+        -:   75:    };
+        -:   76:  }
+        -:   77:
+        -:   78:  template <class UnaryFunc, class Iterator, class Reference, class Value>
+        -:   79:  class transform_iterator
+        -:   80:    : public boost::iterators::detail::transform_iterator_base<UnaryFunc, Iterator, Reference, Value>::type
+        -:   81:  {
+        -:   82:    typedef typename
+        -:   83:    boost::iterators::detail::transform_iterator_base<UnaryFunc, Iterator, Reference, Value>::type
+        -:   84:    super_t;
+        -:   85:
+        -:   86:    friend class iterator_core_access;
+        -:   87:
+        -:   88:  public:
+        -:   89:    transform_iterator() { }
+        -:   90:
+    #####:   91:    transform_iterator(Iterator const& x, UnaryFunc f)
+    #####:   92:      : super_t(x), m_f(f) { }
+------------------
+_ZN5boost9iterators18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESI_EC2ERKSH_S6_:
+function _ZN5boost9iterators18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESI_EC2ERKSH_S6_ called 0 returned 0% blocks executed 0%
+    #####:   91:    transform_iterator(Iterator const& x, UnaryFunc f)
+    #####:   92:      : super_t(x), m_f(f) { }
+    %%%%%:   92-block  0
+call    0 never executed
+------------------
+_ZN5boost9iterators18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS3_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESK_EC2ERKSJ_S6_:
+function _ZN5boost9iterators18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS3_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESK_EC2ERKSJ_S6_ called 0 returned 0% blocks executed 0%
+    #####:   91:    transform_iterator(Iterator const& x, UnaryFunc f)
+    #####:   92:      : super_t(x), m_f(f) { }
+    %%%%%:   92-block  0
+call    0 never executed
+------------------
+        -:   93:
+        -:   94:    explicit transform_iterator(Iterator const& x)
+        -:   95:      : super_t(x)
+        -:   96:    {
+        -:   97:        // Pro8 is a little too aggressive about instantiating the
+        -:   98:        // body of this function.
+        -:   99:#if !BOOST_WORKAROUND(__MWERKS__, BOOST_TESTED_AT(0x3003))
+        -:  100:        // don't provide this constructor if UnaryFunc is a
+        -:  101:        // function pointer type, since it will be 0.  Too dangerous.
+        -:  102:        BOOST_STATIC_ASSERT(is_class<UnaryFunc>::value);
+        -:  103:#endif
+        -:  104:    }
+        -:  105:
+        -:  106:    template <
+        -:  107:        class OtherUnaryFunction
+        -:  108:      , class OtherIterator
+        -:  109:      , class OtherReference
+        -:  110:      , class OtherValue>
+        -:  111:    transform_iterator(
+        -:  112:         transform_iterator<OtherUnaryFunction, OtherIterator, OtherReference, OtherValue> const& t
+        -:  113:       , typename enable_if_convertible<OtherIterator, Iterator>::type* = 0
+        -:  114:#if !BOOST_WORKAROUND(BOOST_MSVC, == 1310)
+        -:  115:       , typename enable_if_convertible<OtherUnaryFunction, UnaryFunc>::type* = 0
+        -:  116:#endif
+        -:  117:    )
+        -:  118:      : super_t(t.base()), m_f(t.functor())
+        -:  119:   {}
+        -:  120:
+        -:  121:    UnaryFunc functor() const
+        -:  122:      { return m_f; }
+        -:  123:
+        -:  124:  private:
+    #####:  125:    typename super_t::reference dereference() const
+    #####:  126:    { return m_f(*this->base()); }
+------------------
+_ZNK5boost9iterators18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESI_E11dereferenceEv:
+function _ZNK5boost9iterators18transform_iteratorINS_7archive9iterators6detail8to_6_bitIcEEN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEENS_11use_defaultESI_E11dereferenceEv called 0 returned 0% blocks executed 0%
+    #####:  125:    typename super_t::reference dereference() const
+    #####:  126:    { return m_f(*this->base()); }
+    %%%%%:  126-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+------------------
+_ZNK5boost9iterators18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS3_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESK_E11dereferenceEv:
+function _ZNK5boost9iterators18transform_iteratorINS_7archive9iterators6detail10from_6_bitIcEENS3_15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEENS_11use_defaultESK_E11dereferenceEv called 0 returned 0% blocks executed 0%
+    #####:  125:    typename super_t::reference dereference() const
+    #####:  126:    { return m_f(*this->base()); }
+    %%%%%:  126-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+------------------
+        -:  127:
+        -:  128:    // Probably should be the initial base class so it can be
+        -:  129:    // optimized away via EBO if it is an empty class.
+        -:  130:    UnaryFunc m_f;
+        -:  131:  };
+        -:  132:
+        -:  133:  template <class UnaryFunc, class Iterator>
+        -:  134:  inline transform_iterator<UnaryFunc, Iterator>
+        -:  135:  make_transform_iterator(Iterator it, UnaryFunc fun)
+        -:  136:  {
+        -:  137:      return transform_iterator<UnaryFunc, Iterator>(it, fun);
+        -:  138:  }
+        -:  139:
+        -:  140:  // Version which allows explicit specification of the UnaryFunc
+        -:  141:  // type.
+        -:  142:  //
+        -:  143:  // This generator is not provided if UnaryFunc is a function
+        -:  144:  // pointer type, because it's too dangerous: the default-constructed
+        -:  145:  // function pointer in the iterator be 0, leading to a runtime
+        -:  146:  // crash.
+        -:  147:  template <class UnaryFunc, class Iterator>
+        -:  148:  inline typename iterators::enable_if<
+        -:  149:      is_class<UnaryFunc>   // We should probably find a cheaper test than is_class<>
+        -:  150:    , transform_iterator<UnaryFunc, Iterator>
+        -:  151:  >::type
+        -:  152:  make_transform_iterator(Iterator it)
+        -:  153:  {
+        -:  154:      return transform_iterator<UnaryFunc, Iterator>(it, UnaryFunc());
+        -:  155:  }
+        -:  156:
+        -:  157:#if defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION ) && !defined(BOOST_NO_FUNCTION_TEMPLATE_ORDERING)
+        -:  158:  template <class Return, class Argument, class Iterator>
+        -:  159:  inline transform_iterator< Return (*)(Argument), Iterator, Return>
+        -:  160:  make_transform_iterator(Iterator it, Return (*fun)(Argument))
+        -:  161:  {
+        -:  162:    return transform_iterator<Return (*)(Argument), Iterator, Return>(it, fun);
+        -:  163:  }
+        -:  164:#endif
+        -:  165:
+        -:  166:} // namespace iterators
+        -:  167:
+        -:  168:using iterators::transform_iterator;
+        -:  169:using iterators::make_transform_iterator;
+        -:  170:
+        -:  171:} // namespace boost
+        -:  172:
+        -:  173:#include <boost/iterator/detail/config_undef.hpp>
+        -:  174:
+        -:  175:#endif // BOOST_TRANSFORM_ITERATOR_23022003THW_HPP

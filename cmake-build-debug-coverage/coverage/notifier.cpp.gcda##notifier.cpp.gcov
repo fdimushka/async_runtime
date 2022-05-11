@@ -1,0 +1,380 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/notifier.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/notifier.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/notifier.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/notifier.hpp"
+        -:    2:#include <cassert>
+        -:    3:
+        -:    4:using namespace AsyncRuntime;
+        -:    5:
+        -:    6:
+function _ZN12AsyncRuntime8NotifierC2Em called 0 returned 0% blocks executed 0%
+    #####:    7:Notifier::Notifier(size_t N) : _waiters{N}
+    %%%%%:    7-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:    7-block  1
+call    4 never executed
+    $$$$$:    7-block  2
+call    5 never executed
+        -:    8:{
+    #####:    9:    assert(_waiters.size() < (1 << kWaiterBits) - 1);
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:    9-block  0
+call    3 never executed
+    #####:   10:    _state = kStackMask | (kEpochMask - kEpochInc * _waiters.size() * 2);
+    %%%%%:   10-block  0
+call    0 never executed
+call    1 never executed
+    #####:   11:}
+        -:   12:
+        -:   13:
+function _ZN12AsyncRuntime8NotifierD2Ev called 0 returned 0% blocks executed 0%
+    #####:   14:Notifier::~Notifier()
+        -:   15:{
+    #####:   16:    assert((_state.load() & (kStackMask | kWaiterMask)) == kStackMask);
+    %%%%%:   16-block  0
+call    0 never executed
+    %%%%%:   16-block  1
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   16-block  2
+call    3 never executed
+    #####:   17:}
+    %%%%%:   17-block  0
+call    0 never executed
+        -:   18:
+        -:   19:
+function _ZN12AsyncRuntime8Notifier11PrepareWaitEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:   20:void Notifier::PrepareWait(Waiter* w) {
+    #####:   21:    w->epoch = _state.fetch_add(kWaiterInc, std::memory_order_relaxed);
+    %%%%%:   21-block  0
+    %%%%%:   21-block  1
+        -:   22:    std::atomic_thread_fence(std::memory_order_seq_cst);
+    #####:   23:}
+        -:   24:
+        -:   25:
+function _ZN12AsyncRuntime8Notifier4WaitEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:   26:void Notifier::Wait(Waiter* w) {
+    #####:   27:    w->state = WaiterState::kNotSignaled;
+        -:   28:    // Modification epoch of this waiter.
+    #####:   29:    uint64_t epoch =
+    #####:   30:            (w->epoch & kEpochMask) +
+    #####:   31:            (((w->epoch & kWaiterMask) >> kWaiterShift) << kEpochShift);
+    #####:   32:    uint64_t state = _state.load(std::memory_order_seq_cst);
+    %%%%%:   32-block  0
+call    0 never executed
+    %%%%%:   32-block  1
+        -:   33:    for (;;) {
+    #####:   34:        if (int64_t((state & kEpochMask) - epoch) < 0) {
+    %%%%%:   34-block  0
+branch  0 never executed
+branch  1 never executed
+        -:   35:            // The preceding waiter has not decided on its fate. Wait until it
+        -:   36:            // calls either CancelWait or Wait, or is notified.
+    #####:   37:            std::this_thread::yield();
+    %%%%%:   37-block  0
+call    0 never executed
+    #####:   38:            state = _state.load(std::memory_order_seq_cst);
+call    0 never executed
+    #####:   39:            continue;
+    %%%%%:   39-block  0
+        -:   40:        }
+        -:   41:        // We've already been notified.
+    #####:   42:        if (int64_t((state & kEpochMask) - epoch) > 0) return;
+    %%%%%:   42-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   42-block  1
+        -:   43:        // Remove this thread from prewait counter and add it to the waiter list.
+    #####:   44:        assert((state & kWaiterMask) != 0);
+    %%%%%:   44-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   44-block  1
+call    2 never executed
+    #####:   45:        uint64_t newstate = state - kWaiterInc + kEpochInc;
+        -:   46:        //newstate = (newstate & ~kStackMask) | (w - &_waiters[0]);
+    #####:   47:        newstate = static_cast<uint64_t>((newstate & ~kStackMask) | static_cast<uint64_t>(w - &_waiters[0]));
+    %%%%%:   47-block  0
+call    0 never executed
+    #####:   48:        if ((state & kStackMask) == kStackMask)
+branch  0 never executed
+branch  1 never executed
+    #####:   49:            w->next.store(nullptr, std::memory_order_relaxed);
+    %%%%%:   49-block  0
+call    0 never executed
+        -:   50:        else
+    #####:   51:            w->next.store(&_waiters[state & kStackMask], std::memory_order_relaxed);
+    %%%%%:   51-block  0
+call    0 never executed
+call    1 never executed
+    #####:   52:        if (_state.compare_exchange_weak(state, newstate,
+    %%%%%:   52-block  0
+call    0 never executed
+    %%%%%:   52-block  1
+branch  1 never executed
+branch  2 never executed
+        -:   53:                                         std::memory_order_release))
+    #####:   54:            break;
+    %%%%%:   54-block  0
+    #####:   55:    }
+    %%%%%:   55-block  0
+    #####:   56:    Park(w);
+    %%%%%:   56-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:   57:}
+        -:   58:
+        -:   59:
+function _ZN12AsyncRuntime8Notifier10CancelWaitEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:   60:void Notifier::CancelWait(Waiter* w) {
+    #####:   61:    uint64_t epoch =
+    #####:   62:            (w->epoch & kEpochMask) +
+    #####:   63:            (((w->epoch & kWaiterMask) >> kWaiterShift) << kEpochShift);
+    #####:   64:    uint64_t state = _state.load(std::memory_order_relaxed);
+    %%%%%:   64-block  0
+call    0 never executed
+    %%%%%:   64-block  1
+        -:   65:    for (;;) {
+    #####:   66:        if (int64_t((state & kEpochMask) - epoch) < 0) {
+    %%%%%:   66-block  0
+branch  0 never executed
+branch  1 never executed
+        -:   67:            // The preceeding waiter has not decided on its fate. Wait until it
+        -:   68:            // calls either cancel_wait or commit_wait, or is notified.
+    #####:   69:            std::this_thread::yield();
+    %%%%%:   69-block  0
+call    0 never executed
+    #####:   70:            state = _state.load(std::memory_order_relaxed);
+call    0 never executed
+    #####:   71:            continue;
+    %%%%%:   71-block  0
+        -:   72:        }
+        -:   73:        // We've already been notified.
+    #####:   74:        if (int64_t((state & kEpochMask) - epoch) > 0) return;
+    %%%%%:   74-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   74-block  1
+        -:   75:        // Remove this thread from prewait counter.
+    #####:   76:        assert((state & kWaiterMask) != 0);
+    %%%%%:   76-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   76-block  1
+call    2 never executed
+    #####:   77:        if (_state.compare_exchange_weak(state, state - kWaiterInc + kEpochInc,
+    %%%%%:   77-block  0
+call    0 never executed
+    %%%%%:   77-block  1
+branch  1 never executed
+branch  2 never executed
+        -:   78:                                         std::memory_order_relaxed))
+    #####:   79:            return;
+    %%%%%:   79-block  0
+        -:   80:    }
+        -:   81:}
+        -:   82:
+        -:   83:
+function _ZN12AsyncRuntime8Notifier6NotifyEb called 0 returned 0% blocks executed 0%
+    #####:   84:void Notifier::Notify(bool all) {
+    %%%%%:   84-block  0
+        -:   85:    std::atomic_thread_fence(std::memory_order_seq_cst);
+    #####:   86:    uint64_t state = _state.load(std::memory_order_acquire);
+    %%%%%:   86-block  0
+call    0 never executed
+    %%%%%:   86-block  1
+        -:   87:    for (;;) {
+        -:   88:        // Easy case: no waiters.
+    #####:   89:        if ((state & kStackMask) == kStackMask && (state & kWaiterMask) == 0)
+    %%%%%:   89-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   89-block  1
+branch  2 never executed
+branch  3 never executed
+    #####:   90:            return;
+    %%%%%:   90-block  0
+    #####:   91:        uint64_t waiters = (state & kWaiterMask) >> kWaiterShift;
+        -:   92:
+        -:   93:        uint64_t newstate;
+    #####:   94:        if (all) {
+    %%%%%:   94-block  0
+branch  0 never executed
+branch  1 never executed
+        -:   95:            // Reset prewait counter and empty wait list.
+    #####:   96:            newstate = (state & kEpochMask) + (kEpochInc * waiters) + kStackMask;
+    %%%%%:   96-block  0
+    #####:   97:        } else if (waiters) {
+    %%%%%:   97-block  0
+branch  0 never executed
+branch  1 never executed
+        -:   98:            // There is a thread in pre-wait state, unblock it.
+    #####:   99:            newstate = state + kEpochInc - kWaiterInc;
+    %%%%%:   99-block  0
+        -:  100:        } else {
+        -:  101:            // Pop a waiter from list and unpark it.
+    #####:  102:            Waiter* w = &_waiters[state & kStackMask];
+    %%%%%:  102-block  0
+call    0 never executed
+    #####:  103:            Waiter* wnext = w->next.load(std::memory_order_relaxed);
+call    0 never executed
+    #####:  104:            uint64_t next = kStackMask;
+        -:  105:            //if (wnext != nullptr) next = wnext - &_waiters[0];
+    #####:  106:            if (wnext != nullptr) next = static_cast<uint64_t>(wnext - &_waiters[0]);
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  106-block  0
+call    2 never executed
+        -:  107:            // Note: we don't add kEpochInc here. ABA problem on the lock-free stack
+        -:  108:            // can't happen because a waiter is re-pushed onto the stack only after
+        -:  109:            // it was in the pre-wait state which inevitably leads to epoch
+        -:  110:            // increment.
+    #####:  111:            newstate = (state & kEpochMask) + next;
+    %%%%%:  111-block  0
+        -:  112:        }
+    #####:  113:        if (_state.compare_exchange_weak(state, newstate,
+    %%%%%:  113-block  0
+call    0 never executed
+    %%%%%:  113-block  1
+branch  1 never executed
+branch  2 never executed
+        -:  114:                                         std::memory_order_acquire)) {
+    #####:  115:            if (!all && waiters) return;  // unblocked pre-wait thread
+    %%%%%:  115-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  115-block  1
+branch  2 never executed
+branch  3 never executed
+    %%%%%:  115-block  2
+    #####:  116:            if ((state & kStackMask) == kStackMask) return;
+    %%%%%:  116-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  116-block  1
+        -:  117:
+    #####:  118:            Waiter* w = &_waiters[state & kStackMask];
+    %%%%%:  118-block  0
+call    0 never executed
+    #####:  119:            if (!all) w->next.store(nullptr, std::memory_order_relaxed);
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  119-block  0
+call    2 never executed
+    #####:  120:            UnPark(w);
+    %%%%%:  120-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  121:            return;
+    %%%%%:  121-block  0
+        -:  122:        }
+    #####:  123:    }
+    %%%%%:  123-block  0
+        -:  124:}
+        -:  125:
+        -:  126:
+function _ZN12AsyncRuntime8Notifier9NotifyOneEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:  127:void Notifier::NotifyOne(Waiter* w) {
+    %%%%%:  127-block  0
+        -:  128:    std::atomic_thread_fence(std::memory_order_seq_cst);
+    #####:  129:    w->next.store(nullptr, std::memory_order_relaxed);
+    %%%%%:  129-block  0
+call    0 never executed
+    #####:  130:    UnPark(w);
+call    0 never executed
+    #####:  131:}
+        -:  132:
+        -:  133:
+function _ZN12AsyncRuntime8Notifier10NotifyManyEm called 0 returned 0% blocks executed 0%
+    #####:  134:void Notifier::NotifyMany(size_t n) {
+    #####:  135:    if(n >= _waiters.size()) {
+    %%%%%:  135-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  136:        Notify(true);
+    %%%%%:  136-block  0
+call    0 never executed
+        -:  137:    }
+        -:  138:    else {
+    #####:  139:        for(size_t k=0; k<n; ++k) {
+    %%%%%:  139-block  0
+    %%%%%:  139-block  1
+branch  0 never executed
+branch  1 never executed
+    #####:  140:            Notify(false);
+    %%%%%:  140-block  0
+call    0 never executed
+        -:  141:        }
+        -:  142:    }
+    #####:  143:}
+        -:  144:
+        -:  145:
+function _ZN12AsyncRuntime8Notifier4ParkEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:  146:void Notifier::Park(Waiter* w) {
+    #####:  147:    std::unique_lock<std::mutex> lock(w->mu);
+    %%%%%:  147-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  148:    while (w->state != WaiterState::kSignaled) {
+    %%%%%:  148-block  0
+    %%%%%:  148-block  1
+branch  0 never executed
+branch  1 never executed
+    #####:  149:        w->state = WaiterState::kWaiting;
+        -:  150:
+    #####:  151:        w->cv.wait(lock);
+    %%%%%:  151-block  0
+call    0 never executed
+        -:  152://        if(w->cv.wait_for(lock,std::chrono::milliseconds (1000)) == std::cv_status::timeout){
+        -:  153://            break;
+        -:  154://        }
+        -:  155:    }
+    #####:  156:}
+    %%%%%:  156-block  0
+call    0 never executed
+        -:  157:
+        -:  158:
+function _ZN12AsyncRuntime8Notifier6UnParkEPNS0_6WaiterE called 0 returned 0% blocks executed 0%
+    #####:  159:void Notifier::UnPark(Waiter* waiters) {
+    #####:  160:    Waiter* next = nullptr;
+    #####:  161:    for (Waiter* w = waiters; w; w = next) {
+    %%%%%:  161-block  0
+    %%%%%:  161-block  1
+    %%%%%:  161-block  2
+branch  0 never executed
+branch  1 never executed
+    #####:  162:        next = w->next.load(std::memory_order_relaxed);
+    %%%%%:  162-block  0
+call    0 never executed
+        -:  163:        unsigned state;
+        -:  164:        {
+    #####:  165:            std::unique_lock<std::mutex> lock(w->mu);
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  166:            state = w->state;
+    #####:  167:            w->state = WaiterState::kSignaled;
+    #####:  168:        }
+    %%%%%:  168-block  0
+call    0 never executed
+        -:  169:        // Avoid notifying if it wasn't waiting.
+    #####:  170:        if (state == WaiterState::kWaiting) {
+branch  0 never executed
+branch  1 never executed
+    #####:  171:            w->cv.notify_one();
+    %%%%%:  171-block  0
+call    0 never executed
+        -:  172:        }
+        -:  173:    }
+    #####:  174:}
+    %%%%%:  174-block  0

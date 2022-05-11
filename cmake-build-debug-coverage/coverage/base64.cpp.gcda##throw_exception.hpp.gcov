@@ -1,0 +1,52 @@
+        -:    0:Source:/usr/include/boost/serialization/throw_exception.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef BOOST_SERIALIZATION_THROW_EXCEPTION_HPP_INCLUDED
+        -:    2:#define BOOST_SERIALIZATION_THROW_EXCEPTION_HPP_INCLUDED
+        -:    3:
+        -:    4:// MS compatible compilers support #pragma once
+        -:    5:
+        -:    6:#if defined(_MSC_VER)
+        -:    7:# pragma once
+        -:    8:#endif
+        -:    9:
+        -:   10://  boost/throw_exception.hpp
+        -:   11://
+        -:   12://  Copyright (c) 2002 Peter Dimov and Multi Media Ltd.
+        -:   13://
+        -:   14:// Distributed under the Boost Software License, Version 1.0. (See
+        -:   15:// accompanying file LICENSE_1_0.txt or copy at
+        -:   16:// http://www.boost.org/LICENSE_1_0.txt)
+        -:   17:
+        -:   18:#include <boost/config.hpp>
+        -:   19:
+        -:   20:#ifndef BOOST_NO_EXCEPTIONS
+        -:   21:#include <exception>
+        -:   22:#endif
+        -:   23:
+        -:   24:namespace boost {
+        -:   25:namespace serialization {
+        -:   26:
+        -:   27:#ifdef BOOST_NO_EXCEPTIONS
+        -:   28:
+        -:   29:BOOST_NORETURN inline void throw_exception(std::exception const & e) {
+        -:   30:    ::boost::throw_exception(e);
+        -:   31:}
+        -:   32:
+        -:   33:#else
+        -:   34:
+function _ZN5boost13serialization15throw_exceptionINS_7archive9iterators18dataflow_exceptionEEEvRKT_ called 0 returned 0% blocks executed 0%
+    #####:   35:template<class E> BOOST_NORETURN inline void throw_exception(E const & e){
+    #####:   36:    throw e;
+    %%%%%:   36-block  0
+call    0 never executed
+call    1 never executed
+        -:   37:}
+        -:   38:
+        -:   39:#endif
+        -:   40:
+        -:   41:} // namespace serialization
+        -:   42:} // namespace boost
+        -:   43:
+        -:   44:#endif // #ifndef BOOST_SERIALIZATION_THROW_EXCEPTION_HPP_INCLUDED

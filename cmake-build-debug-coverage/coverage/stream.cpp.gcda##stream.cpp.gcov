@@ -1,0 +1,227 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/stream.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/stream.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/stream.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/stream.hpp"
+        -:    2:#include <algorithm>
+        -:    3:#include <numeric>
+        -:    4:
+        -:    5:
+        -:    6:using namespace AsyncRuntime;
+        -:    7:
+        -:    8:
+function _ZN12AsyncRuntime8IOStreamC2Ev called 1 returned 100% blocks executed 100%
+        1:    9:IOStream::IOStream() : fd(-1), seek(0), length(0), allocated_length(0), allocated(false) { }
+function _ZN12AsyncRuntime8IOStreamC2EPKcl called 1 returned 100% blocks executed 55%
+        1:   10:IOStream::IOStream(const char *buf, int64_t len) : fd(-1), seek(0), length(len), allocated_length(len), allocated(true)
+        -:   11:{
+       1*:   12:    assert(length > 0);
+        1:   12-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    %%%%%:   12-block  1
+call    2 never executed
+       1*:   13:    assert(allocated_length > 0);
+        1:   13-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    %%%%%:   13-block  1
+call    2 never executed
+       1*:   14:    assert(allocated_length == length);
+        1:   14-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    %%%%%:   14-block  1
+call    2 never executed
+       1*:   15:    assert(buf != nullptr);
+        1:   15-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    %%%%%:   15-block  1
+call    2 never executed
+        -:   16:
+        -:   17:    //@todo add alignment
+        1:   18:    buffer = (char*)malloc(sizeof(char*) * allocated_length);
+        -:   19:
+        1:   20:    if(!buffer) {
+        1:   20-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   21:        RNT_ASSERT_MSG( false, "memory out of bound");
+    %%%%%:   21-block  0
+call    0 never executed
+        -:   22:    }
+        -:   23:
+        1:   24:    memcpy(buffer, buf, sizeof(char*) * allocated_length);
+        1:   25:}
+        -:   26:
+        -:   27:
+function _ZN12AsyncRuntime8IOStreamD2Ev called 0 returned 0% blocks executed 0%
+    #####:   28:IOStream::~IOStream()
+        -:   29:{
+    #####:   30:    Flush();
+    %%%%%:   30-block  0
+call    0 never executed
+    #####:   31:}
+        -:   32:
+        -:   33:
+function _ZN12AsyncRuntime8IOStream5FlushEv called 0 returned 0% blocks executed 0%
+    #####:   34:void IOStream::Flush()
+        -:   35:{
+    #####:   36:    if(buffer != nullptr) {
+    %%%%%:   36-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   37:        free(buffer);
+    #####:   38:        buffer = nullptr;
+    %%%%%:   38-block  0
+        -:   39:    }
+        -:   40:
+    #####:   41:    fd = -1;
+    #####:   42:    allocated_length = 0;
+    #####:   43:    length = 0;
+    #####:   44:    seek = 0;
+    #####:   45:}
+        -:   46:
+        -:   47:
+function _ZN12AsyncRuntime8IOStream7SetModeERKNS0_4ModeE called 2 returned 100% blocks executed 100%
+        2:   48:void IOStream::SetMode(const Mode &mode)
+        -:   49:{
+        2:   50:    switch (mode) {
+        2:   50-block  0
+branch  0 taken 1
+branch  1 taken 1
+branch  2 taken 0
+        1:   51:        case W: allocated = true; break;
+        1:   51-block  0
+        1:   52:        case R: allocated = false; break;
+        1:   52-block  0
+        -:   53:    }
+        2:   54:}
+        -:   55:
+        -:   56:
+function _ZN12AsyncRuntime8IOStream4NextEl called 1 returned 100% blocks executed 54%
+        1:   57:uv_buf_t *IOStream::Next(int64_t size)
+        -:   58:{
+        1:   59:    if(!allocated) {
+        1:   59-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   60:        seek = length;
+    #####:   61:        if (allocated_length < seek + size) {
+    %%%%%:   61-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   62:            allocated_length = seek + size;
+        -:   63:
+        -:   64:            //@todo add alignment
+    #####:   65:            buffer = (char *) realloc(buffer, sizeof(char *) * allocated_length);
+        -:   66:
+    #####:   67:            if (!buffer) {
+    %%%%%:   67-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   68:                RNT_ASSERT_MSG(false, "memory out of bound");
+    %%%%%:   68-block  0
+call    0 never executed
+        -:   69:            }
+        -:   70:        }
+        -:   71:
+    #####:   72:        uv_buf.base = buffer + seek;
+    #####:   73:        uv_buf.len = size;
+        -:   74:
+    #####:   75:        memset(uv_buf.base, 0, uv_buf.len);
+    %%%%%:   75-block  0
+        -:   76:    }else{
+       1*:   77:        assert(length > 0);
+        1:   77-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    %%%%%:   77-block  1
+call    2 never executed
+        -:   78:
+        1:   79:        if(seek >= length)
+        1:   79-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   80:            return nullptr;
+    %%%%%:   80-block  0
+        -:   81:
+        1:   82:        int64_t s = std::min(size, length - seek);
+        1:   82-block  0
+call    0 returned 1
+        1:   83:        uv_buf.base = buffer + seek;
+        1:   84:        uv_buf.len = s;
+        1:   85:        seek += s;
+        -:   86:    }
+        -:   87:
+        1:   88:    return &uv_buf;
+        1:   88-block  0
+        -:   89:}
+        -:   90:
+        -:   91:
+function _ZN12AsyncRuntime8IOStream4NextEP8uv_buf_tl called 1 returned 100% blocks executed 46%
+        1:   92:bool IOStream::Next(uv_buf_t* buf, int64_t size) {
+        1:   93:    if(!allocated) {
+        1:   93-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   94:        seek = length;
+        1:   95:        if (allocated_length < seek + size) {
+        1:   95-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   96:            allocated_length = seek + size;
+        -:   97:
+        -:   98:            //@todo add alignment
+        1:   99:            buffer = (char *) realloc(buffer, sizeof(char *) * allocated_length);
+        -:  100:
+        1:  101:            if (!buffer) {
+        1:  101-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:  102:                RNT_ASSERT_MSG(false, "memory out of bound");
+    %%%%%:  102-block  0
+call    0 never executed
+        -:  103:            }
+        -:  104:        }
+        -:  105:
+        1:  106:        buf->base = buffer + seek;
+        1:  107:        buf->len = size;
+        -:  108:
+        1:  109:        memset(buf->base, 0, buf->len);
+        1:  109-block  0
+        -:  110:    }else{
+    #####:  111:        assert(length > 0);
+    %%%%%:  111-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  111-block  1
+call    2 never executed
+        -:  112:
+    #####:  113:        if(seek >= length)
+    %%%%%:  113-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  114:            return false;
+    %%%%%:  114-block  0
+        -:  115:
+    #####:  116:        int64_t s = std::min(size, length - seek);
+    %%%%%:  116-block  0
+call    0 never executed
+    #####:  117:        buf->base = buffer + seek;
+    #####:  118:        buf->len = s;
+    #####:  119:        seek += s;
+        -:  120:    }
+        -:  121:
+        1:  122:    return true;
+        1:  122-block  0
+        -:  123:}
+        -:  124:
+        -:  125:
+function _ZN12AsyncRuntime8IOStream5BeginEv called 1 returned 100% blocks executed 100%
+        1:  126:void IOStream::Begin()
+        -:  127:{
+        1:  128:    seek = 0;
+        1:  129:}
+        -:  130:

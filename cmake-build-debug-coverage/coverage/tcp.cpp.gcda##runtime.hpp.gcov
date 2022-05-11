@@ -1,0 +1,615 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/include/ar/runtime.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef AR_RUNTIME_H
+        -:    2:#define AR_RUNTIME_H
+        -:    3:
+        -:    4:#include "ar/work_steal_queue.h"
+        -:    5:#include "ar/task.hpp"
+        -:    6:#include "ar/notifier.hpp"
+        -:    7:#include "ar/coroutine.hpp"
+        -:    8:#include "ar/awaiter.hpp"
+        -:    9:#include "ar/channel.hpp"
+        -:   10:#include "ar/executor.hpp"
+        -:   11:#include "ar/io_task.hpp"
+        -:   12:#include "ar/io_executor.hpp"
+        -:   13:
+        -:   14:
+        -:   15:namespace AsyncRuntime {
+        -:   16:    /**
+        -:   17:     * @class Runtime
+        -:   18:     * @brief runtime class
+        -:   19:     */
+        -:   20:    class Runtime {
+        -:   21:        friend class Processor;
+        -:   22:    public:
+        -:   23:        static Runtime g_runtime;
+        -:   24:
+        -:   25:        Runtime();
+        -:   26:        ~Runtime();
+        -:   27:
+        -:   28:
+        -:   29:        Runtime(const Runtime&) = delete;
+        -:   30:        Runtime& operator =(const Runtime&) = delete;
+        -:   31:        Runtime(Runtime&&) = delete;
+        -:   32:        Runtime& operator =(Runtime&&) = delete;
+        -:   33:
+        -:   34:
+        -:   35:        /**
+        -:   36:         * @brief
+        -:   37:         */
+        -:   38:        void Setup(/*...*/);
+        -:   39:        void Terminate();
+        -:   40:
+        -:   41:
+        -:   42:        /**
+        -:   43:         * @brief
+        -:   44:         * @tparam Callable
+        -:   45:         * @tparam Arguments
+        -:   46:         * @param f
+        -:   47:         * @param args
+        -:   48:         * @return
+        -:   49:         */
+        -:   50:        template <  class Callable,
+        -:   51:                    class... Arguments  >
+        -:   52:        auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
+        -:   53:
+        -:   54:
+        -:   55:        /**
+        -:   56:         * @brief async call
+        -:   57:         * @tparam Callable
+        -:   58:         * @tparam Arguments
+        -:   59:         * @param wg
+        -:   60:         * @param f
+        -:   61:         * @param args
+        -:   62:         * @return
+        -:   63:         */
+        -:   64:        template <  class Callable,
+        -:   65:                    class... Arguments  >
+        -:   66:        auto Async(IExecutor* ex, Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
+        -:   67:
+        -:   68:
+        -:   69:        /**
+        -:   70:         * @brief async call
+        -:   71:         * @tparam CoroutineType
+        -:   72:         */
+        -:   73:        template<class CoroutineType>
+        -:   74:        std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine);
+        -:   75:
+        -:   76:
+        -:   77:        /**
+        -:   78:         * @brief
+        -:   79:         * @tparam CoroutineType
+        -:   80:         * @param coroutine
+        -:   81:         * @return
+        -:   82:         */
+        -:   83:        template<class CoroutineType>
+        -:   84:        std::shared_ptr<Result<typename CoroutineType::RetType>> Async(IExecutor* ex, CoroutineType & coroutine);
+        -:   85:
+        -:   86:
+        -:   87:        /**
+        -:   88:         * @brief async sleep
+        -:   89:         * @tparam _Rep
+        -:   90:         * @tparam _Period
+        -:   91:         * @param rtime
+        -:   92:         */
+        -:   93:        template<typename Rep, typename Period>
+        -:   94:        ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime);
+        -:   95:
+        -:   96:
+        -:   97:        /**
+        -:   98:         * @brief
+        -:   99:         * @return
+        -:  100:         */
+        -:  101:        template<typename Method>
+        -:  102:        std::shared_ptr<Result<IOResult>> AsyncFs(Method method,
+        -:  103:                                                  const IOStreamPtr& stream);
+        -:  104:
+        -:  105:
+        -:  106:        /**
+        -:  107:         * @brief
+        -:  108:         * @return
+        -:  109:         */
+        -:  110:        template<typename Method>
+        -:  111:        std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
+        -:  112:                                                   const TCPServerPtr& server);
+        -:  113:
+        -:  114:
+        -:  115:        template<typename Method>
+        -:  116:        std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
+        -:  117:                                                   const TCPConnectionPtr& connection);
+        -:  118:
+        -:  119:
+        -:  120:        template<typename Method>
+        -:  121:        std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
+        -:  122:                                                   const IOStreamPtr& stream);
+        -:  123:
+        -:  124:        template<typename Method>
+        -:  125:        std::shared_ptr<Result<IOResult>> AsyncNet(Method method,
+        -:  126:                                                   const NetAddrInfoPtr& info);
+        -:  127:
+        -:  128:        template<typename Method>
+        -:  129:        std::shared_ptr<Result<IOResult>> AsyncNet(Method method);
+        -:  130:
+        -:  131:
+        -:  132:        /**
+        -:  133:         * @brief
+        -:  134:         * @tparam Ret
+        -:  135:         * @param awaiter
+        -:  136:         * @param context
+        -:  137:         * @return
+        -:  138:         */
+        -:  139:        template<class Ret>
+        -:  140:        Ret Await(std::shared_ptr<Result<Ret>> result);
+        -:  141:
+        -:  142:
+        -:  143:        /**
+        -:  144:         * @brief
+        -:  145:         * @tparam Ret
+        -:  146:         * @param awaiter
+        -:  147:         * @param context
+        -:  148:         * @return
+        -:  149:         */
+        -:  150:        template<class Ret, class Res>
+        -:  151:        Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
+        -:  152:
+        -:  153:
+        -:  154:        /**
+        -:  155:         * @brief
+        -:  156:         */
+        -:  157:        void Bind(const TCPServerPtr & server, int flags = 0);
+        -:  158:    private:
+        -:  159:        void CheckRuntime();
+        -:  160:
+        -:  161:        /**
+        -:  162:         * @brief
+        -:  163:         * @param task
+        -:  164:         */
+        -:  165:        void Post(Task * task);
+        -:  166:
+        -:  167:
+        -:  168:        /**
+        -:  169:         * @brief
+        -:  170:         * @param task
+        -:  171:         */
+        -:  172:        void Post(IExecutor* ex, Task * task);
+        -:  173:
+        -:  174:
+        -:  175:        /**
+        -:  176:         * @brief
+        -:  177:         */
+        -:  178:        void CreateDefaultExecutors();
+        -:  179:
+        -:  180:
+        -:  181:        std::unordered_map<ObjectID, IExecutor*>    executors;
+        -:  182:        IExecutor*                                  main_executor;
+        -:  183:        IOExecutor*                                 io_executor;
+        -:  184:        bool                                        is_setup;
+        -:  185:    };
+        -:  186:
+        -:  187:
+        -:  188:    template<class Callable, class... Arguments>
+        -:  189:    auto Runtime::Async(Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        -:  190:        CheckRuntime();
+        -:  191:        auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
+        -:  192:        auto result = task->GetResult();
+        -:  193:        Post(task);
+        -:  194:        return result;
+        -:  195:    }
+        -:  196:
+        -:  197:
+        -:  198:    template<class Callable, class... Arguments>
+        -:  199:    auto Runtime::Async(IExecutor* ex, Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        -:  200:        CheckRuntime();
+        -:  201:        auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
+        -:  202:        auto result = task->GetResult();
+        -:  203:        Post(ex, task);
+        -:  204:        return result;
+        -:  205:    }
+        -:  206:
+        -:  207:
+        -:  208:    template<class CoroutineType>
+function _ZN12AsyncRuntime7Runtime5AsyncINS_9CoroutineIvEEEESt10shared_ptrINS_6ResultINT_7RetTypeEEEERS6_ called 0 returned 0% blocks executed 0%
+    #####:  209:    std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(CoroutineType & coroutine) {
+    #####:  210:        CheckRuntime();
+    %%%%%:  210-block  0
+call    0 never executed
+    #####:  211:        if(coroutine.GetState() != CoroutineState::kWaiting) {
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  212:            auto result = coroutine.GetResult();
+    %%%%%:  212-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  213:            result->Wait();
+    %%%%%:  213-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    #####:  214:        }
+    %%%%%:  214-block  0
+call    0 never executed
+    $$$$$:  214-block  1
+call    1 never executed
+        -:  215:
+    #####:  216:        auto task = coroutine.MakeExecTask();
+    %%%%%:  216-block  0
+call    0 never executed
+    #####:  217:        if(task != nullptr) {
+branch  0 never executed
+branch  1 never executed
+    #####:  218:            coroutine.MakeResult();
+    %%%%%:  218-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  219:            auto result = coroutine.GetResult();
+    %%%%%:  219-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  220:            Post(task);
+    %%%%%:  220-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  221:            return result;
+    %%%%%:  221-block  0
+call    0 never executed
+    #####:  222:        }else{
+call    0 never executed
+    $$$$$:  222-block  0
+call    1 never executed
+    #####:  223:            return {};
+    %%%%%:  223-block  0
+call    0 never executed
+        -:  224:        }
+        -:  225:    }
+        -:  226:
+        -:  227:
+        -:  228:    template<class CoroutineType>
+        -:  229:    std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(IExecutor* ex, CoroutineType & coroutine) {
+        -:  230:        CheckRuntime();
+        -:  231:        if(coroutine.GetState() != CoroutineState::kWaiting) {
+        -:  232:            auto result = coroutine.GetResult();
+        -:  233:            result->Wait();
+        -:  234:        }
+        -:  235:
+        -:  236:        auto task = coroutine.MakeExecTask();
+        -:  237:        if(task != nullptr) {
+        -:  238:            coroutine.MakeResult();
+        -:  239:            auto result = coroutine.GetResult();
+        -:  240:            Post(ex, task);
+        -:  241:            return result;
+        -:  242:        }else{
+        -:  243:            return {};
+        -:  244:        }
+        -:  245:    }
+        -:  246:
+        -:  247:
+        -:  248:    template<typename Rep, typename Period>
+        -:  249:    ResultVoidPtr Runtime::AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
+        -:  250:        CheckRuntime();
+        -:  251:        return std::move(Async([](const std::chrono::duration<Rep, Period>& t){
+        -:  252:            std::this_thread::sleep_for(t);
+        -:  253:        }, rtime));
+        -:  254:    }
+        -:  255:
+        -:  256:
+        -:  257:    template<typename Method>
+        -:  258:    std::shared_ptr<Result<IOResult>> Runtime::AsyncFs(Method method,
+        -:  259:                                                       const IOStreamPtr& stream) {
+        -:  260:        CheckRuntime();
+        -:  261:        auto *task = new IOFsTaskImpl<Method>(method, stream);
+        -:  262:        auto result = task->GetResult();
+        -:  263:        io_executor->Post(task);
+        -:  264:        return result;
+        -:  265:    }
+        -:  266:
+        -:  267:
+        -:  268:    template<typename Method>
+        -:  269:    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
+        -:  270:                                                        const TCPServerPtr& server) {
+        -:  271:        CheckRuntime();
+        -:  272:        auto *task = new IONetTaskImpl<Method>(method, server);
+        -:  273:        auto result = task->GetResult();
+        -:  274:        io_executor->Post(task);
+        -:  275:        return result;
+        -:  276:    }
+        -:  277:
+        -:  278:
+        -:  279:    template<typename Method>
+        -:  280:    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
+        -:  281:                                                        const IOStreamPtr& stream) {
+        -:  282:        CheckRuntime();
+        -:  283:        auto *task = new IONetTaskImpl<Method>(method,  stream);
+        -:  284:        auto result = task->GetResult();
+        -:  285:        io_executor->Post(task);
+        -:  286:        return result;
+        -:  287:    }
+        -:  288:
+        -:  289:
+        -:  290:    template<typename Method>
+        -:  291:    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
+        -:  292:                                                        const TCPConnectionPtr& connection) {
+        -:  293:        CheckRuntime();
+        -:  294:        auto *task = new IONetTaskImpl<Method>(method, connection);
+        -:  295:        auto result = task->GetResult();
+        -:  296:        io_executor->Post(task);
+        -:  297:        return result;
+        -:  298:    }
+        -:  299:
+        -:  300:
+        -:  301:    template<typename Method>
+        -:  302:    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method,
+        -:  303:                                                        const NetAddrInfoPtr& info) {
+        -:  304:        CheckRuntime();
+        -:  305:        auto *task = new IONetTaskImpl<Method>(method, info);
+        -:  306:        auto result = task->GetResult();
+        -:  307:        io_executor->Post(task);
+        -:  308:        return result;
+        -:  309:    }
+        -:  310:
+        -:  311:
+        -:  312:    template<typename Method>
+        -:  313:    std::shared_ptr<Result<IOResult>> Runtime::AsyncNet(Method method) {
+        -:  314:        CheckRuntime();
+        -:  315:        auto *task = new IONetTaskImpl<Method>(method);
+        -:  316:        auto result = task->GetResult();
+        -:  317:        io_executor->Post(task);
+        -:  318:        return result;
+        -:  319:    }
+        -:  320:
+        -:  321:
+        -:  322:    template<class Ret>
+        -:  323:    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
+        -:  324:        CheckRuntime();
+        -:  325:        assert(result);
+        -:  326:
+        -:  327:        result->Wait();
+        -:  328:        return result->Get();
+        -:  329:    }
+        -:  330:
+        -:  331:
+        -:  332:    template<class Ret, class Res>
+        -:  333:    Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
+        -:  334:        CheckRuntime();
+        -:  335:        assert(result);
+        -:  336:        assert(handler != nullptr);
+        -:  337:
+        -:  338:        return Awaiter::Await(result, [this](void* p) {
+        -:  339:            if(p != nullptr) {
+        -:  340:                auto resumed_coroutine = (CoroutineHandler*)p;
+        -:  341:                auto task = resumed_coroutine->MakeExecTask();
+        -:  342:                if(task != nullptr) {
+        -:  343:                    Post(task);
+        -:  344:                }
+        -:  345:            }
+        -:  346:        }, handler);
+        -:  347:    }
+        -:  348:
+        -:  349:
+        -:  350:
+        -:  351:
+        -:  352:    /**
+        -:  353:     * @brief
+        -:  354:     */
+        -:  355:    inline void SetupRuntime(/*args...*/) {
+        -:  356:        return Runtime::g_runtime.Setup();
+        -:  357:    }
+        -:  358:
+        -:  359:
+        -:  360:    /**
+        -:  361:     * @brief
+        -:  362:     */
+        -:  363:    inline void Terminate() {
+        -:  364:        return Runtime::g_runtime.Terminate();
+        -:  365:    }
+        -:  366:
+        -:  367:
+        -:  368:    /**
+        -:  369:     * @brief
+        -:  370:     * @tparam Callable
+        -:  371:     * @tparam Arguments
+        -:  372:     * @param f
+        -:  373:     * @param args
+        -:  374:     * @return
+        -:  375:     */
+        -:  376:    template <  class Callable,
+        -:  377:                class... Arguments  >
+        -:  378:    inline auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        -:  379:        return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
+        -:  380:    }
+        -:  381:
+        -:  382:
+        -:  383:    /**
+        -:  384:     * @brief async call
+        -:  385:     * @tparam CoroutineType
+        -:  386:     */
+        -:  387:    template< class CoroutineType >
+function _ZN12AsyncRuntime5AsyncINS_9CoroutineIvEEEESt10shared_ptrINS_6ResultINT_7RetTypeEEEERS5_ called 0 returned 0% blocks executed 0%
+    #####:  388:    inline std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine) {
+    #####:  389:        return Runtime::g_runtime.Async(coroutine);
+    %%%%%:  389-block  0
+call    0 never executed
+        -:  390:    }
+        -:  391:
+        -:  392:
+        -:  393:    /**
+        -:  394:     * @brief async sleep
+        -:  395:     * @tparam _Rep
+        -:  396:     * @tparam _Period
+        -:  397:     * @param rtime
+        -:  398:     */
+        -:  399:    template< typename Rep, typename Period >
+        -:  400:    inline ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
+        -:  401:        return Runtime::g_runtime.AsyncSleep(rtime);
+        -:  402:    }
+        -:  403:
+        -:  404:
+        -:  405:    /**
+        -:  406:     * @brief async open file
+        -:  407:     * @param stream
+        -:  408:     * @param filename
+        -:  409:     * @param flags
+        -:  410:     * @param mods
+        -:  411:     * @return
+        -:  412:     */
+        -:  413:    inline IOResultPtr AsyncFsOpen(const IOStreamPtr& stream, const char* filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
+        -:  414:        return Runtime::g_runtime.AsyncFs<IOFsOpen>(IOFsOpen{filename, flags, mode}, stream);
+        -:  415:    }
+        -:  416:
+        -:  417:
+        -:  418:    /**
+        -:  419:     * @brief async close file
+        -:  420:     * @param stream
+        -:  421:     * @return
+        -:  422:     */
+        -:  423:    inline IOResultPtr AsyncFsClose(const IOStreamPtr& stream) {
+        -:  424:        return Runtime::g_runtime.AsyncFs<IOFsClose>(IOFsClose{}, stream);
+        -:  425:    }
+        -:  426:
+        -:  427:
+        -:  428:    /**
+        -:  429:     * @brief async read from file
+        -:  430:     * @param stream
+        -:  431:     * @param offset
+        -:  432:     * @return
+        -:  433:     */
+        -:  434:    inline IOResultPtr AsyncFsRead(const IOStreamPtr& stream, int64_t seek = -1, int64_t size = -1) {
+        -:  435:        return Runtime::g_runtime.AsyncFs<IOFsRead>(IOFsRead{seek, size}, stream);
+        -:  436:    }
+        -:  437:
+        -:  438:
+        -:  439:    /**
+        -:  440:     * @brief async write to file
+        -:  441:     * @param stream
+        -:  442:     * @param offset
+        -:  443:     * @return
+        -:  444:     */
+        -:  445:    inline IOResultPtr AsyncFsWrite(const IOStreamPtr& stream, int64_t seek = -1) {
+        -:  446:        return Runtime::g_runtime.AsyncFs<IOFsWrite>(IOFsWrite{seek}, stream);
+        -:  447:    }
+        -:  448:
+        -:  449:
+        -:  450:    /**
+        -:  451:     * @brief
+        -:  452:     * @param handle_connection
+        -:  453:     * @return
+        -:  454:     */
+        -:  455:    inline IOResultPtr AsyncConnect(const TCPConnectionPtr& connection) {
+        -:  456:        return Runtime::g_runtime.AsyncNet<IONetConnect>(IONetConnect{  }, connection);
+        -:  457:    }
+        -:  458:
+        -:  459:
+        -:  460:    /**
+        -:  461:     * @brief
+        -:  462:     * @param server
+        -:  463:     * @return
+        -:  464:     */
+        -:  465:    inline IOResultPtr AsyncListen(const TCPServerPtr& server, const TCPSession::HandlerType & handle_connection) {
+        -:  466:        return Runtime::g_runtime.AsyncNet<IONetListen>(IONetListen{ 0, handle_connection }, server);
+        -:  467:    }
+        -:  468:
+        -:  469:
+        -:  470:    /**
+        -:  471:     * @brief
+        -:  472:     * @param server
+        -:  473:     * @return
+        -:  474:     */
+        -:  475:    inline IOResultPtr AsyncRead(const TCPSessionPtr & session, const IOStreamPtr & stream) {
+        -:  476:        return Runtime::g_runtime.AsyncNet<IONetRead>(IONetRead{ session->GetClient() }, stream);
+        -:  477:    }
+        -:  478:
+        -:  479:
+        -:  480:    inline IOResultPtr AsyncRead(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
+        -:  481:        return Runtime::g_runtime.AsyncNet<IONetRead>(IONetRead{ &connection->socket }, stream);
+        -:  482:    }
+        -:  483:
+        -:  484:
+        -:  485:    /**
+        -:  486:     * @brief
+        -:  487:     * @param session
+        -:  488:     * @param stream
+        -:  489:     * @return
+        -:  490:     */
+        -:  491:    inline IOResultPtr AsyncWrite(const TCPSessionPtr & session, const IOStreamPtr & stream) {
+        -:  492:        return Runtime::g_runtime.AsyncNet<IONetWrite>(IONetWrite{ session->GetClient() }, stream);
+        -:  493:    }
+        -:  494:
+        -:  495:
+        -:  496:    inline IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
+        -:  497:        return Runtime::g_runtime.AsyncNet<IONetWrite>(IONetWrite{ &connection->socket }, stream);
+        -:  498:    }
+        -:  499:
+        -:  500:
+        -:  501:    /**
+        -:  502:     * @brief
+        -:  503:     * @param session
+        -:  504:     * @return
+        -:  505:     */
+        -:  506:    inline IOResultPtr AsyncClose(const TCPSessionPtr & session) {
+        -:  507:        return Runtime::g_runtime.AsyncNet<IONetClose>(IONetClose{ session->GetClient()});
+        -:  508:    }
+        -:  509:
+        -:  510:
+        -:  511:    inline IOResultPtr AsyncClose(const TCPConnectionPtr & connection) {
+        -:  512:        return Runtime::g_runtime.AsyncNet<IONetClose>(IONetClose{ &connection->socket });
+        -:  513:    }
+        -:  514:
+        -:  515:
+        -:  516:    /**
+        -:  517:     * @brief
+        -:  518:     * @param info
+        -:  519:     * @return
+        -:  520:     */
+        -:  521:    inline IOResultPtr AsyncNetAddrInfo(const NetAddrInfoPtr & info) {
+        -:  522:        return Runtime::g_runtime.AsyncNet<IONetAddrInfo>(IONetAddrInfo{  }, info);
+        -:  523:    }
+        -:  524:
+        -:  525:
+        -:  526:    /**
+        -:  527:     * @brief await
+        -:  528:     * @tparam Ret
+        -:  529:     * @param awaiter
+        -:  530:     * @param context
+        -:  531:     * @return
+        -:  532:     */
+        -:  533:    template< class Ret >
+        -:  534:    inline Ret Await(std::shared_ptr<Result<Ret>> result) {
+        -:  535:        return Runtime::g_runtime.Await(result);
+        -:  536:    }
+        -:  537:
+        -:  538:
+        -:  539:    /**
+        -:  540:     * @brief await
+        -:  541:     * @tparam Ret
+        -:  542:     * @param awaiter
+        -:  543:     * @param context
+        -:  544:     * @return
+        -:  545:     */
+        -:  546:    template< class Ret >
+        -:  547:    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        -:  548:        return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, handler);
+        -:  549:    }
+        -:  550:
+        -:  551:
+        -:  552:    /**
+        -:  553:     * @brief
+        -:  554:     * @tparam Ret
+        -:  555:     * @param result
+        -:  556:     * @param handler
+        -:  557:     * @return
+        -:  558:     */
+        -:  559:    template< class Ret >
+        -:  560:    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
+        -:  561:        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
+        -:  562:    }
+        -:  563:}
+        -:  564:
+        -:  565:
+        -:  566:#endif //AR_RUNTIME_H

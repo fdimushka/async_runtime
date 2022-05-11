@@ -1,0 +1,121 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/stack.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/stack.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/stack.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/stack.hpp"
+        -:    2:
+        -:    3:#include <mutex>
+        -:    4:
+        -:    5:extern "C" {
+        -:    6:#include <sys/resource.h>
+        -:    7:}
+        -:    8:
+        -:    9:using namespace AsyncRuntime;
+        -:   10:
+        -:   11:
+        -:   12:#if !defined (SIGSTKSZ)
+        -:   13:# define SIGSTKSZ (32768) // 32kb minimum allowable stack
+        -:   14:# define UDEF_SIGSTKSZ
+        -:   15:#endif
+        -:   16:
+        -:   17:#if !defined (MINSIGSTKSZ)
+        -:   18:# define MINSIGSTKSZ (131072) // 128kb recommended stack size
+        -:   19:# define UDEF_MINSIGSTKSZ
+        -:   20:#endif
+        -:   21:
+        -:   22:
+function _Z9pagesize_Pm called 0 returned 0% blocks executed 0%
+    #####:   23:void pagesize_( std::size_t * size) RNT_NOEXCEPT_OR_NOTHROW {
+    #####:   24:    * size = ::sysconf( _SC_PAGESIZE);
+    %%%%%:   24-block  0
+call    0 never executed
+    #####:   25:}
+        -:   26:
+        -:   27:
+function _Z16stacksize_limit_P6rlimit called 0 returned 0% blocks executed 0%
+    #####:   28:void stacksize_limit_( rlimit * limit) RNT_NOEXCEPT_OR_NOTHROW {
+    #####:   29:    ::getrlimit( RLIMIT_STACK, limit);
+    %%%%%:   29-block  0
+call    0 never executed
+    #####:   30:}
+        -:   31:
+        -:   32:
+function _Z8pagesizev called 0 returned 0% blocks executed 0%
+    #####:   33:std::size_t pagesize() RNT_NOEXCEPT_OR_NOTHROW {
+        -:   34:    static std::size_t size = 0;
+        -:   35:    static std::once_flag flag;
+    #####:   36:    std::call_once( flag, pagesize_, & size);
+    %%%%%:   36-block  0
+call    0 never executed
+    #####:   37:    return size;
+        -:   38:}
+        -:   39:
+        -:   40:
+function _Z15stacksize_limitv called 0 returned 0% blocks executed 0%
+    #####:   41:rlimit stacksize_limit() RNT_NOEXCEPT_OR_NOTHROW {
+        -:   42:    static rlimit limit;
+        -:   43:    static std::once_flag flag;
+    #####:   44:    std::call_once( flag, stacksize_limit_, & limit);
+    %%%%%:   44-block  0
+call    0 never executed
+    #####:   45:    return limit;
+        -:   46:}
+        -:   47:
+        -:   48:
+function _ZN12AsyncRuntime11StackTraits11DefaultSizeEv called 1 returned 100% blocks executed 100%
+        1:   49:std::size_t StackTraits::DefaultSize() RNT_NOEXCEPT_OR_NOTHROW
+        -:   50:{
+        1:   51:    return 128 * 1024;
+        1:   51-block  0
+        -:   52:}
+        -:   53:
+        -:   54:
+function _ZN12AsyncRuntime11StackTraits11IsUnboundedEv called 0 returned 0% blocks executed 0%
+    #####:   55:bool StackTraits::IsUnbounded() RNT_NOEXCEPT_OR_NOTHROW
+        -:   56:{
+    #####:   57:    return RLIM_INFINITY == stacksize_limit().rlim_max;
+    %%%%%:   57-block  0
+call    0 never executed
+        -:   58:}
+        -:   59:
+        -:   60:
+function _ZN12AsyncRuntime11StackTraits11MaximumSizeEv called 0 returned 0% blocks executed 0%
+    #####:   61:std::size_t StackTraits::MaximumSize() RNT_NOEXCEPT_OR_NOTHROW
+        -:   62:{
+    #####:   63:    assert( ! IsUnbounded() );
+    %%%%%:   63-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   63-block  1
+call    3 never executed
+    #####:   64:    return static_cast< std::size_t >( stacksize_limit().rlim_max);
+    %%%%%:   64-block  0
+call    0 never executed
+        -:   65:}
+        -:   66:
+        -:   67:
+function _ZN12AsyncRuntime11StackTraits11MinimumSizeEv called 0 returned 0% blocks executed 0%
+    #####:   68:std::size_t StackTraits::MinimumSize() RNT_NOEXCEPT_OR_NOTHROW
+        -:   69:{
+    #####:   70:    return MINSIGSTKSZ;
+    %%%%%:   70-block  0
+        -:   71:}
+        -:   72:
+        -:   73:
+function _ZN12AsyncRuntime11StackTraits8PageSizeEv called 0 returned 0% blocks executed 0%
+    #####:   74:std::size_t StackTraits::PageSize() RNT_NOEXCEPT_OR_NOTHROW
+        -:   75:{
+    #####:   76:    return pagesize();
+    %%%%%:   76-block  0
+call    0 never executed
+        -:   77:}
+        -:   78:
+        -:   79:
+        -:   80:#ifdef UDEF_SIGSTKSZ
+        -:   81:# undef SIGSTKSZ
+        -:   82:#endif
+        -:   83:
+        -:   84:#ifdef UDEF_MINSIGSTKSZ
+        -:   85:# undef MINSIGSTKSZ
+        -:   86:#endif

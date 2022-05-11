@@ -1,0 +1,464 @@
+        -:    0:Source:/usr/include/boost/archive/iterators/transform_width.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/base64.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef BOOST_ARCHIVE_ITERATORS_TRANSFORM_WIDTH_HPP
+        -:    2:#define BOOST_ARCHIVE_ITERATORS_TRANSFORM_WIDTH_HPP
+        -:    3:
+        -:    4:// MS compatible compilers support #pragma once
+        -:    5:#if defined(_MSC_VER)
+        -:    6:# pragma once
+        -:    7:#endif
+        -:    8:
+        -:    9://///////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
+        -:   10:// transform_width.hpp
+        -:   11:
+        -:   12:// (C) Copyright 2002 Robert Ramey - http://www.rrsd.com . 
+        -:   13:// Use, modification and distribution is subject to the Boost Software
+        -:   14:// License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+        -:   15:// http://www.boost.org/LICENSE_1_0.txt)
+        -:   16:
+        -:   17://  See http://www.boost.org for updates, documentation, and revision history.
+        -:   18:
+        -:   19:// iterator which takes elements of x bits and returns elements of y bits.
+        -:   20:// used to change streams of 8 bit characters into streams of 6 bit characters.
+        -:   21:// and vice-versa for implementing base64 encodeing/decoding. Be very careful
+        -:   22:// when using and end iterator.  end is only reliable detected when the input
+        -:   23:// stream length is some common multiple of x and y.  E.G. Base64 6 bit
+        -:   24:// character and 8 bit bytes. Lowest common multiple is 24 => 4 6 bit characters
+        -:   25:// or 3 8 bit characters
+        -:   26:
+        -:   27:#include <boost/iterator/iterator_adaptor.hpp>
+        -:   28:#include <boost/iterator/iterator_traits.hpp>
+        -:   29:
+        -:   30:#include <algorithm> // std::min
+        -:   31:
+        -:   32:namespace boost { 
+        -:   33:namespace archive {
+        -:   34:namespace iterators {
+        -:   35:
+        -:   36://///////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
+        -:   37:// class used by text archives to translate char strings to wchar_t
+        -:   38:// strings of the currently selected locale
+        -:   39:template<
+        -:   40:    class Base, 
+        -:   41:    int BitsOut, 
+        -:   42:    int BitsIn, 
+        -:   43:    class CharType = typename boost::iterator_value<Base>::type // output character
+        -:   44:>
+        -:   45:class transform_width : 
+        -:   46:    public boost::iterator_adaptor<
+        -:   47:        transform_width<Base, BitsOut, BitsIn, CharType>,
+        -:   48:        Base,
+        -:   49:        CharType,
+        -:   50:        single_pass_traversal_tag,
+        -:   51:        CharType
+        -:   52:    >
+        -:   53:{
+        -:   54:    friend class boost::iterator_core_access;
+        -:   55:    typedef typename boost::iterator_adaptor<
+        -:   56:        transform_width<Base, BitsOut, BitsIn, CharType>,
+        -:   57:        Base,
+        -:   58:        CharType,
+        -:   59:        single_pass_traversal_tag,
+        -:   60:        CharType
+        -:   61:    > super_t;
+        -:   62:
+        -:   63:    typedef transform_width<Base, BitsOut, BitsIn, CharType> this_t;
+        -:   64:    typedef typename iterator_value<Base>::type base_value_type;
+        -:   65:
+        -:   66:    void fill();
+        -:   67:
+    #####:   68:    CharType dereference() const {
+    #####:   69:        if(!m_buffer_out_full)
+    #####:   70:            const_cast<this_t *>(this)->fill();
+    #####:   71:        return m_buffer_out;
+        -:   72:    }
+------------------
+_ZNK5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE11dereferenceEv:
+function _ZNK5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE11dereferenceEv called 0 returned 0% blocks executed 0%
+    #####:   68:    CharType dereference() const {
+    #####:   69:        if(!m_buffer_out_full)
+    %%%%%:   69-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   70:            const_cast<this_t *>(this)->fill();
+    %%%%%:   70-block  0
+call    0 never executed
+    #####:   71:        return m_buffer_out;
+    %%%%%:   71-block  0
+        -:   72:    }
+------------------
+_ZNK5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE11dereferenceEv:
+function _ZNK5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE11dereferenceEv called 0 returned 0% blocks executed 0%
+    #####:   68:    CharType dereference() const {
+    #####:   69:        if(!m_buffer_out_full)
+    %%%%%:   69-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   70:            const_cast<this_t *>(this)->fill();
+    %%%%%:   70-block  0
+call    0 never executed
+    #####:   71:        return m_buffer_out;
+    %%%%%:   71-block  0
+        -:   72:    }
+------------------
+        -:   73:
+    #####:   74:    bool equal_impl(const this_t & rhs){
+        -:   75:        if(BitsIn < BitsOut) // discard any left over bits
+    #####:   76:            return this->base_reference() == rhs.base_reference();
+        -:   77:        else{
+        -:   78:            // BitsIn > BitsOut  // zero fill
+    #####:   79:            if(this->base_reference() == rhs.base_reference()){
+    #####:   80:                m_end_of_sequence = true;
+    #####:   81:                return 0 == m_remaining_bits;
+        -:   82:            }
+    #####:   83:            return false;
+        -:   84:        }
+        -:   85:    }
+------------------
+_ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE10equal_implERKSE_:
+function _ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE10equal_implERKSE_ called 0 returned 0% blocks executed 0%
+    #####:   74:    bool equal_impl(const this_t & rhs){
+    %%%%%:   74-block  0
+        -:   75:        if(BitsIn < BitsOut) // discard any left over bits
+        -:   76:            return this->base_reference() == rhs.base_reference();
+        -:   77:        else{
+        -:   78:            // BitsIn > BitsOut  // zero fill
+    #####:   79:            if(this->base_reference() == rhs.base_reference()){
+    %%%%%:   79-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+branch  3 never executed
+branch  4 never executed
+    #####:   80:                m_end_of_sequence = true;
+    #####:   81:                return 0 == m_remaining_bits;
+    %%%%%:   81-block  0
+        -:   82:            }
+    #####:   83:            return false;
+    %%%%%:   83-block  0
+        -:   84:        }
+        -:   85:    }
+------------------
+_ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE10equal_implERKSG_:
+function _ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE10equal_implERKSG_ called 0 returned 0% blocks executed 0%
+    #####:   74:    bool equal_impl(const this_t & rhs){
+    %%%%%:   74-block  0
+        -:   75:        if(BitsIn < BitsOut) // discard any left over bits
+    #####:   76:            return this->base_reference() == rhs.base_reference();
+    %%%%%:   76-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+        -:   77:        else{
+        -:   78:            // BitsIn > BitsOut  // zero fill
+        -:   79:            if(this->base_reference() == rhs.base_reference()){
+        -:   80:                m_end_of_sequence = true;
+        -:   81:                return 0 == m_remaining_bits;
+        -:   82:            }
+        -:   83:            return false;
+        -:   84:        }
+        -:   85:    }
+------------------
+        -:   86:
+        -:   87:    // standard iterator interface
+    #####:   88:    bool equal(const this_t & rhs) const {
+    #####:   89:        return const_cast<this_t *>(this)->equal_impl(rhs);
+        -:   90:    }
+------------------
+_ZNK5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE5equalERKSE_:
+function _ZNK5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE5equalERKSE_ called 0 returned 0% blocks executed 0%
+    #####:   88:    bool equal(const this_t & rhs) const {
+    #####:   89:        return const_cast<this_t *>(this)->equal_impl(rhs);
+    %%%%%:   89-block  0
+call    0 never executed
+        -:   90:    }
+------------------
+_ZNK5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE5equalERKSG_:
+function _ZNK5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE5equalERKSG_ called 0 returned 0% blocks executed 0%
+    #####:   88:    bool equal(const this_t & rhs) const {
+    #####:   89:        return const_cast<this_t *>(this)->equal_impl(rhs);
+    %%%%%:   89-block  0
+call    0 never executed
+        -:   90:    }
+------------------
+        -:   91:
+    #####:   92:    void increment(){
+    #####:   93:        m_buffer_out_full = false;
+    #####:   94:    }
+------------------
+_ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE9incrementEv:
+function _ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE9incrementEv called 0 returned 0% blocks executed 0%
+    #####:   92:    void increment(){
+    #####:   93:        m_buffer_out_full = false;
+    #####:   94:    }
+------------------
+_ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE9incrementEv:
+function _ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE9incrementEv called 0 returned 0% blocks executed 0%
+    #####:   92:    void increment(){
+    #####:   93:        m_buffer_out_full = false;
+    #####:   94:    }
+------------------
+        -:   95:
+        -:   96:    bool m_buffer_out_full;
+        -:   97:    CharType m_buffer_out;
+        -:   98:
+        -:   99:    // last read element from input
+        -:  100:    base_value_type m_buffer_in;
+        -:  101:
+        -:  102:    // number of bits to left in the input buffer.
+        -:  103:    unsigned int m_remaining_bits;
+        -:  104:
+        -:  105:    // flag to indicate we've reached end of data.
+        -:  106:    bool m_end_of_sequence;
+        -:  107:
+        -:  108:public:
+        -:  109:    // make composible buy using templated constructor
+        -:  110:    template<class T>
+    #####:  111:    transform_width(T start) : 
+    #####:  112:        super_t(Base(static_cast< T >(start))),
+    #####:  113:        m_buffer_out_full(false),
+    #####:  114:        m_buffer_out(0),
+        -:  115:        // To disable GCC warning, but not truly necessary 
+        -:  116:	    //(m_buffer_in will be initialized later before being 
+        -:  117:	    //used because m_remaining_bits == 0)
+    #####:  118:        m_buffer_in(0), 
+    #####:  119:        m_remaining_bits(0),
+    #####:  120:        m_end_of_sequence(false)
+    #####:  121:    {}
+------------------
+_ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEC2ISD_EET_:
+function _ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEC2ISD_EET_ called 0 returned 0% blocks executed 0%
+    #####:  111:    transform_width(T start) : 
+    #####:  112:        super_t(Base(static_cast< T >(start))),
+    #####:  113:        m_buffer_out_full(false),
+    #####:  114:        m_buffer_out(0),
+        -:  115:        // To disable GCC warning, but not truly necessary 
+        -:  116:	    //(m_buffer_in will be initialized later before being 
+        -:  117:	    //used because m_remaining_bits == 0)
+    #####:  118:        m_buffer_in(0), 
+    #####:  119:        m_remaining_bits(0),
+    #####:  120:        m_end_of_sequence(false)
+    %%%%%:  120-block  0
+call    0 never executed
+    #####:  121:    {}
+------------------
+_ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEC2ISE_EET_:
+function _ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEC2ISE_EET_ called 0 returned 0% blocks executed 0%
+    #####:  111:    transform_width(T start) : 
+    #####:  112:        super_t(Base(static_cast< T >(start))),
+    #####:  113:        m_buffer_out_full(false),
+    #####:  114:        m_buffer_out(0),
+        -:  115:        // To disable GCC warning, but not truly necessary 
+        -:  116:	    //(m_buffer_in will be initialized later before being 
+        -:  117:	    //used because m_remaining_bits == 0)
+    #####:  118:        m_buffer_in(0), 
+    #####:  119:        m_remaining_bits(0),
+    #####:  120:        m_end_of_sequence(false)
+    %%%%%:  120-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    #####:  121:    {}
+    %%%%%:  121-block  0
+------------------
+        -:  122:    // intel 7.1 doesn't like default copy constructor
+    #####:  123:    transform_width(const transform_width & rhs) : 
+        -:  124:        super_t(rhs.base_reference()),
+    #####:  125:        m_buffer_out_full(rhs.m_buffer_out_full),
+    #####:  126:        m_buffer_out(rhs.m_buffer_out),
+    #####:  127:        m_buffer_in(rhs.m_buffer_in),
+    #####:  128:        m_remaining_bits(rhs.m_remaining_bits),
+    #####:  129:        m_end_of_sequence(false)
+    #####:  130:    {}
+------------------
+_ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEC2ERKSE_:
+function _ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcEC2ERKSE_ called 0 returned 0% blocks executed 0%
+    #####:  123:    transform_width(const transform_width & rhs) : 
+        -:  124:        super_t(rhs.base_reference()),
+    #####:  125:        m_buffer_out_full(rhs.m_buffer_out_full),
+    #####:  126:        m_buffer_out(rhs.m_buffer_out),
+    #####:  127:        m_buffer_in(rhs.m_buffer_in),
+    #####:  128:        m_remaining_bits(rhs.m_remaining_bits),
+    #####:  129:        m_end_of_sequence(false)
+    %%%%%:  129-block  0
+call    0 never executed
+call    1 never executed
+    #####:  130:    {}
+------------------
+_ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEC2ERKSG_:
+function _ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcEC2ERKSG_ called 0 returned 0% blocks executed 0%
+    #####:  123:    transform_width(const transform_width & rhs) : 
+        -:  124:        super_t(rhs.base_reference()),
+    #####:  125:        m_buffer_out_full(rhs.m_buffer_out_full),
+    #####:  126:        m_buffer_out(rhs.m_buffer_out),
+    #####:  127:        m_buffer_in(rhs.m_buffer_in),
+    #####:  128:        m_remaining_bits(rhs.m_remaining_bits),
+    #####:  129:        m_end_of_sequence(false)
+    %%%%%:  129-block  0
+call    0 never executed
+call    1 never executed
+    #####:  130:    {}
+------------------
+        -:  131:};
+        -:  132:
+        -:  133:template<
+        -:  134:    class Base, 
+        -:  135:    int BitsOut, 
+        -:  136:    int BitsIn, 
+        -:  137:    class CharType
+        -:  138:>
+    #####:  139:void transform_width<Base, BitsOut, BitsIn, CharType>::fill() {
+    #####:  140:    unsigned int missing_bits = BitsOut;
+    #####:  141:    m_buffer_out = 0;
+        -:  142:    do{
+    #####:  143:        if(0 == m_remaining_bits){
+    #####:  144:            if(m_end_of_sequence){
+    #####:  145:                m_buffer_in = 0;
+    #####:  146:                m_remaining_bits = missing_bits;
+        -:  147:            }
+        -:  148:            else{
+    #####:  149:                m_buffer_in = * this->base_reference()++;
+    #####:  150:                m_remaining_bits = BitsIn;
+        -:  151:            }
+        -:  152:        }
+        -:  153:
+        -:  154:        // append these bits to the next output
+        -:  155:        // up to the size of the output
+    #####:  156:        unsigned int i = (std::min)(missing_bits, m_remaining_bits);
+        -:  157:        // shift interesting bits to least significant position
+    #####:  158:        base_value_type j = m_buffer_in >> (m_remaining_bits - i);
+        -:  159:        // and mask off the un interesting higher bits
+        -:  160:        // note presumption of twos complement notation
+    #####:  161:        j &= (1 << i) - 1;
+        -:  162:        // append then interesting bits to the output value
+    #####:  163:        m_buffer_out <<= i;
+    #####:  164:        m_buffer_out |= j;
+        -:  165:
+        -:  166:        // and update counters
+    #####:  167:        missing_bits -= i;
+    #####:  168:        m_remaining_bits -= i;
+    #####:  169:    }while(0 < missing_bits);
+    #####:  170:    m_buffer_out_full = true;
+    #####:  171:}
+------------------
+_ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE4fillEv:
+function _ZN5boost7archive9iterators15transform_widthIN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEELi6ELi8EcE4fillEv called 0 returned 0% blocks executed 0%
+    #####:  139:void transform_width<Base, BitsOut, BitsIn, CharType>::fill() {
+    #####:  140:    unsigned int missing_bits = BitsOut;
+    #####:  141:    m_buffer_out = 0;
+    %%%%%:  141-block  0
+        -:  142:    do{
+    #####:  143:        if(0 == m_remaining_bits){
+    %%%%%:  143-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  144:            if(m_end_of_sequence){
+    %%%%%:  144-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  145:                m_buffer_in = 0;
+    #####:  146:                m_remaining_bits = missing_bits;
+    %%%%%:  146-block  0
+        -:  147:            }
+        -:  148:            else{
+    #####:  149:                m_buffer_in = * this->base_reference()++;
+    %%%%%:  149-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+    #####:  150:                m_remaining_bits = BitsIn;
+        -:  151:            }
+        -:  152:        }
+        -:  153:
+        -:  154:        // append these bits to the next output
+        -:  155:        // up to the size of the output
+    #####:  156:        unsigned int i = (std::min)(missing_bits, m_remaining_bits);
+    %%%%%:  156-block  0
+call    0 never executed
+        -:  157:        // shift interesting bits to least significant position
+    #####:  158:        base_value_type j = m_buffer_in >> (m_remaining_bits - i);
+        -:  159:        // and mask off the un interesting higher bits
+        -:  160:        // note presumption of twos complement notation
+    #####:  161:        j &= (1 << i) - 1;
+        -:  162:        // append then interesting bits to the output value
+    #####:  163:        m_buffer_out <<= i;
+    #####:  164:        m_buffer_out |= j;
+        -:  165:
+        -:  166:        // and update counters
+    #####:  167:        missing_bits -= i;
+    #####:  168:        m_remaining_bits -= i;
+    #####:  169:    }while(0 < missing_bits);
+branch  0 never executed
+branch  1 never executed
+    #####:  170:    m_buffer_out_full = true;
+    #####:  171:}
+------------------
+_ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE4fillEv:
+function _ZN5boost7archive9iterators15transform_widthINS1_18binary_from_base64IN9__gnu_cxx17__normal_iteratorIPKcNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEcEELi8ELi6EcE4fillEv called 0 returned 0% blocks executed 0%
+    #####:  139:void transform_width<Base, BitsOut, BitsIn, CharType>::fill() {
+    #####:  140:    unsigned int missing_bits = BitsOut;
+    #####:  141:    m_buffer_out = 0;
+    %%%%%:  141-block  0
+        -:  142:    do{
+    #####:  143:        if(0 == m_remaining_bits){
+    %%%%%:  143-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  144:            if(m_end_of_sequence){
+    %%%%%:  144-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  145:                m_buffer_in = 0;
+    #####:  146:                m_remaining_bits = missing_bits;
+    %%%%%:  146-block  0
+        -:  147:            }
+        -:  148:            else{
+    #####:  149:                m_buffer_in = * this->base_reference()++;
+    %%%%%:  149-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:  149-block  1
+call    4 never executed
+branch  5 never executed
+branch  6 never executed
+    $$$$$:  149-block  2
+    #####:  150:                m_remaining_bits = BitsIn;
+    %%%%%:  150-block  0
+        -:  151:            }
+        -:  152:        }
+        -:  153:
+        -:  154:        // append these bits to the next output
+        -:  155:        // up to the size of the output
+    #####:  156:        unsigned int i = (std::min)(missing_bits, m_remaining_bits);
+    %%%%%:  156-block  0
+call    0 never executed
+        -:  157:        // shift interesting bits to least significant position
+    #####:  158:        base_value_type j = m_buffer_in >> (m_remaining_bits - i);
+        -:  159:        // and mask off the un interesting higher bits
+        -:  160:        // note presumption of twos complement notation
+    #####:  161:        j &= (1 << i) - 1;
+        -:  162:        // append then interesting bits to the output value
+    #####:  163:        m_buffer_out <<= i;
+    #####:  164:        m_buffer_out |= j;
+        -:  165:
+        -:  166:        // and update counters
+    #####:  167:        missing_bits -= i;
+    #####:  168:        m_remaining_bits -= i;
+    #####:  169:    }while(0 < missing_bits);
+branch  0 never executed
+branch  1 never executed
+    #####:  170:    m_buffer_out_full = true;
+    #####:  171:}
+    %%%%%:  171-block  0
+------------------
+        -:  172:
+        -:  173:} // namespace iterators
+        -:  174:} // namespace archive
+        -:  175:} // namespace boost
+        -:  176:
+        -:  177:#endif // BOOST_ARCHIVE_ITERATORS_TRANSFORM_WIDTH_HPP

@@ -1,0 +1,301 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/epoll.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/epoll.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/epoll.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "epoll.hpp"
+        -:    2:
+        -:    3:#ifdef __APPLE__
+        -:    4:
+        -:    5:#else
+        -:    6:
+        -:    7:#include <cassert>
+        -:    8:
+        -:    9:
+        -:   10:#define EPOLL_SIZE 1024
+        -:   11:
+        -:   12:using namespace AsyncRuntime;
+        -:   13:
+        -:   14:enum { R = 1, W = 2 };
+        -:   15:
+        -:   16:
+function _ZN12AsyncRuntime5EpollC2Ev called 0 returned 0% blocks executed 0%
+    #####:   17:Epoll::Epoll() : events(EPOLL_SIZE, {0}), events_count(0)
+    %%%%%:   17-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   17-block  1
+call    4 never executed
+    $$$$$:   17-block  2
+    $$$$$:   17-block  3
+call    5 never executed
+        -:   18:{
+    #####:   19:    int size = (int)events.size();
+call    0 never executed
+    #####:   20:    fd = epoll_create(size);
+call    0 never executed
+    #####:   21:    assert(fd >= 0);
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   21-block  0
+call    2 never executed
+    #####:   22:}
+    %%%%%:   22-block  0
+        -:   23:
+        -:   24:
+function _ZN12AsyncRuntime5EpollD2Ev called 0 returned 0% blocks executed 0%
+    #####:   25:Epoll::~Epoll()
+        -:   26:{
+    #####:   27:    if (fd != -1) {
+    %%%%%:   27-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   28:        close(fd);
+    %%%%%:   28-block  0
+call    0 never executed
+    #####:   29:        fd = -1;
+        -:   30:    }
+    #####:   31:}
+    %%%%%:   31-block  0
+call    0 never executed
+        -:   32:
+        -:   33:
+function _ZN12AsyncRuntime5Epoll4WaitEi called 0 returned 0% blocks executed 0%
+    #####:   34:int Epoll::Wait(int timeout)
+        -:   35:{
+    #####:   36:    if (events.empty())
+    %%%%%:   36-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   37:        return 0;
+    %%%%%:   37-block  0
+        -:   38:
+    #####:   39:    int _count = epoll_wait(fd, &events[0], (int)events.size(), timeout);
+    %%%%%:   39-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+    #####:   40:    if (_count <= 0)
+branch  0 never executed
+branch  1 never executed
+    #####:   41:        return 0;
+    %%%%%:   41-block  0
+    #####:   42:    int i = 0;
+    #####:   43:    while (i < _count) {
+    %%%%%:   43-block  0
+    %%%%%:   43-block  1
+branch  0 never executed
+branch  1 never executed
+    #####:   44:        struct epoll_event *ev = &events[i];
+    %%%%%:   44-block  0
+call    0 never executed
+    #####:   45:        FD *_fd = (FD*)ev->data.ptr;
+    #####:   46:        if (_fd->on_read) {
+branch  0 never executed
+branch  1 never executed
+    #####:   47:            if (ev->events & EPOLLIN)
+    %%%%%:   47-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   48:                _fd->on_read(_fd);
+    %%%%%:   48-block  0
+call    0 never executed
+        -:   49:        }
+    #####:   50:        if (_fd->on_write) {
+    %%%%%:   50-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   51:            if (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
+    %%%%%:   51-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   51-block  1
+branch  2 never executed
+branch  3 never executed
+    #####:   52:                ev->events & EPOLLHUP) {
+    %%%%%:   52-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   53:                _fd->on_write(_fd);
+    %%%%%:   53-block  0
+call    0 never executed
+        -:   54:            }
+        -:   55:        }
+    #####:   56:        i++;
+    %%%%%:   56-block  0
+        -:   57:    }
+    #####:   58:    return _count;
+    %%%%%:   58-block  0
+        -:   59:}
+        -:   60:
+        -:   61:
+function _ZN12AsyncRuntime5Epoll3AddEPNS_2FDEi called 0 returned 0% blocks executed 0%
+    #####:   62:int Epoll::Add(FD *fd_, int mask)
+        -:   63:{
+    #####:   64:    if ((events_count + 1) > events.size()) {
+    %%%%%:   64-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   65:        events.push_back({0});
+    %%%%%:   65-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   65-block  1
+    $$$$$:   65-block  2
+        -:   66:    }
+    #####:   67:    epoll_event ev{0};
+    #####:   68:    ev.events = 0;
+    #####:   69:    fd_->mask = mask;
+    #####:   70:    if (fd_->mask & R)
+    %%%%%:   70-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   71:        ev.events |= EPOLLIN;
+    %%%%%:   71-block  0
+    #####:   72:    if (fd_->mask & W)
+    %%%%%:   72-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   73:        ev.events |= EPOLLOUT;
+    %%%%%:   73-block  0
+    #####:   74:    ev.data.ptr = fd_;
+    #####:   75:    int rc = epoll_ctl(fd, EPOLL_CTL_ADD, fd_->fd, &ev);
+    %%%%%:   75-block  0
+call    0 never executed
+    #####:   76:    if (rc == -1)
+branch  0 never executed
+branch  1 never executed
+    #####:   77:        return -1;
+    %%%%%:   77-block  0
+    #####:   78:    events_count++;
+    #####:   79:    return 0;
+    %%%%%:   79-block  0
+        -:   80:}
+        -:   81:
+        -:   82:
+function _ZN12AsyncRuntime5Epoll6ModifyEPNS_2FDEi called 0 returned 0% blocks executed 0%
+    #####:   83:int Epoll::Modify(FD *fd_, int mask)
+        -:   84:{
+    #####:   85:    epoll_event ev{0};
+    #####:   86:    ev.events = 0;
+    #####:   87:    if (mask & R)
+    %%%%%:   87-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   88:        ev.events |= EPOLLIN;
+    %%%%%:   88-block  0
+    #####:   89:    if (mask & W)
+    %%%%%:   89-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   90:        ev.events |= EPOLLOUT;
+    %%%%%:   90-block  0
+    #####:   91:    ev.data.ptr = fd_;
+    #####:   92:    int rc = epoll_ctl(fd, EPOLL_CTL_MOD, fd_->fd, &ev);
+    %%%%%:   92-block  0
+call    0 never executed
+    #####:   93:    if (rc == -1)
+branch  0 never executed
+branch  1 never executed
+    #####:   94:        return -1;
+    %%%%%:   94-block  0
+    #####:   95:    fd_->mask = mask;
+    #####:   96:    return 0;
+    %%%%%:   96-block  0
+        -:   97:}
+        -:   98:
+        -:   99:
+function _ZN12AsyncRuntime5Epoll4ReadEPNS_2FDEPFvS2_EPvi called 0 returned 0% blocks executed 0%
+    #####:  100:int Epoll::Read(FD *fd_, FDCallback on_read, void *arg, int enable)
+        -:  101:{
+    #####:  102:    int mask = fd_->mask;
+    #####:  103:    if (enable)
+    %%%%%:  103-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  104:        mask |= R;
+    %%%%%:  104-block  0
+        -:  105:    else
+    #####:  106:        mask &= ~R;
+    %%%%%:  106-block  0
+    #####:  107:    fd_->on_read = on_read;
+    #####:  108:    fd_->on_read_arg = arg;
+    #####:  109:    if (mask == fd_->mask)
+    %%%%%:  109-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  110:        return 0;
+    %%%%%:  110-block  0
+    #####:  111:    return Modify(fd_, mask);
+    %%%%%:  111-block  0
+call    0 never executed
+        -:  112:}
+        -:  113:
+        -:  114:
+function _ZN12AsyncRuntime5Epoll5WriteEPNS_2FDEPFvS2_EPvi called 0 returned 0% blocks executed 0%
+    #####:  115:int Epoll::Write(FD *fd_, FDCallback on_write, void *arg, int enable)
+        -:  116:{
+    #####:  117:    int mask = fd_->mask;
+    #####:  118:    if (enable)
+    %%%%%:  118-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  119:        mask |= W;
+    %%%%%:  119-block  0
+        -:  120:    else
+    #####:  121:        mask &= ~W;
+    %%%%%:  121-block  0
+    #####:  122:    fd_->on_write = on_write;
+    #####:  123:    fd_->on_write_arg = arg;
+    #####:  124:    if (mask == fd_->mask)
+    %%%%%:  124-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  125:        return 0;
+    %%%%%:  125-block  0
+    #####:  126:    return Modify(fd_, mask);
+    %%%%%:  126-block  0
+call    0 never executed
+        -:  127:}
+        -:  128:
+        -:  129:
+function _ZN12AsyncRuntime5Epoll6DeleteEPNS_2FDE called 0 returned 0% blocks executed 0%
+    #####:  130:int Epoll::Delete(FD *fd_)
+        -:  131:{
+    #####:  132:    epoll_event ev{0};
+    #####:  133:    ev.events = 0;
+    #####:  134:    if (fd_->mask & R)
+    %%%%%:  134-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  135:        ev.events |= EPOLLIN;
+    %%%%%:  135-block  0
+    #####:  136:    if (fd_->mask & W)
+    %%%%%:  136-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:  137:        ev.events |= EPOLLOUT;
+    %%%%%:  137-block  0
+    #####:  138:    ev.data.ptr = fd_;
+    #####:  139:    fd_->mask = 0;
+    #####:  140:    fd_->on_write = nullptr;
+    #####:  141:    fd_->on_write_arg = nullptr;
+    #####:  142:    fd_->on_read = nullptr;
+    #####:  143:    fd_->on_read_arg = nullptr;
+    #####:  144:    events_count--;
+    #####:  145:    assert(events_count >= 0);
+    %%%%%:  145-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  145-block  1
+call    2 never executed
+    #####:  146:    return epoll_ctl(fd, EPOLL_CTL_DEL, fd_->fd, &ev);
+    %%%%%:  146-block  0
+call    0 never executed
+        -:  147:}
+        -:  148:
+        -:  149:#endif

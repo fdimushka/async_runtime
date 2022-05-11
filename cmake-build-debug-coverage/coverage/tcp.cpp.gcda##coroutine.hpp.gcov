@@ -1,0 +1,772 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/include/ar/coroutine.hpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#ifndef AR_COROUTINE_H
+        -:    2:#define AR_COROUTINE_H
+        -:    3:
+        -:    4:#include <iterator>
+        -:    5:#include <type_traits>
+        -:    6:#include <assert.h>
+        -:    7:
+        -:    8:#include "ar/object.hpp"
+        -:    9:#include "ar/task.hpp"
+        -:   10:#include "ar/stack.hpp"
+        -:   11:#include "ar/context_switcher.hpp"
+        -:   12:
+        -:   13:
+        -:   14:namespace AsyncRuntime {
+        -:   15:    class Task;
+        -:   16:    class Runtime;
+        -:   17:
+        -:   18:
+        -:   19:    class CoroutineHandler : public BaseObject {
+        -:   20:    public:
+        -:   21:        virtual void MakeResult() = 0;
+        -:   22:        virtual Task* MakeExecTask() = 0;
+        -:   23:        virtual void Suspend() = 0;
+        -:   24:        virtual const ExecutorState& GetExecutorState() const = 0;
+        -:   25:    };
+        -:   26:
+        -:   27:
+        -:   28:    template< typename T >
+        -:   29:    class BaseYield {
+        -:   30:        friend Runtime;
+        -:   31:    public:
+        -:   32:        typedef Result<T> ResultType;
+        -:   33:
+        -:   34:
+function _ZN12AsyncRuntime9BaseYieldIvEC2EPNS_16CoroutineHandlerE called 0 returned 0% blocks executed 0%
+    #####:   35:        BaseYield(CoroutineHandler*  handler) : coroutine_handler(handler) { };
+    %%%%%:   35-block  0
+call    0 never executed
+    #####:   36:        virtual ~BaseYield() =default;
+------------------
+_ZN12AsyncRuntime9BaseYieldIvED0Ev:
+function _ZN12AsyncRuntime9BaseYieldIvED0Ev called 0 returned 0% blocks executed 0%
+    #####:   36:        virtual ~BaseYield() =default;
+    %%%%%:   36-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime9BaseYieldIvED2Ev:
+function _ZN12AsyncRuntime9BaseYieldIvED2Ev called 0 returned 0% blocks executed 0%
+    #####:   36:        virtual ~BaseYield() =default;
+    %%%%%:   36-block  0
+call    0 never executed
+------------------
+        -:   37:
+        -:   38:
+function _ZN12AsyncRuntime9BaseYieldIvE7SuspendEv called 0 returned 0% blocks executed 0%
+    #####:   39:        void Suspend() {
+    #####:   40:            coroutine_handler->Suspend();
+    %%%%%:   40-block  0
+call    0 never executed
+    #####:   41:        }
+        -:   42:
+        -:   43:
+function _ZN12AsyncRuntime9BaseYieldIvE11ResetResultEv called 0 returned 0% blocks executed 0%
+    #####:   44:        void ResetResult() {
+    #####:   45:            if(!result || result->Resolved()) {
+    %%%%%:   45-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:   45-block  1
+call    3 never executed
+call    4 never executed
+branch  5 never executed
+branch  6 never executed
+    %%%%%:   45-block  2
+    %%%%%:   45-block  3
+    %%%%%:   45-block  4
+branch  7 never executed
+branch  8 never executed
+    #####:   46:                result.reset(new ResultType());
+    %%%%%:   46-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   46-block  1
+call    4 never executed
+    $$$$$:   46-block  2
+call    5 never executed
+        -:   47:            }
+    #####:   48:        }
+    %%%%%:   48-block  0
+        -:   49:
+        -:   50:
+function _ZNK12AsyncRuntime9BaseYieldIvE9GetResultEv called 0 returned 0% blocks executed 0%
+    #####:   51:        std::shared_ptr<ResultType> GetResult() const {
+    #####:   52:            return result;
+    %%%%%:   52-block  0
+call    0 never executed
+        -:   53:        }
+        -:   54:
+        -:   55:
+function _ZN12AsyncRuntime9BaseYieldIvE12SetExceptionENSt15__exception_ptr13exception_ptrE called 0 returned 0% blocks executed 0%
+    #####:   56:        void SetException(std::exception_ptr e) {
+    #####:   57:            if(result)
+    %%%%%:   57-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   58:                result->SetException(std::current_exception());
+    %%%%%:   58-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+branch  3 never executed
+branch  4 never executed
+    %%%%%:   58-block  1
+call    5 never executed
+    $$$$$:   58-block  2
+call    6 never executed
+    #####:   59:        }
+    %%%%%:   59-block  0
+        -:   60:
+        -:   61:
+        -:   62:        virtual void Complete() = 0;
+        -:   63:
+        -:   64:        CoroutineHandler*               coroutine_handler;
+        -:   65:    protected:
+        -:   66:        std::shared_ptr<ResultType>     result;
+        -:   67:    };
+        -:   68:
+        -:   69:
+        -:   70:    template< typename T >
+        -:   71:    class Yield : public BaseYield<T> {
+        -:   72:        typedef BaseYield<T> base;
+        -:   73:    public:
+        -:   74:        Yield(CoroutineHandler*  handler) : base(handler) {};
+        -:   75:        virtual ~Yield() =default;
+        -:   76:
+        -:   77:        void operator() (T  v) {
+        -:   78:            value = v;
+        -:   79:
+        -:   80:            if(base::result) {
+        -:   81:                base::result->SetValue(value);
+        -:   82:            }
+        -:   83:
+        -:   84:            base::Suspend();
+        -:   85:        };
+        -:   86:
+        -:   87:
+        -:   88:        void Complete() override {
+        -:   89:            if(base::result) {
+        -:   90:                base::result->SetValue(value);
+        -:   91:            }
+        -:   92:        }
+        -:   93:    private:
+        -:   94:        T                               value;
+        -:   95:    };
+        -:   96:
+        -:   97:
+        -:   98:    template<>
+        -:   99:    class Yield<void> : public BaseYield<void> {
+        -:  100:        typedef BaseYield<void> base;
+        -:  101:    public:
+function _ZN12AsyncRuntime5YieldIvEC2EPNS_16CoroutineHandlerE called 0 returned 0% blocks executed 0%
+    #####:  102:        Yield(CoroutineHandler*  handler) : base(handler) {};
+    %%%%%:  102-block  0
+call    0 never executed
+    #####:  103:        virtual ~Yield() =default;
+------------------
+_ZN12AsyncRuntime5YieldIvED0Ev:
+function _ZN12AsyncRuntime5YieldIvED0Ev called 0 returned 0% blocks executed 0%
+    #####:  103:        virtual ~Yield() =default;
+    %%%%%:  103-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime5YieldIvED2Ev:
+function _ZN12AsyncRuntime5YieldIvED2Ev called 0 returned 0% blocks executed 0%
+    #####:  103:        virtual ~Yield() =default;
+    %%%%%:  103-block  0
+call    0 never executed
+------------------
+        -:  104:
+function _ZN12AsyncRuntime5YieldIvEclEv called 0 returned 0% blocks executed 0%
+    #####:  105:        void operator() () {
+    #####:  106:            if(base::result) {
+    %%%%%:  106-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  107:                base::result->SetValue();
+    %%%%%:  107-block  0
+call    0 never executed
+call    1 never executed
+        -:  108:            }
+        -:  109:
+    #####:  110:            base::Suspend();
+    %%%%%:  110-block  0
+call    0 never executed
+    #####:  111:        };
+        -:  112:
+        -:  113:
+function _ZN12AsyncRuntime5YieldIvE8CompleteEv called 0 returned 0% blocks executed 0%
+    #####:  114:        void Complete() override {
+    #####:  115:            if(base::result) {
+    %%%%%:  115-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  116:                base::result->SetValue();
+    %%%%%:  116-block  0
+call    0 never executed
+call    1 never executed
+        -:  117:            }
+    #####:  118:        }
+        -:  119:    };
+        -:  120:
+        -:  121:
+        -:  122:    typedef Yield<void> YieldVoid;
+        -:  123:
+        -:  124:
+        -:  125:    /**
+        -:  126:     * @class ContextRecord< StackAlloc >
+        -:  127:     * @tparam StackAlloc
+        -:  128:     */
+        -:  129:    template< typename StackAlloc, class CoroutineType >
+        -:  130:    class ContextRecord {
+        -:  131:        typedef typename CoroutineType::YieldType                       YieldType;
+        -:  132:        typedef std::function<void(CoroutineHandler*, YieldType&)>       Callable;
+        -:  133:    public:
+function _ZN12AsyncRuntime13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS3_vEEEC2ENS_12StackContextEOS3_OSt8functionIFvPNS_16CoroutineHandlerERNS_5YieldIvEEEEPS5_ called 0 returned 0% blocks executed 0%
+    #####:  134:        ContextRecord(StackContext sctx, StackAlloc && salloc, Callable && fn, CoroutineType *coroutine) :
+    #####:  135:                salloc_(salloc),
+    #####:  136:                sctx_(sctx),
+    #####:  137:                fn_(fn),
+    #####:  138:                coroutine_(coroutine) { };
+    %%%%%:  138-block  0
+call    0 never executed
+        -:  139:
+        -:  140:
+        -:  141:        ContextRecord(const ContextRecord& other) = delete;
+        -:  142:        ContextRecord& operator =(const ContextRecord& other) = delete;
+        -:  143:        ContextRecord(ContextRecord&& other) = delete;
+        -:  144:        ContextRecord& operator =(ContextRecord&& other) = delete;
+        -:  145:
+        -:  146:
+function _ZN12AsyncRuntime13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS3_vEEE3RunEN5boost7context6detail10transfer_tE called 0 returned 0% blocks executed 0%
+    #####:  147:        fcontext_t Run(transfer_t t) {
+    #####:  148:            YieldType& yield = coroutine_->BindYieldContext(t.fctx);
+    %%%%%:  148-block  0
+call    0 never executed
+        -:  149:            // invoke context-function
+        -:  150:            try {
+    #####:  151:                fn_(static_cast<CoroutineHandler*>(coroutine_), yield);
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  152:                coroutine_->Complete();
+    %%%%%:  152-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    =====:  153:            }catch (...) {
+    $$$$$:  153-block  0
+    $$$$$:  153-block  1
+call    0 never executed
+    $$$$$:  153-block  2
+call    1 never executed
+    $$$$$:  153-block  3
+call    2 never executed
+        -:  154:                try {
+    =====:  155:                    yield.SetException(std::current_exception());
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    $$$$$:  155-block  0
+call    4 never executed
+    $$$$$:  155-block  1
+call    5 never executed
+    $$$$$:  155-block  2
+    =====:  156:                } catch(...) { }
+    $$$$$:  156-block  0
+    $$$$$:  156-block  1
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+        -:  157:
+    =====:  158:                coroutine_->Complete();
+    $$$$$:  158-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  159:            }
+        -:  160:
+    #####:  161:            return coroutine_->yield_fctx;
+    %%%%%:  161-block  0
+    %%%%%:  161-block  1
+        -:  162:        }
+        -:  163:
+        -:  164:
+function _ZN12AsyncRuntime13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS3_vEEE10DeallocateEv called 0 returned 0% blocks executed 0%
+    #####:  165:        void Deallocate() noexcept {
+    #####:  166:            Destroy( this);
+    %%%%%:  166-block  0
+call    0 never executed
+    #####:  167:        }
+        -:  168:    private:
+function _ZN12AsyncRuntime13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS3_vEEE7DestroyEPS6_ called 0 returned 0% blocks executed 0%
+    #####:  169:        static void Destroy( ContextRecord * r) noexcept {
+    #####:  170:            typename std::decay< StackAlloc >::type salloc = std::move( r->salloc_);
+    %%%%%:  170-block  0
+call    0 never executed
+    #####:  171:            StackContext sctx = r->sctx_;
+        -:  172:            // deallocate record
+    #####:  173:            r->~ContextRecord();
+call    0 never executed
+        -:  174:            // destroy stack with stack allocator
+    #####:  175:            salloc.Deallocate( sctx);
+call    0 never executed
+    #####:  176:        }
+        -:  177:
+        -:  178:
+        -:  179:        CoroutineType                                       *coroutine_;
+        -:  180:        typename std::decay< StackAlloc >::type             salloc_;
+        -:  181:        StackContext                                        sctx_;
+        -:  182:        Callable                                            fn_;
+        -:  183:    };
+        -:  184:
+        -:  185:
+        -:  186:    enum CoroutineState {
+        -:  187:        kExecuting,
+        -:  188:        kWaiting,
+        -:  189:    };
+        -:  190:
+        -:  191:
+        -:  192:    template< class StackAlloc,
+        -:  193:              class Ret >
+        -:  194:    class BaseCoroutine: public CoroutineHandler {
+        -:  195:        typedef BaseCoroutine<StackAlloc, Ret>                                      BaseCoroutineType;
+        -:  196:        typedef ContextRecord< StackAlloc, BaseCoroutineType >                      Record;
+        -:  197:
+        -:  198:        friend Record;
+        -:  199:    public:
+        -:  200:        typedef Yield<Ret>                                                          YieldType;
+        -:  201:        typedef Ret                                                                 RetType;
+        -:  202:        typedef std::function<void(CoroutineHandler*, YieldType&)>                  Callable;
+        -:  203:
+        -:  204:
+        -:  205:        template< class Function,
+        -:  206:                  class ...Arguments>
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvEC2IPFvPNS_16CoroutineHandlerENS_5YieldIvEERKSt10shared_ptrINS_10TCPSessionEEEJSC_EEEOT_DpOT0_ called 0 returned 0% blocks executed 0%
+    #####:  207:        explicit BaseCoroutine(Function &&fn, Arguments &&... args) :
+    #####:  208:                is_completed{false},
+call    0 never executed
+    #####:  209:                yield(this),
+    #####:  210:                state{kExecuting} {
+    %%%%%:  210-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+call    3 never executed
+call    4 never executed
+call    5 never executed
+branch  6 never executed
+branch  7 never executed
+    #####:  211:            yield.ResetResult();
+    %%%%%:  211-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  212:            CreateRecord(std::bind( std::forward<Function>(fn),
+    %%%%%:  212-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+branch  3 never executed
+branch  4 never executed
+    %%%%%:  212-block  1
+call    5 never executed
+branch  6 never executed
+branch  7 never executed
+    %%%%%:  212-block  2
+call    8 never executed
+branch  9 never executed
+branch 10 never executed
+    %%%%%:  212-block  3
+call   11 never executed
+call   12 never executed
+    $$$$$:  212-block  4
+call   13 never executed
+    $$$$$:  212-block  5
+    $$$$$:  212-block  6
+call   14 never executed
+    $$$$$:  212-block  7
+        -:  213:                                    std::placeholders::_1,
+        -:  214:                                    std::placeholders::_2,
+        -:  215:                                    std::forward<Arguments>(args)...) );
+        -:  216:
+    #####:  217:            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  218:        }
+    %%%%%:  218-block  0
+    $$$$$:  218-block  1
+call    0 never executed
+    $$$$$:  218-block  2
+call    1 never executed
+    $$$$$:  218-block  3
+call    2 never executed
+        -:  219:
+        -:  220:
+        -:  221:        BaseCoroutine(const BaseCoroutine& other) = delete;
+        -:  222:        BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
+        -:  223:        BaseCoroutine(BaseCoroutine&& other) = delete;
+        -:  224:        BaseCoroutine& operator =(BaseCoroutine&& other) = delete;
+    #####:  225:        virtual ~BaseCoroutine() = default;
+------------------
+_ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvED0Ev:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvED0Ev called 0 returned 0% blocks executed 0%
+    #####:  225:        virtual ~BaseCoroutine() = default;
+    %%%%%:  225-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvED2Ev:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvED2Ev called 0 returned 0% blocks executed 0%
+    #####:  225:        virtual ~BaseCoroutine() = default;
+    %%%%%:  225-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+------------------
+        -:  226:
+        -:  227:
+        -:  228:        void operator() (const ExecutorState& executor_ = ExecutorState()) {
+        -:  229:            std::lock_guard<std::mutex> lock(mutex);
+        -:  230:
+        -:  231:            if(is_completed.load(std::memory_order_relaxed)) {
+        -:  232:                throw std::runtime_error("coroutine is completed");
+        -:  233:            }
+        -:  234:
+        -:  235:            state.store(kExecuting, std::memory_order_relaxed);
+        -:  236:
+        -:  237:            yield.ResetResult();
+        -:  238:
+        -:  239:            executor = executor_;
+        -:  240:            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+        -:  241:        }
+        -:  242:
+        -:  243:
+        -:  244:        bool Valid() const {
+        -:  245:            bool completed = is_completed.load(std::memory_order_relaxed);
+        -:  246:            return !completed;
+        -:  247:        }
+        -:  248:
+        -:  249:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE7SuspendEv called 0 returned 0% blocks executed 0%
+    #####:  250:        void Suspend() override {
+    #####:  251:            state.store(kWaiting, std::memory_order_relaxed);
+    %%%%%:  251-block  0
+call    0 never executed
+    #####:  252:            yield_fctx = Context::Jump( yield_fctx, nullptr).fctx;
+call    0 never executed
+    #####:  253:        }
+        -:  254:
+        -:  255:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE9GetResultEv called 0 returned 0% blocks executed 0%
+    #####:  256:        std::shared_ptr<Result<Ret>> GetResult()  {
+    #####:  257:            return yield.GetResult();
+    %%%%%:  257-block  0
+call    0 never executed
+        -:  258:        }
+        -:  259:
+        -:  260:
+function _ZNK12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE8GetStateEv called 0 returned 0% blocks executed 0%
+    #####:  261:        CoroutineState GetState() const {
+    #####:  262:            CoroutineState s = state.load(std::memory_order_relaxed);
+    %%%%%:  262-block  0
+call    0 never executed
+    #####:  263:            return s;
+        -:  264:        }
+        -:  265:
+        -:  266:
+function _ZNK12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE16GetExecutorStateEv called 0 returned 0% blocks executed 0%
+    #####:  267:        const ExecutorState& GetExecutorState() const {
+    #####:  268:            return executor;
+    %%%%%:  268-block  0
+        -:  269:        }
+        -:  270:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE10MakeResultEv called 0 returned 0% blocks executed 0%
+    #####:  271:        void MakeResult() override {
+    #####:  272:            yield.ResetResult();
+    %%%%%:  272-block  0
+call    0 never executed
+    #####:  273:        }
+        -:  274:
+        -:  275:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE12MakeExecTaskEv called 0 returned 0% blocks executed 0%
+    #####:  276:        Task* MakeExecTask() override {
+    #####:  277:            if(!is_completed.load(std::memory_order_relaxed)) {
+    %%%%%:  277-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  278:                auto task = MakeTask(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
+    %%%%%:  278-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:  278-block  1
+call    3 never executed
+branch  4 never executed
+branch  5 never executed
+    $$$$$:  278-block  2
+    $$$$$:  278-block  3
+    #####:  279:                task->SetDesirableExecutor(executor);
+    %%%%%:  279-block  0
+call    0 never executed
+    #####:  280:                return task;
+        -:  281:            }else{
+    #####:  282:                return nullptr;
+    %%%%%:  282-block  0
+        -:  283:            }
+        -:  284:        }
+        -:  285:    private:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE7ExecuteERKNS_13ExecutorStateE called 0 returned 0% blocks executed 0%
+    #####:  286:        void Execute(const ExecutorState& executor_ = ExecutorState()) {
+    #####:  287:            std::lock_guard<std::mutex> lock(mutex);
+    %%%%%:  287-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  288:
+    #####:  289:            if(is_completed.load(std::memory_order_relaxed)) {
+    %%%%%:  289-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  290:                throw std::runtime_error("coroutine is completed");
+    %%%%%:  290-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:  290-block  1
+call    4 never executed
+    $$$$$:  290-block  2
+call    5 never executed
+        -:  291:            }
+        -:  292:
+    #####:  293:            state.store(kExecuting, std::memory_order_relaxed);
+    %%%%%:  293-block  0
+call    0 never executed
+    #####:  294:            executor = executor_;
+    #####:  295:            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  296:        }
+    %%%%%:  296-block  0
+call    0 never executed
+    $$$$$:  296-block  1
+call    1 never executed
+        -:  297:
+        -:  298:
+        -:  299:        void CreateRecord(Callable && fn);
+        -:  300:
+        -:  301:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE16BindYieldContextEPv called 0 returned 0% blocks executed 0%
+    #####:  302:        Yield<Ret>& BindYieldContext( fcontext_t ctx ) {
+    #####:  303:            yield_fctx = ctx;
+    #####:  304:            return yield;
+    %%%%%:  304-block  0
+        -:  305:        };
+        -:  306:
+        -:  307:
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE8CompleteEv called 0 returned 0% blocks executed 0%
+    #####:  308:        void Complete() {
+    #####:  309:            is_completed.store(true, std::memory_order_relaxed);
+    %%%%%:  309-block  0
+call    0 never executed
+    #####:  310:            yield.Complete();
+call    0 never executed
+    #####:  311:        }
+        -:  312:
+        -:  313:
+        -:  314:        ExecutorState                                       executor;
+        -:  315:        std::atomic_bool                                    is_completed;
+        -:  316:        std::mutex                                          mutex;
+        -:  317:        std::atomic<CoroutineState>                         state;
+        -:  318:        std::shared_future<void>                            future;
+        -:  319:        Record*                                             record;
+        -:  320:        fcontext_t                                          fctx{ nullptr };
+        -:  321:        fcontext_t                                          yield_fctx{ nullptr };
+        -:  322:        Yield<Ret>                                          yield;
+        -:  323:    };
+        -:  324:
+        -:  325:
+        -:  326:    template< typename Rec >
+function _ZN12AsyncRuntime10RecordExitINS_13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS4_vEEEEEEN5boost7context6detail10transfer_tESB_ called 0 returned 0% blocks executed 0%
+    #####:  327:    transfer_t RecordExit( transfer_t t) noexcept {
+    #####:  328:        Rec * rec = static_cast< Rec * >( t.data);
+        -:  329:        // destroy context stack
+    #####:  330:        rec->Deallocate();
+    %%%%%:  330-block  0
+call    0 never executed
+    #####:  331:        return { nullptr, nullptr };
+        -:  332:    }
+        -:  333:
+        -:  334:
+        -:  335:    template< typename Rec >
+function _ZN12AsyncRuntime11RecordEntryINS_13ContextRecordINS_19BasicFixedSizeStackINS_11StackTraitsEEENS_13BaseCoroutineIS4_vEEEEEEvN5boost7context6detail10transfer_tE called 0 returned 0% blocks executed 0%
+    #####:  336:    void RecordEntry( transfer_t t) noexcept {
+        -:  337:        // transfer control structure to the context-stack
+    #####:  338:        Rec * rec = static_cast< Rec * >( t.data);
+    #####:  339:        RNT_ASSERT( nullptr != t.fctx);
+    %%%%%:  339-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  339-block  1
+call    2 never executed
+    #####:  340:        RNT_ASSERT( nullptr != rec);
+    %%%%%:  340-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  340-block  1
+call    2 never executed
+        -:  341:        try {
+    #####:  342:            t = Context::Jump( t.fctx, nullptr);
+    %%%%%:  342-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  343:            // start executing
+    #####:  344:            t.fctx = rec->Run( t);
+    %%%%%:  344-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    %%%%%:  344-block  1
+    =====:  345:        }catch ( ... ) {
+    $$$$$:  345-block  0
+    $$$$$:  345-block  1
+call    0 never executed
+    =====:  346:            std::cerr << "Exception" << std::endl;
+call    0 never executed
+call    1 never executed
+        -:  347:        }
+    #####:  348:        RNT_ASSERT( nullptr !=  t.fctx);
+    %%%%%:  348-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  348-block  1
+call    2 never executed
+        -:  349:
+        -:  350:        // destroy context-stack of `this`context on next context
+    #####:  351:        Context::OnTop(  t.fctx, rec, RecordExit< Rec >);
+    %%%%%:  351-block  0
+call    0 never executed
+    #####:  352:        RNT_ASSERT_MSG( false, "context already terminated");
+call    0 never executed
+        -:  353:    }
+        -:  354:
+        -:  355:
+        -:  356:    template<typename StackAlloc, class Ret>
+function _ZN12AsyncRuntime13BaseCoroutineINS_19BasicFixedSizeStackINS_11StackTraitsEEEvE12CreateRecordEOSt8functionIFvPNS_16CoroutineHandlerERNS_5YieldIvEEEE called 0 returned 0% blocks executed 0%
+    #####:  357:    void BaseCoroutine<StackAlloc, Ret>::CreateRecord(Callable &&fn) {
+    #####:  358:        StackAlloc salloc;
+    %%%%%:  358-block  0
+call    0 never executed
+call    1 never executed
+    #####:  359:        auto sctx = salloc.Allocate();
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  360:        // reserve space for control structure
+    #####:  361:        void * storage = reinterpret_cast< void * >(
+    #####:  362:                ( reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sizeof( Record) ) )
+    #####:  363:                & ~static_cast< uintptr_t >( 0xff) );
+        -:  364:        // placment new for control structure on context stack
+    #####:  365:        record = new ( storage) Record( sctx, std::forward< StackAlloc >( salloc), std::forward<Callable>( fn), this);
+    %%%%%:  365-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+call    3 never executed
+branch  4 never executed
+branch  5 never executed
+    $$$$$:  365-block  1
+call    6 never executed
+    $$$$$:  365-block  2
+        -:  366:        // 64byte gab between control structure and stack top
+        -:  367:        // should be 16byte aligned
+    #####:  368:        void * stack_top = reinterpret_cast< void * >(
+    #####:  369:                reinterpret_cast< uintptr_t >( storage) - static_cast< uintptr_t >( 64) );
+    #####:  370:        void * stack_bottom = reinterpret_cast< void * >(
+    #####:  371:                reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sctx.size) );
+        -:  372:        // create fast-context 131072
+    #####:  373:        const std::size_t size = reinterpret_cast< uintptr_t >( stack_top) - reinterpret_cast< uintptr_t >( stack_bottom);
+    #####:  374:        fcontext_t ctx = Context::Make( stack_top, size, & RecordEntry< Record >);
+    %%%%%:  374-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  375:        fctx = Context::Jump( ctx, record).fctx;
+    %%%%%:  375-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:  376:        RNT_ASSERT( nullptr != fctx);
+    %%%%%:  376-block  0
+branch  0 never executed
+branch  1 never executed
+    %%%%%:  376-block  1
+call    2 never executed
+    #####:  377:    }
+    %%%%%:  377-block  0
+        -:  378:
+        -:  379:
+        -:  380:    template< typename Ret = void >
+        -:  381:    class Coroutine : public BaseCoroutine<FixedSizeStack, Ret> {
+        -:  382:        using base = BaseCoroutine<FixedSizeStack, Ret> ;
+        -:  383:    public:
+        -:  384:        template<   class Fn,
+        -:  385:                    class ...Arguments>
+function _ZN12AsyncRuntime9CoroutineIvEC2IPFvPNS_16CoroutineHandlerENS_5YieldIvEERKSt10shared_ptrINS_10TCPSessionEEEJS9_EEEOT_DpOT0_ called 0 returned 0% blocks executed 0%
+    #####:  386:        explicit Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) { };
+    %%%%%:  386-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+    #####:  387:        virtual ~Coroutine() = default;
+------------------
+_ZN12AsyncRuntime9CoroutineIvED0Ev:
+function _ZN12AsyncRuntime9CoroutineIvED0Ev called 0 returned 0% blocks executed 0%
+    #####:  387:        virtual ~Coroutine() = default;
+    %%%%%:  387-block  0
+call    0 never executed
+call    1 never executed
+------------------
+_ZN12AsyncRuntime9CoroutineIvED2Ev:
+function _ZN12AsyncRuntime9CoroutineIvED2Ev called 0 returned 0% blocks executed 0%
+    #####:  387:        virtual ~Coroutine() = default;
+    %%%%%:  387-block  0
+call    0 never executed
+------------------
+        -:  388:    };
+        -:  389:
+        -:  390:
+        -:  391:    template< typename Ret = void, typename Fn, typename ...Arguments>
+        -:  392:    inline Coroutine< Ret > MakeCoroutine(Fn &&fn, Arguments &&... args) {
+        -:  393:        return Coroutine< Ret >(std::forward<Fn>(fn), std::forward<Arguments>(args)...);
+        -:  394:    }
+        -:  395:
+        -:  396:
+        -:  397:    template< typename Ret = void, class StackAllocator, typename Fn, typename ...Arguments>
+        -:  398:    inline BaseCoroutine<StackAllocator, Ret> MakeCoroutine(Fn &&fn, Arguments &&... args) {
+        -:  399:        return BaseCoroutine<StackAllocator, Ret>(std::forward<Fn>(fn), std::forward<Arguments>(args)...);
+        -:  400:    }
+        -:  401:}
+        -:  402:
+        -:  403:
+        -:  404:#endif //AR_COROUTINE_H

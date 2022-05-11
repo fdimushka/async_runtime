@@ -11,7 +11,7 @@ Full-featured event loop backed by epoll, kqueue, IOCP, event ports.
 * IPC with socket sharing, using Unix domain sockets or named pipes (Windows).
 
 ### API (async fs io)
-* `class IOFsStream` - is primitive to implement a buffer for async reading and writing to fs.
+* `class IOStream` - is primitive to implement a buffer for async reading and writing to fs.
 
 * `IOFsStreamPtr MakeStream()` - method for create empty stream for reading. Return shared pointer to stream object.
 * `IOFsStreamPtr MakeStream(const char *buffer, size_t length)` - method for create stream with data for writing. Return shared pointer to stream object.
@@ -20,6 +20,24 @@ Full-featured event loop backed by epoll, kqueue, IOCP, event ports.
 * `IOResultPtr AsyncFsRead(const IOFsStreamPtr& stream, int64_t seek = -1, int64_t size = -1)` - method for async read from file, `stream` - is shared pointer to file stream, `seek` - offset reading (by default without offset), `size` - number of bytes to read (by default read all data from file). The read data will be written to the stream buffer. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
 * `IOResultPtr AsyncFsWrite(const IOFsStreamPtr& stream, int64_t seek = -1)` - method for async write to file, `stream` - is shared pointer to file stream, `seek` - offset writing (by default without offset). Write data will be reading from the stream buffer. Return shared pointer to promise result. Successfully result code is `0`. [Error codes detail](http://docs.libuv.org/en/v1.x/errors.html).
 
+
+### API (async network io)
+#### Objects:
+* `class IOStream` - is primitive to implement a buffer for async reading and writing to socket.
+* `class TCPServer` - is primitive of server data struct, use `MakeTCPServer(const char* hostname, int port)` for make instance of `TCPServer`.
+* `class TCPConnection` - tcp connection data struct, use `MakeTCPConnection(const char *hostname, int port, int keepalive)` for make instance of `TCPConnection`.
+* `class TCPSession` - tcp session data struct.
+* `class NetAddrInfo` - dns info data struct, use `MakeNetAddrInfo(const char* node)` for make instance of `NetAddrInfo`.
+
+#### Methods:
+* `IOResultPtr AsyncListen(const TCPServerPtr& server, const TCPSession::HandlerType & handle_connection)` - method for async listen connections.
+* `IOResultPtr AsyncRead(const TCPSessionPtr & session, const IOStreamPtr & stream)`.
+* `IOResultPtr AsyncRead(const TCPConnectionPtr & connection, const IOStreamPtr & stream)`.
+* `IOResultPtr AsyncWrite(const TCPSessionPtr & session, const IOStreamPtr & stream)`.
+* `IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const IOStreamPtr & stream)`.
+* `IOResultPtr AsyncClose(const TCPSessionPtr & session)`.
+* `IOResultPtr AsyncClose(const TCPConnectionPtr & connection)`.
+* `IOResultPtr AsyncNetAddrInfo(const NetAddrInfoPtr & info)`.
 
 ### Usage example
 Include library headers:
@@ -59,4 +77,9 @@ Async close file:
 Await(AsyncFsClose(in_stream), handler);
 ```
 
-More examples [see here](../examples/io.cpp).
+### Examples
+
+* Async tcp server example [see here](../examples/tcp_server.cpp).
+* Async tcp client example [see here](../examples/tcp_client.cpp).
+* Async dns example [see here](../examples/dns.cpp).
+* Async fs example [see here](../examples/io.cpp).

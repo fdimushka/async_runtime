@@ -1,0 +1,227 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/tcp.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/tcp.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/tcp.hpp"
+        -:    2:#include "ar/runtime.hpp"
+        -:    3:
+        -:    4:using namespace AsyncRuntime;
+        -:    5:
+        -:    6:
+function _ZN12AsyncRuntime17MakeTCPConnectionEPKcii called 1 returned 100% blocks executed 75%
+        1:    7:TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive)
+        -:    8:{
+        1:    9:    TCPConnectionPtr connection = std::make_shared<TCPConnection>();
+        1:    9-block  0
+call    0 returned 1
+        1:   10:    connection->hostname = std::string{hostname};
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   10-block  0
+call    4 returned 1
+call    5 returned 1
+call    6 returned 1
+call    7 returned 1
+    $$$$$:   10-block  1
+call    8 never executed
+    $$$$$:   10-block  2
+        1:   11:    connection->port = port;
+call    0 returned 1
+        1:   12:    connection->keepalive = keepalive;
+call    0 returned 1
+        1:   13:    return connection;
+        1:   13-block  0
+    =====:   14:}
+    $$$$$:   14-block  0
+call    0 never executed
+        -:   15:
+        -:   16:
+function _ZN12AsyncRuntime13MakeTCPServerEPKci called 0 returned 0% blocks executed 0%
+    #####:   17:TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
+        -:   18:{
+    #####:   19:    TCPServerPtr server = std::make_shared<TCPServer>();
+    %%%%%:   19-block  0
+call    0 never executed
+    #####:   20:    server->hostname = std::string{hostname};
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   20-block  0
+call    4 never executed
+call    5 never executed
+call    6 never executed
+call    7 never executed
+    $$$$$:   20-block  1
+call    8 never executed
+    $$$$$:   20-block  2
+    #####:   21:    server->port = port;
+call    0 never executed
+    #####:   22:    return server;
+    %%%%%:   22-block  0
+    =====:   23:}
+    $$$$$:   23-block  0
+call    0 never executed
+        -:   24:
+        -:   25:
+function _ZN12AsyncRuntime15MakeNetAddrInfoEPKc called 0 returned 0% blocks executed 0%
+    #####:   26:NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
+        -:   27:{
+    #####:   28:    NetAddrInfoPtr info = std::make_shared<NetAddrInfo>();
+    %%%%%:   28-block  0
+call    0 never executed
+    #####:   29:    info->node = std::string{node};
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   29-block  0
+call    4 never executed
+call    5 never executed
+call    6 never executed
+call    7 never executed
+    $$$$$:   29-block  1
+call    8 never executed
+    $$$$$:   29-block  2
+    #####:   30:    info->hints.ai_family = PF_INET;
+call    0 never executed
+    #####:   31:    info->hints.ai_socktype = SOCK_STREAM;
+call    0 never executed
+    #####:   32:    info->hints.ai_protocol = IPPROTO_TCP;
+call    0 never executed
+    #####:   33:    info->hints.ai_flags = 0;
+call    0 never executed
+    #####:   34:    return info;
+    %%%%%:   34-block  0
+    =====:   35:}
+    $$$$$:   35-block  0
+call    0 never executed
+        -:   36:
+        -:   37:
+function _ZN12AsyncRuntime10TCPSessionC2EP11uv_stream_sRKSt8functionIFvPNS_16CoroutineHandlerESt10shared_ptrIS0_EEE called 0 returned 0% blocks executed 0%
+    #####:   38:TCPSession::TCPSession(uv_stream_t *server, const HandlerType & connection_handler) :
+    #####:   39:        fn(connection_handler),
+    #####:   40:        loop_(server->loop),
+    #####:   41:        server_(server),
+    #####:   42:        client_(nullptr),
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   43:        accepted_(false) {
+    %%%%%:   43-block  0
+call    0 never executed
+    %%%%%:   43-block  1
+call    1 never executed
+    #####:   44:    client_ = (uv_tcp_t*) malloc(sizeof(uv_tcp_t));
+    #####:   45:    uv_tcp_init(loop_, client_);
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   46:}
+    %%%%%:   46-block  0
+    $$$$$:   46-block  1
+call    0 never executed
+    $$$$$:   46-block  2
+call    1 never executed
+    $$$$$:   46-block  3
+call    2 never executed
+        -:   47:
+        -:   48:
+function _ZN12AsyncRuntime10TCPSessionD2Ev called 0 returned 0% blocks executed 0%
+    #####:   49:TCPSession::~TCPSession()
+        -:   50:{
+    #####:   51:    if(client_ != nullptr)
+    %%%%%:   51-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   52:        free(client_);
+    %%%%%:   52-block  0
+    #####:   53:}
+    %%%%%:   53-block  0
+call    0 never executed
+call    1 never executed
+call    2 never executed
+        -:   54:
+        -:   55:
+function _ZN12AsyncRuntime10TCPSession6AcceptEv called 0 returned 0% blocks executed 0%
+    #####:   56:void TCPSession::Accept()
+        -:   57:{
+    #####:   58:    if(!accepted_) {
+    %%%%%:   58-block  0
+branch  0 never executed
+branch  1 never executed
+    #####:   59:        int error = uv_accept(server_, (uv_stream_t *) client_);
+    %%%%%:   59-block  0
+call    0 never executed
+    #####:   60:        RNT_ASSERT_MSG(error == 0, FSErrorMsg(error));
+branch  0 never executed
+branch  1 never executed
+    %%%%%:   60-block  0
+call    2 never executed
+branch  3 never executed
+branch  4 never executed
+    %%%%%:   60-block  1
+call    5 never executed
+    #####:   61:        accepted_ = true;
+    %%%%%:   61-block  0
+        -:   62:    }
+    #####:   63:}
+        -:   64:
+        -:   65:
+function _ZN12AsyncRuntime10TCPSession3RunEv called 0 returned 0% blocks executed 0%
+    #####:   66:void TCPSession::Run() {
+    #####:   67:    coroutine = std::make_shared<Coroutine<void>>(&TCPSession::Session, shared_from_this());
+    %%%%%:   67-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   67-block  1
+call    4 never executed
+call    5 never executed
+call    6 never executed
+    $$$$$:   67-block  2
+    $$$$$:   67-block  3
+call    7 never executed
+    #####:   68:    Async(*coroutine);
+call    0 never executed
+call    1 never executed
+call    2 never executed
+    #####:   69:}
+        -:   70:
+        -:   71:
+function _ZN12AsyncRuntime10TCPSession6InvokeEPNS_16CoroutineHandlerE called 0 returned 0% blocks executed 0%
+    #####:   72:void TCPSession::Invoke(CoroutineHandler *handler)
+        -:   73:{
+    #####:   74:    if(fn)
+    %%%%%:   74-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+    #####:   75:        fn(handler, shared_from_this());
+    %%%%%:   75-block  0
+call    0 never executed
+call    1 never executed
+branch  2 never executed
+branch  3 never executed
+    %%%%%:   75-block  1
+call    4 never executed
+    $$$$$:   75-block  2
+call    5 never executed
+    #####:   76:}
+    %%%%%:   76-block  0
+        -:   77:
+        -:   78:
+function _ZN12AsyncRuntime10TCPSession7SessionEPNS_16CoroutineHandlerENS_5YieldIvEERKSt10shared_ptrIS0_E called 0 returned 0% blocks executed 0%
+    #####:   79:void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, const std::shared_ptr<TCPSession> &session) {
+        -:   80:        //accept
+    #####:   81:        yield();
+    %%%%%:   81-block  0
+call    0 never executed
+        -:   82:
+    #####:   83:        session->Invoke(handler);
+call    0 never executed
+call    1 never executed
+    #####:   84:}

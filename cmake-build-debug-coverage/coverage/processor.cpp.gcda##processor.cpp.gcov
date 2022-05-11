@@ -1,0 +1,437 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/processor.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/processor.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/processor.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/processor.hpp"
+        -:    2:#include "ar/executor.hpp"
+        -:    3:
+        -:    4:#include "trace.h"
+        -:    5:
+        -:    6:
+        -:    7:using namespace AsyncRuntime;
+        -:    8:
+        -:    9:
+function _ZN12AsyncRuntime9ProcessorC2EPNS_8ExecutorE called 16 returned 100% blocks executed 57%
+       16:   10:Processor::Processor(Executor* executor_) :
+        -:   11:    BaseObject(),
+       16:   12:    executor(executor_),
+       16:   13:    is_continue(true),
+       16:   13-block  0
+call    0 returned 16
+       16:   14:    notify_count{0},
+call    0 returned 16
+       16:   15:    executor_state{executor_, this},
+       32:   16:    state{IDLE}
+       16:   16-block  0
+call    0 returned 16
+call    1 returned 16
+call    2 returned 16
+branch  3 taken 16 (fallthrough)
+branch  4 taken 0 (throw)
+call    5 returned 16
+call    6 returned 16
+call    7 returned 16
+        -:   17:{
+      16*:   18:    assert(executor != nullptr);
+branch  0 taken 0 (fallthrough)
+branch  1 taken 16
+    %%%%%:   18-block  0
+call    2 never executed
+function _ZZN12AsyncRuntime9ProcessorC4EPNS_8ExecutorEENKUlvE_clEv called 16 returned 100% blocks executed 100%
+       32:   19:    thread_executor.Submit([this] { Work(); });
+       16:   19-block  0
+call    0 returned 16
+branch  1 taken 16 (fallthrough)
+branch  2 taken 0 (throw)
+    $$$$$:   19-block  1
+       16:   19-block  2
+call    3 returned 16
+       16:   20:}
+       16:   20-block  0
+    $$$$$:   20-block  1
+call    0 never executed
+    $$$$$:   20-block  2
+call    1 never executed
+    $$$$$:   20-block  3
+call    2 never executed
+    $$$$$:   20-block  4
+call    3 never executed
+        -:   21:
+        -:   22:
+       32:   23:Processor::~Processor()
+        -:   24:{
+       16:   25:    is_continue.store(false, std::memory_order_relaxed);
+       16:   26:    thread_executor.Join();
+       32:   27:}
+------------------
+_ZN12AsyncRuntime9ProcessorD0Ev:
+function _ZN12AsyncRuntime9ProcessorD0Ev called 16 returned 100% blocks executed 100%
+       16:   23:Processor::~Processor()
+        -:   24:{
+        -:   25:    is_continue.store(false, std::memory_order_relaxed);
+        -:   26:    thread_executor.Join();
+       16:   27:}
+       16:   27-block  0
+call    0 returned 16
+call    1 returned 16
+------------------
+_ZN12AsyncRuntime9ProcessorD2Ev:
+function _ZN12AsyncRuntime9ProcessorD2Ev called 16 returned 100% blocks executed 100%
+       16:   23:Processor::~Processor()
+        -:   24:{
+       16:   25:    is_continue.store(false, std::memory_order_relaxed);
+       16:   25-block  0
+call    0 returned 16
+       16:   26:    thread_executor.Join();
+call    0 returned 16
+       16:   27:}
+call    0 returned 16
+call    1 returned 16
+call    2 returned 16
+call    3 returned 16
+------------------
+        -:   28:
+        -:   29:
+function _ZN12AsyncRuntime9Processor3RunEv called 16 returned 100% blocks executed 100%
+       16:   30:void Processor::Run()
+        -:   31:{
+       16:   32:    is_continue.store(true, std::memory_order_relaxed);
+       16:   32-block  0
+call    0 returned 16
+       16:   33:    cv.notify_one();
+call    0 returned 16
+       16:   34:}
+        -:   35:
+        -:   36:
+function _ZN12AsyncRuntime9Processor9TerminateEv called 16 returned 100% blocks executed 100%
+       16:   37:void Processor::Terminate()
+        -:   38:{
+       16:   39:    is_continue.store(false, std::memory_order_relaxed);
+       16:   39-block  0
+call    0 returned 16
+       16:   40:    cv.notify_one();
+call    0 returned 16
+       16:   41:}
+        -:   42:
+        -:   43:
+function _ZN12AsyncRuntime9Processor8GetStateEv called 156 returned 103% blocks executed 100%
+      156:   44:Processor::State Processor::GetState()
+        -:   45:{
+      156:   46:    return state.load(std::memory_order_relaxed);
+      156:   46-block  0
+call    0 returned 160
+        -:   47:}
+        -:   48:
+        -:   49:
+function _ZN12AsyncRuntime9Processor4WorkEv called 16 returned 100% blocks executed 78%
+       16:   50:void Processor::Work()
+        -:   51:{
+        -:   52:    //wait run
+        -:   53:    {
+       16:   54:        std::unique_lock<std::mutex> lock(mutex);
+       16:   54-block  0
+call    0 returned 16
+branch  1 taken 16 (fallthrough)
+branch  2 taken 0 (throw)
+       16:   55:        if(cv.wait_for(lock, std::chrono::milliseconds(1000)) == std::cv_status::timeout) {
+       16:   55-block  0
+call    0 returned 16
+call    1 returned 15
+branch  2 taken 15 (fallthrough)
+branch  3 taken 0 (throw)
+       15:   55-block  1
+    $$$$$:   55-block  2
+    $$$$$:   55-block  3
+        -:   56:            //warning
+        -:   57:        }
+       15:   58:    }
+       15:   58-block  0
+call    0 returned 16
+    $$$$$:   58-block  1
+call    1 never executed
+        -:   59:
+       42:   60:    while (is_continue.load(std::memory_order_relaxed))
+       42:   60-block  0
+call    0 returned 41
+branch  1 taken 25
+branch  2 taken 16 (fallthrough)
+        -:   61:    {
+       25:   62:        state.store(IDLE, std::memory_order_relaxed);
+       25:   62-block  0
+call    0 returned 26
+       26:   63:        auto task = ConsumeWork();
+call    0 returned 23
+branch  1 taken 23 (fallthrough)
+branch  2 taken 0 (throw)
+       23:   64:        if (task) {
+       23:   64-block  0
+call    0 returned 23
+branch  1 taken 5 (fallthrough)
+branch  2 taken 18
+        5:   65:            ExecuteTask(task.value());
+        5:   65-block  0
+call    0 returned 5
+branch  1 taken 5 (fallthrough)
+branch  2 taken 0 (throw)
+        5:   65-block  1
+call    3 returned 5
+branch  4 taken 5 (fallthrough)
+branch  5 taken 0 (throw)
+        -:   66:        }else{
+       18:   67:            WaitTask();
+       18:   67-block  0
+call    0 returned 21
+branch  1 taken 21 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   68:        }
+        -:   69:    }
+       16:   70:}
+       16:   70-block  0
+        -:   71:
+        -:   72:
+function _ZN12AsyncRuntime9Processor11ConsumeWorkEv called 24 returned 96% blocks executed 100%
+       24:   73:std::optional<Task *> Processor::ConsumeWork()
+        -:   74:{
+       24:   75:    std::optional<Task*> task;
+       24:   76:    task = StealWorkLocal();
+       24:   76-block  0
+call    0 returned 24
+branch  1 taken 24 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   77:
+       24:   78:    if(executor != nullptr) {
+       24:   78-block  0
+branch  0 taken 24 (fallthrough)
+branch  1 taken 0
+       24:   79:        if (!task) {
+       24:   79-block  0
+call    0 returned 24
+branch  1 taken 20 (fallthrough)
+branch  2 taken 4
+       20:   80:            task = StealWorkGlobal();
+       20:   80-block  0
+call    0 returned 20
+branch  1 taken 20 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   81:        }
+        -:   82:
+       24:   83:        if (!task) {
+       24:   83-block  0
+call    0 returned 25
+branch  1 taken 20 (fallthrough)
+branch  2 taken 5
+       20:   84:            task = StealWorkOnOthers();
+       20:   84-block  0
+call    0 returned 18
+branch  1 taken 18 (fallthrough)
+branch  2 taken 0 (throw)
+        -:   85:        }
+        -:   86:    }
+        -:   87:
+       23:   88:    return task;
+       23:   88-block  0
+       23:   88-block  1
+        -:   89:}
+        -:   90:
+        -:   91:
+function _ZN12AsyncRuntime9Processor11ExecuteTaskEPNS_4TaskE called 5 returned 100% blocks executed 86%
+        5:   92:void Processor::ExecuteTask(Task *task)
+        -:   93:{
+       5*:   94:    assert(task != nullptr);
+        5:   94-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 5
+    %%%%%:   94-block  1
+call    2 never executed
+        -:   95:
+        5:   96:    state.store(EXECUTE, std::memory_order_relaxed);
+        5:   96-block  0
+call    0 returned 5
+        5:   97:    task->Execute(executor_state);
+call    0 returned 5
+        5:   98:    delete task;
+branch  0 taken 5 (fallthrough)
+branch  1 taken 0
+        5:   98-block  0
+call    2 returned 5
+        5:   99:}
+        -:  100:
+        -:  101:
+function _ZN12AsyncRuntime9Processor4PostEPNS_4TaskE called 4 returned 100% blocks executed 78%
+        4:  102:void Processor::Post(Task *task)
+        -:  103:{
+        4:  104:    std::unique_lock<std::mutex> lock(mutex);
+        4:  104-block  0
+call    0 returned 4
+branch  1 taken 4 (fallthrough)
+branch  2 taken 0 (throw)
+        4:  105:    notify_count++;
+        4:  105-block  0
+call    0 returned 4
+        4:  106:    local_run_queue.push(task);
+call    0 returned 4
+branch  1 taken 4 (fallthrough)
+branch  2 taken 0 (throw)
+        4:  107:    cv.notify_one();
+        4:  107-block  0
+call    0 returned 4
+        4:  108:}
+call    0 returned 4
+    $$$$$:  108-block  0
+call    1 never executed
+        -:  109:
+        -:  110:
+function _ZN12AsyncRuntime9Processor6NotifyEv called 1 returned 100% blocks executed 100%
+        1:  111:void Processor::Notify()
+        -:  112:{
+        1:  113:    std::unique_lock<std::mutex> lock(mutex);
+        1:  113-block  0
+call    0 returned 1
+branch  1 taken 1 (fallthrough)
+branch  2 taken 0 (throw)
+        1:  114:    notify_count++;
+        1:  114-block  0
+call    0 returned 1
+        1:  115:    cv.notify_one();
+call    0 returned 1
+        1:  116:}
+call    0 returned 1
+        -:  117:
+        -:  118:
+function _ZN12AsyncRuntime9Processor8WaitTaskEv called 20 returned 105% blocks executed 81%
+       20:  119:void Processor::WaitTask()
+        -:  120:{
+       20:  121:    std::unique_lock<std::mutex>  lock(mutex);
+       20:  121-block  0
+call    0 returned 21
+branch  1 taken 21 (fallthrough)
+branch  2 taken 0 (throw)
+       42:  122:    while(notify_count == 0 && is_continue.load(std::memory_order_relaxed)) {
+       21:  122-block  0
+       42:  122-block  1
+call    0 returned 42
+branch  1 taken 37 (fallthrough)
+branch  2 taken 5
+       37:  122-block  2
+call    3 returned 37
+branch  4 taken 21 (fallthrough)
+branch  5 taken 16
+       21:  122-block  3
+       21:  122-block  4
+       42:  122-block  5
+branch  6 taken 21
+branch  7 taken 21 (fallthrough)
+       21:  123:        state.store(WAIT, std::memory_order_relaxed);
+       21:  123-block  0
+call    0 returned 21
+       21:  124:        if(executor->run_queue.empty())
+call    0 returned 20
+branch  1 taken 20 (fallthrough)
+branch  2 taken 0
+       20:  125:            cv.wait_for(lock, std::chrono::milliseconds(1000));
+       20:  125-block  0
+call    0 returned 20
+call    1 returned 21
+branch  2 taken 21 (fallthrough)
+branch  3 taken 0 (throw)
+       21:  125-block  1
+    $$$$$:  125-block  2
+    $$$$$:  125-block  3
+        -:  126:        else
+    #####:  127:            break;
+    %%%%%:  127-block  0
+        -:  128:    }
+       21:  129:    notify_count--;
+       21:  129-block  0
+call    0 returned 21
+        -:  130:
+       21:  131:    if(notify_count < 0) notify_count = 0;
+call    0 returned 21
+branch  1 taken 16 (fallthrough)
+branch  2 taken 5
+       16:  131-block  0
+call    3 returned 16
+       21:  132:}
+       21:  132-block  0
+call    0 returned 21
+    $$$$$:  132-block  1
+call    1 never executed
+        -:  133:
+        -:  134:
+function _ZN12AsyncRuntime9Processor15StealWorkGlobalEv called 20 returned 100% blocks executed 100%
+       20:  135:std::optional<Task*> Processor::StealWorkGlobal()
+        -:  136:{
+       20:  137:    return executor->run_queue.steal();
+       20:  137-block  0
+call    0 returned 20
+        -:  138:}
+        -:  139:
+        -:  140:
+function _ZN12AsyncRuntime9Processor14StealWorkLocalEv called 24 returned 100% blocks executed 100%
+       24:  141:std::optional<Task*> Processor::StealWorkLocal()
+        -:  142:{
+       24:  143:    return local_run_queue.steal();
+       24:  143-block  0
+call    0 returned 24
+        -:  144:}
+        -:  145:
+        -:  146:
+function _ZN12AsyncRuntime9Processor17StealWorkOnOthersEv called 18 returned 100% blocks executed 83%
+       18:  147:std::optional<Task*> Processor::StealWorkOnOthers()
+        -:  148:{
+       18:  149:    std::optional<Task*> task = std::nullopt;
+      189:  150:    for (int i = 0; i < executor->processors.size() && !task; i++) {
+       18:  150-block  0
+      171:  150-block  1
+      189:  150-block  2
+call    0 returned 176
+branch  1 taken 156 (fallthrough)
+branch  2 taken 20
+      156:  150-block  3
+call    3 returned 168
+branch  4 taken 170 (fallthrough)
+branch  5 taken -2
+      170:  150-block  4
+       18:  150-block  5
+      188:  150-block  6
+branch  6 taken 170
+branch  7 taken 18 (fallthrough)
+      170:  151:        auto processor = executor->processors[i];
+      170:  151-block  0
+call    0 returned 163
+      163:  152:        if (processor->GetID() != GetID() &&
+call    0 returned 162
+call    1 returned 162
+     162*:  153:            processor->GetState() == EXECUTE &&
+branch  0 taken 155 (fallthrough)
+branch  1 taken 7
+      155:  153-block  0
+call    2 returned 163
+branch  3 taken 163 (fallthrough)
+branch  4 taken 0 (throw)
+      163:  153-block  1
+branch  5 taken 0 (fallthrough)
+branch  6 taken 163
+    %%%%%:  153-block  2
+      170:  153-block  3
+      170:  153-block  4
+branch  7 taken 0 (fallthrough)
+branch  8 taken 170
+    #####:  154:            !processor->local_run_queue.empty())
+    %%%%%:  154-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  155:        {
+    #####:  156:            task = processor->StealWorkLocal();
+    %%%%%:  156-block  0
+call    0 never executed
+branch  1 never executed
+branch  2 never executed
+        -:  157:        }
+        -:  158:    }
+        -:  159:
+       18:  160:    return task;
+       18:  160-block  0
+       18:  160-block  1
+        -:  161:}

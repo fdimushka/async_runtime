@@ -1,0 +1,272 @@
+        -:    0:Source:/usr/include/c++/11/bits/std_mutex.h
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/executor.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/executor.cpp.gcda
+        -:    0:Runs:1
+        -:    1:// std::mutex implementation -*- C++ -*-
+        -:    2:
+        -:    3:// Copyright (C) 2003-2021 Free Software Foundation, Inc.
+        -:    4://
+        -:    5:// This file is part of the GNU ISO C++ Library.  This library is free
+        -:    6:// software; you can redistribute it and/or modify it under the
+        -:    7:// terms of the GNU General Public License as published by the
+        -:    8:// Free Software Foundation; either version 3, or (at your option)
+        -:    9:// any later version.
+        -:   10:
+        -:   11:// This library is distributed in the hope that it will be useful,
+        -:   12:// but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   13:// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   14:// GNU General Public License for more details.
+        -:   15:
+        -:   16:// Under Section 7 of GPL version 3, you are granted additional
+        -:   17:// permissions described in the GCC Runtime Library Exception, version
+        -:   18:// 3.1, as published by the Free Software Foundation.
+        -:   19:
+        -:   20:// You should have received a copy of the GNU General Public License and
+        -:   21:// a copy of the GCC Runtime Library Exception along with this program;
+        -:   22:// see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+        -:   23:// <http://www.gnu.org/licenses/>.
+        -:   24:
+        -:   25:/** @file bits/std_mutex.h
+        -:   26: *  This is an internal header file, included by other library headers.
+        -:   27: *  Do not attempt to use it directly. @headername{mutex}
+        -:   28: */
+        -:   29:
+        -:   30:#ifndef _GLIBCXX_MUTEX_H
+        -:   31:#define _GLIBCXX_MUTEX_H 1
+        -:   32:
+        -:   33:#pragma GCC system_header
+        -:   34:
+        -:   35:#if __cplusplus < 201103L
+        -:   36:# include <bits/c++0x_warning.h>
+        -:   37:#else
+        -:   38:
+        -:   39:#include <system_error>
+        -:   40:#include <bits/functexcept.h>
+        -:   41:#include <bits/gthr.h>
+        -:   42:
+        -:   43:namespace std _GLIBCXX_VISIBILITY(default)
+        -:   44:{
+        -:   45:_GLIBCXX_BEGIN_NAMESPACE_VERSION
+        -:   46:
+        -:   47:  /**
+        -:   48:   * @defgroup mutexes Mutexes
+        -:   49:   * @ingroup concurrency
+        -:   50:   *
+        -:   51:   * Classes for mutex support.
+        -:   52:   * @{
+        -:   53:   */
+        -:   54:
+        -:   55:#ifdef _GLIBCXX_HAS_GTHREADS
+        -:   56:  // Common base class for std::mutex and std::timed_mutex
+        -:   57:  class __mutex_base
+        -:   58:  {
+        -:   59:  protected:
+        -:   60:    typedef __gthread_mutex_t			__native_type;
+        -:   61:
+        -:   62:#ifdef __GTHREAD_MUTEX_INIT
+        -:   63:    __native_type  _M_mutex = __GTHREAD_MUTEX_INIT;
+        -:   64:
+function _ZNSt12__mutex_baseC2Ev called 0 returned 0% blocks executed 0%
+    #####:   65:    constexpr __mutex_base() noexcept = default;
+        -:   66:#else
+        -:   67:    __native_type  _M_mutex;
+        -:   68:
+        -:   69:    __mutex_base() noexcept
+        -:   70:    {
+        -:   71:      // XXX EAGAIN, ENOMEM, EPERM, EBUSY(may), EINVAL(may)
+        -:   72:      __GTHREAD_MUTEX_INIT_FUNCTION(&_M_mutex);
+        -:   73:    }
+        -:   74:
+        -:   75:    ~__mutex_base() noexcept { __gthread_mutex_destroy(&_M_mutex); }
+        -:   76:#endif
+        -:   77:
+        -:   78:    __mutex_base(const __mutex_base&) = delete;
+        -:   79:    __mutex_base& operator=(const __mutex_base&) = delete;
+        -:   80:  };
+        -:   81:
+        -:   82:  /// The standard mutex type.
+        -:   83:  class mutex : private __mutex_base
+        -:   84:  {
+        -:   85:  public:
+        -:   86:    typedef __native_type* 			native_handle_type;
+        -:   87:
+        -:   88:#ifdef __GTHREAD_MUTEX_INIT
+        -:   89:    constexpr
+        -:   90:#endif
+function _ZNSt5mutexC2Ev called 0 returned 0% blocks executed 0%
+    #####:   91:    mutex() noexcept = default;
+    %%%%%:   91-block  0
+call    0 never executed
+        -:   92:    ~mutex() = default;
+        -:   93:
+        -:   94:    mutex(const mutex&) = delete;
+        -:   95:    mutex& operator=(const mutex&) = delete;
+        -:   96:
+        -:   97:    void
+function _ZNSt5mutex4lockEv called 0 returned 0% blocks executed 0%
+    #####:   98:    lock()
+        -:   99:    {
+    #####:  100:      int __e = __gthread_mutex_lock(&_M_mutex);
+    %%%%%:  100-block  0
+call    0 never executed
+        -:  101:
+        -:  102:      // EINVAL, EAGAIN, EBUSY, EINVAL, EDEADLK(may)
+    #####:  103:      if (__e)
+branch  0 never executed
+branch  1 never executed
+    #####:  104:	__throw_system_error(__e);
+    %%%%%:  104-block  0
+call    0 never executed
+    #####:  105:    }
+        -:  106:
+        -:  107:    bool
+        -:  108:    try_lock() noexcept
+        -:  109:    {
+        -:  110:      // XXX EINVAL, EAGAIN, EBUSY
+        -:  111:      return !__gthread_mutex_trylock(&_M_mutex);
+        -:  112:    }
+        -:  113:
+        -:  114:    void
+function _ZNSt5mutex6unlockEv called 0 returned 0% blocks executed 0%
+    #####:  115:    unlock()
+        -:  116:    {
+        -:  117:      // XXX EINVAL, EAGAIN, EPERM
+    #####:  118:      __gthread_mutex_unlock(&_M_mutex);
+    %%%%%:  118-block  0
+call    0 never executed
+    #####:  119:    }
+        -:  120:
+        -:  121:    native_handle_type
+        -:  122:    native_handle() noexcept
+        -:  123:    { return &_M_mutex; }
+        -:  124:  };
+        -:  125:
+        -:  126:  // Implementation details for std::condition_variable
+        -:  127:  class __condvar
+        -:  128:  {
+        -:  129:    using timespec = __gthread_time_t;
+        -:  130:
+        -:  131:  public:
+        -:  132:    __condvar() noexcept
+        -:  133:    {
+        -:  134:#ifndef __GTHREAD_COND_INIT
+        -:  135:      __GTHREAD_COND_INIT_FUNCTION(&_M_cond);
+        -:  136:#endif
+        -:  137:    }
+        -:  138:
+        -:  139:    ~__condvar()
+        -:  140:    {
+        -:  141:      int __e __attribute__((__unused__)) = __gthread_cond_destroy(&_M_cond);
+        -:  142:      __glibcxx_assert(__e != EBUSY); // threads are still blocked
+        -:  143:    }
+        -:  144:
+        -:  145:    __condvar(const __condvar&) = delete;
+        -:  146:    __condvar& operator=(const __condvar&) = delete;
+        -:  147:
+        -:  148:    __gthread_cond_t* native_handle() noexcept { return &_M_cond; }
+        -:  149:
+        -:  150:    // Expects: Calling thread has locked __m.
+        -:  151:    void
+        -:  152:    wait(mutex& __m) noexcept
+        -:  153:    {
+        -:  154:      int __e __attribute__((__unused__))
+        -:  155:	= __gthread_cond_wait(&_M_cond, __m.native_handle());
+        -:  156:      __glibcxx_assert(__e == 0);
+        -:  157:    }
+        -:  158:
+        -:  159:    void
+        -:  160:    wait_until(mutex& __m, timespec& __abs_time) noexcept
+        -:  161:    {
+        -:  162:      __gthread_cond_timedwait(&_M_cond, __m.native_handle(), &__abs_time);
+        -:  163:    }
+        -:  164:
+        -:  165:#ifdef _GLIBCXX_USE_PTHREAD_COND_CLOCKWAIT
+        -:  166:    void
+        -:  167:    wait_until(mutex& __m, clockid_t __clock, timespec& __abs_time) noexcept
+        -:  168:    {
+        -:  169:      pthread_cond_clockwait(&_M_cond, __m.native_handle(), __clock,
+        -:  170:			     &__abs_time);
+        -:  171:    }
+        -:  172:#endif
+        -:  173:
+        -:  174:    void
+        -:  175:    notify_one() noexcept
+        -:  176:    {
+        -:  177:      int __e __attribute__((__unused__)) = __gthread_cond_signal(&_M_cond);
+        -:  178:      __glibcxx_assert(__e == 0);
+        -:  179:    }
+        -:  180:
+        -:  181:    void
+        -:  182:    notify_all() noexcept
+        -:  183:    {
+        -:  184:      int __e __attribute__((__unused__)) = __gthread_cond_broadcast(&_M_cond);
+        -:  185:      __glibcxx_assert(__e == 0);
+        -:  186:    }
+        -:  187:
+        -:  188:  protected:
+        -:  189:#ifdef __GTHREAD_COND_INIT
+        -:  190:    __gthread_cond_t _M_cond = __GTHREAD_COND_INIT;
+        -:  191:#else
+        -:  192:    __gthread_cond_t _M_cond;
+        -:  193:#endif
+        -:  194:  };
+        -:  195:
+        -:  196:#endif // _GLIBCXX_HAS_GTHREADS
+        -:  197:
+        -:  198:  /// Do not acquire ownership of the mutex.
+        -:  199:  struct defer_lock_t { explicit defer_lock_t() = default; };
+        -:  200:
+        -:  201:  /// Try to acquire ownership of the mutex without blocking.
+        -:  202:  struct try_to_lock_t { explicit try_to_lock_t() = default; };
+        -:  203:
+        -:  204:  /// Assume the calling thread has already obtained mutex ownership
+        -:  205:  /// and manage it.
+        -:  206:  struct adopt_lock_t { explicit adopt_lock_t() = default; };
+        -:  207:
+        -:  208:  /// Tag used to prevent a scoped lock from acquiring ownership of a mutex.
+        -:  209:  _GLIBCXX17_INLINE constexpr defer_lock_t	defer_lock { };
+        -:  210:
+        -:  211:  /// Tag used to prevent a scoped lock from blocking if a mutex is locked.
+        -:  212:  _GLIBCXX17_INLINE constexpr try_to_lock_t	try_to_lock { };
+        -:  213:
+        -:  214:  /// Tag used to make a scoped lock take ownership of a locked mutex.
+        -:  215:  _GLIBCXX17_INLINE constexpr adopt_lock_t	adopt_lock { };
+        -:  216:
+        -:  217:  /** @brief A simple scoped lock type.
+        -:  218:   *
+        -:  219:   * A lock_guard controls mutex ownership within a scope, releasing
+        -:  220:   * ownership in the destructor.
+        -:  221:   */
+        -:  222:  template<typename _Mutex>
+        -:  223:    class lock_guard
+        -:  224:    {
+        -:  225:    public:
+        -:  226:      typedef _Mutex mutex_type;
+        -:  227:
+function _ZNSt10lock_guardISt5mutexEC2ERS0_ called 0 returned 0% blocks executed 0%
+    #####:  228:      explicit lock_guard(mutex_type& __m) : _M_device(__m)
+    #####:  229:      { _M_device.lock(); }
+    %%%%%:  229-block  0
+call    0 never executed
+        -:  230:
+        -:  231:      lock_guard(mutex_type& __m, adopt_lock_t) noexcept : _M_device(__m)
+        -:  232:      { } // calling thread owns mutex
+        -:  233:
+function _ZNSt10lock_guardISt5mutexED2Ev called 0 returned 0% blocks executed 0%
+    #####:  234:      ~lock_guard()
+    #####:  235:      { _M_device.unlock(); }
+    %%%%%:  235-block  0
+call    0 never executed
+        -:  236:
+        -:  237:      lock_guard(const lock_guard&) = delete;
+        -:  238:      lock_guard& operator=(const lock_guard&) = delete;
+        -:  239:
+        -:  240:    private:
+        -:  241:      mutex_type&  _M_device;
+        -:  242:    };
+        -:  243:
+        -:  244:  /// @} group mutexes
+        -:  245:_GLIBCXX_END_NAMESPACE_VERSION
+        -:  246:} // namespace
+        -:  247:#endif // C++11
+        -:  248:#endif // _GLIBCXX_MUTEX_H

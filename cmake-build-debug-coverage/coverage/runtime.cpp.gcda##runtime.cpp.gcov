@@ -1,0 +1,244 @@
+        -:    0:Source:/home/df/Documents/workspace/async_runtime/src/runtime.cpp
+        -:    0:Graph:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/runtime.cpp.gcno
+        -:    0:Data:/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/CMakeFiles/ar.dir/src/runtime.cpp.gcda
+        -:    0:Runs:1
+        -:    1:#include "ar/runtime.hpp"
+        -:    2:#include "ar/io_executor.hpp"
+        -:    3:
+        -:    4:
+        -:    5:using namespace AsyncRuntime;
+        -:    6:
+        -:    7:
+        -:    8:#define MAIN_EXECUTOR_NAME "main"
+        -:    9:#define IO_EXECUTOR_NAME "io"
+        -:   10:
+        -:   11:Runtime Runtime::g_runtime;
+        -:   12:
+function _ZN12AsyncRuntime7RuntimeC2Ev called 1 returned 100% blocks executed 100%
+        1:   13:Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
+        1:   13-block  0
+call    0 returned 1
+        -:   14:{
+        1:   15:}
+        -:   16:
+        -:   17:
+function _ZN12AsyncRuntime7RuntimeD2Ev called 1 returned 100% blocks executed 100%
+        1:   18:Runtime::~Runtime()
+        -:   19:{
+        1:   20:    Terminate();
+        1:   20-block  0
+call    0 returned 1
+        1:   21:}
+call    0 returned 1
+        -:   22:
+        -:   23:
+function _ZN12AsyncRuntime7Runtime5SetupEv called 1 returned 100% blocks executed 80%
+        1:   24:void Runtime::Setup(/*...*/)
+        -:   25:{
+        1:   26:    if(is_setup)
+        1:   26-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 1
+    #####:   27:        return;
+    %%%%%:   27-block  0
+        -:   28:
+        1:   29:    CreateDefaultExecutors();
+        1:   29-block  0
+call    0 returned 1
+        1:   30:    is_setup = true;
+        -:   31:}
+        -:   32:
+        -:   33:
+function _ZN12AsyncRuntime7Runtime9TerminateEv called 2 returned 100% blocks executed 100%
+        2:   34:void Runtime::Terminate()
+        -:   35:{
+        2:   36:    if(!is_setup)
+        2:   36-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 1
+        1:   37:        return;
+        1:   37-block  0
+        -:   38:
+        1:   39:    if(io_executor != nullptr) {
+        1:   39-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   40:        delete io_executor;
+        1:   40-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   40-block  1
+call    2 returned 1
+        1:   41:        io_executor = nullptr;
+        1:   41-block  0
+        -:   42:    }
+        -:   43:
+        1:   44:    if(main_executor != nullptr) {
+        1:   44-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   45:        delete main_executor;
+        1:   45-block  0
+branch  0 taken 1 (fallthrough)
+branch  1 taken 0
+        1:   45-block  1
+call    2 returned 1
+        1:   46:        main_executor = nullptr;
+        1:   46-block  0
+        -:   47:    }
+        -:   48:
+        1:   49:    executors.clear();
+        1:   49-block  0
+call    0 returned 1
+        -:   50:
+        1:   51:    is_setup = false;
+        -:   52:}
+        -:   53:
+        -:   54:
+function _ZN12AsyncRuntime7Runtime12CheckRuntimeEv called 10 returned 100% blocks executed 57%
+       10:   55:void Runtime::CheckRuntime()
+        -:   56:{
+      10*:   57:    assert(is_setup);
+       10:   57-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 10
+    %%%%%:   57-block  1
+call    2 never executed
+      10*:   58:    assert(io_executor != nullptr);
+       10:   58-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 10
+    %%%%%:   58-block  1
+call    2 never executed
+      10*:   59:    assert(main_executor != nullptr);
+       10:   59-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 10
+    %%%%%:   59-block  1
+call    2 never executed
+       10:   60:}
+        -:   61:
+        -:   62:
+function _ZN12AsyncRuntime7Runtime22CreateDefaultExecutorsEv called 1 returned 100% blocks executed 52%
+        1:   63:void Runtime::CreateDefaultExecutors()
+        -:   64:{
+        1:   65:    main_executor = new Executor(MAIN_EXECUTOR_NAME);
+        1:   65-block  0
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   65-block  1
+call    4 returned 1
+call    5 returned 1
+branch  6 taken 1 (fallthrough)
+branch  7 taken 0 (throw)
+        1:   65-block  2
+call    8 returned 1
+branch  9 taken 1 (fallthrough)
+branch 10 taken 0 (throw)
+        1:   65-block  3
+call   11 returned 1
+call   12 returned 1
+    $$$$$:   65-block  4
+call   13 never executed
+    $$$$$:   65-block  5
+call   14 never executed
+    $$$$$:   65-block  6
+    $$$$$:   65-block  7
+call   15 never executed
+    $$$$$:   65-block  8
+call   16 never executed
+        1:   66:    io_executor = new IOExecutor(IO_EXECUTOR_NAME);
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   66-block  0
+call    4 returned 1
+branch  5 taken 1 (fallthrough)
+branch  6 taken 0 (throw)
+        1:   66-block  1
+call    7 returned 1
+branch  8 taken 1 (fallthrough)
+branch  9 taken 0 (throw)
+        1:   66-block  2
+call   10 returned 1
+call   11 returned 1
+    $$$$$:   66-block  3
+call   12 never executed
+    $$$$$:   66-block  4
+call   13 never executed
+    $$$$$:   66-block  5
+    $$$$$:   66-block  6
+call   14 never executed
+    $$$$$:   66-block  7
+call   15 never executed
+        -:   67:
+        1:   68:    executors.insert(std::make_pair(main_executor->GetID(), main_executor));
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   68-block  0
+call    4 returned 1
+branch  5 taken 1 (fallthrough)
+branch  6 taken 0 (throw)
+    $$$$$:   68-block  1
+    $$$$$:   68-block  2
+call    7 never executed
+        1:   69:    executors.insert(std::make_pair(io_executor->GetID(), io_executor));
+        1:   69-block  0
+call    0 returned 1
+call    1 returned 1
+branch  2 taken 1 (fallthrough)
+branch  3 taken 0 (throw)
+        1:   69-block  1
+call    4 returned 1
+branch  5 taken 1 (fallthrough)
+branch  6 taken 0 (throw)
+    $$$$$:   69-block  2
+        1:   70:}
+        1:   70-block  0
+        -:   71:
+        -:   72:
+function _ZN12AsyncRuntime7Runtime4PostEPNS_4TaskE called 5 returned 100% blocks executed 86%
+        5:   73:void Runtime::Post(Task *task)
+        -:   74:{
+       5*:   75:    assert(task != nullptr);
+        5:   75-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 5
+    %%%%%:   75-block  1
+call    2 never executed
+        -:   76:
+        5:   77:    const auto& executor_state = task->GetDesirableExecutor();
+        5:   77-block  0
+call    0 returned 5
+        5:   78:    if(executor_state.executor == nullptr) {
+branch  0 taken 1 (fallthrough)
+branch  1 taken 4
+        1:   79:        Post(main_executor, task);
+        1:   79-block  0
+call    0 returned 1
+        -:   80:    }else{
+        4:   81:        Post(executor_state.executor, task);
+        4:   81-block  0
+call    0 returned 4
+        -:   82:    }
+        5:   83:}
+        -:   84:
+        -:   85:
+function _ZN12AsyncRuntime7Runtime4PostEPNS_9IExecutorEPNS_4TaskE called 5 returned 100% blocks executed 75%
+        5:   86:void Runtime::Post(IExecutor *executor, Task *task)
+        -:   87:{
+       5*:   88:    assert(executor != nullptr);
+        5:   88-block  0
+branch  0 taken 0 (fallthrough)
+branch  1 taken 5
+    %%%%%:   88-block  1
+call    2 never executed
+        5:   89:    executor->Post(task);
+        5:   89-block  0
+call    0 returned 5
+        5:   90:}

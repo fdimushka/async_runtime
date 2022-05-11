@@ -1,0 +1,42 @@
+/home/df/Documents/install/CLion-2021.2.3/clion-2021.2.3/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=Debug -DWITH_TESTS=ON -DWITH_BENCHMARKS=ON -DCMAKE_CXX_FLAGS=--coverage -DCMAKE_C_FLAGS=--coverage -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/df/Documents/workspace/async_runtime
+-- The C compiler identification is GNU 11.2.1
+-- The CXX compiler identification is GNU 11.2.1
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Build with tracing: OFF
+-- Build with tests: ON
+-- Build with examples: ON
+-- Build with docs: OFF
+-- Build with benchmarks: ON
+-- Build type: Debug
+-- Found Boost: /usr/lib64/cmake/Boost-1.72.0/BoostConfig.cmake (found suitable version "1.72.0", minimum required is "1.70.0") found components: thread chrono system regex context 
+-- Found LibUV: /usr/lib64/libuv.so  
+-- Unit tests: ArrayTest
+-- Unit tests: ChannelTest
+-- Unit tests: CoroutineTest
+-- Unit tests: IOFsTaskTest
+-- Unit tests: NotifierTest
+-- Unit tests: StreamTest
+-- Unit tests: TaskTest
+-- Found Threads: TRUE  
+-- Benchmark: benchmarks
+-- Example: channel
+-- Example: coroutine_fib
+-- Example: coroutine_tree
+-- Example: dns
+-- Example: io
+-- Example: runtime
+-- Example: tcp_client
+-- Example: tcp_server
+-- Example: uv_test
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage
