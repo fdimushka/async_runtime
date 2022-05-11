@@ -1,0 +1,5 @@
+if(EXISTS "/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/StreamTest_tests-b858cb2.cmake")
+  include("/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/tests/StreamTest_tests-b858cb2.cmake")
+else()
+  add_test(StreamTest_NOT_BUILT-b858cb2 StreamTest_NOT_BUILT-b858cb2)
+endif()

@@ -42,7 +42,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
-include(cmake/boost.cmake)
+include(cmake/asm.cmake)
 include(cmake/libuv.cmake)
 
 if (WITH_TRACE)
@@ -63,9 +63,9 @@ include_directories(src/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 
-add_library(${LIB_NAME} SHARED ${SOURCES})
+add_library(${LIB_NAME} SHARED ${ASM_SOURCES} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${Boost_LIBRARIES} ${LibUV_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES})
 
 if (WITH_TESTS)
     add_subdirectory(tests)

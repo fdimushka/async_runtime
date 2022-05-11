@@ -1,0 +1,1 @@
+/usr/bin/c++ --coverage -g -rdynamic CMakeFiles/ArrayTest.dir/ArrayTest.cpp.o -o ArrayTest  -Wl,-rpath,/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage ../libar.so -lpthread -luv 

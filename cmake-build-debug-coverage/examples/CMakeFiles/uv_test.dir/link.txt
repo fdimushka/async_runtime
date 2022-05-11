@@ -1,0 +1,1 @@
+/usr/bin/c++ --coverage -g -rdynamic CMakeFiles/uv_test.dir/uv_test.cpp.o -o uv_test  -Wl,-rpath,/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage ../libar.so -lpthread -luv 

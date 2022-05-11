@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="benchmarks"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\cmake\;CMake Files\tests\;CMake Files\benchmarks\;CMake Files\..\;CMake Files\..\..\;CMake Files\..\..\..\;CMake Files\..\..\..\..\;CMake Files\..\..\..\..\..\;CMake Files\..\..\..\..\..\usr\;CMake Files\..\..\..\..\..\usr\local\;CMake Files\..\..\..\..\..\usr\local\lib64\;CMake Files\..\..\..\..\..\usr\local\lib64\cmake\;CMake Files\..\..\..\..\..\usr\local\lib64\cmake\benchmark\;CMake Files\examples\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="benchmarks">
+				<Option output="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/benchmarks" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/df/Documents/workspace/async_runtime/include"/>
+					<Add directory="/home/df/Documents/workspace/async_runtime/src"/>
+					<Add directory="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 benchmarks"/>
+					<CompileFile command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="benchmarks/fast">
+				<Option output="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/benchmarks" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/df/Documents/workspace/async_runtime/include"/>
+					<Add directory="/home/df/Documents/workspace/async_runtime/src"/>
+					<Add directory="/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/../../../../include/c++/11/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/11/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 benchmarks/fast"/>
+					<CompileFile command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j16 -f &quot;/home/df/Documents/workspace/async_runtime/cmake-build-debug-coverage/benchmarks/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/benchmarks/benchmarks.cpp">
+			<Option target="benchmarks"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/config.in">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/version.in">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/cmake/asm.cmake">
+			<Option virtualFolder="CMake Files\cmake\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/cmake/libuv.cmake">
+			<Option virtualFolder="CMake Files\cmake\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/tests/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\tests\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/tests/Catch.cmake">
+			<Option virtualFolder="CMake Files\tests\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/benchmarks/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\benchmarks\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/../../../../../usr/local/lib64/cmake/benchmark/benchmarkConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\usr\local\lib64\cmake\benchmark\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/../../../../../usr/local/lib64/cmake/benchmark/benchmarkConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\usr\local\lib64\cmake\benchmark\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/../../../../../usr/local/lib64/cmake/benchmark/benchmarkTargets-release.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\usr\local\lib64\cmake\benchmark\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/../../../../../usr/local/lib64/cmake/benchmark/benchmarkTargets.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\usr\local\lib64\cmake\benchmark\"/>
+		</Unit>
+		<Unit filename="/home/df/Documents/workspace/async_runtime/examples/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\examples\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

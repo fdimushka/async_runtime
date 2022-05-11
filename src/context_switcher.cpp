@@ -2,7 +2,6 @@
 
 
 using namespace AsyncRuntime;
-using namespace boost::context::detail;
 
 
 
