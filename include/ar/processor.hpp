@@ -3,9 +3,8 @@
 
 #include "ar/object.hpp"
 #include "ar/thread_executor.hpp"
-#include "ar/work_steal_queue.h"
+#include "ar/work_steal_queue.hpp"
 #include "ar/task.hpp"
-#include "trace.h"
 #include "ar/notifier.hpp"
 
 

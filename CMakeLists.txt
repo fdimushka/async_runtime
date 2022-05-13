@@ -53,7 +53,7 @@ if (WITH_DOCS)
     include(cmake/doxygen.cmake)
 endif()
 
-configure_file(config.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+configure_file(config.in ${CMAKE_CURRENT_SOURCE_DIR}/include/ar/config.hpp)
 
 file(GLOB SOURCES src/*.cpp)
 file(GLOB HEADERS include/${LIB_NAME}/*.hpp)

@@ -5,7 +5,7 @@
 #include "ar/object.hpp"
 #include "ar/array.hpp"
 #include "ar/task.hpp"
-#include "config.h"
+#include "ar/config.hpp"
 
 #ifdef USE_TESTS
 class CHANNEL_TEST_FRIEND;

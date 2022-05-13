@@ -1,7 +1,7 @@
 #ifndef AR_RUNTIME_H
 #define AR_RUNTIME_H
 
-#include "ar/work_steal_queue.h"
+#include "ar/work_steal_queue.hpp"
 #include "ar/task.hpp"
 #include "ar/notifier.hpp"
 #include "ar/coroutine.hpp"

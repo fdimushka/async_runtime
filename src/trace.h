@@ -8,7 +8,7 @@
 #include "ar/helper.hpp"
 #include "ar/object.hpp"
 
-#include "config.h"
+#include "ar/config.hpp"
 
 #include <vector>
 #include <set>
