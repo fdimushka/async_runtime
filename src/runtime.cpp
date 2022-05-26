@@ -1,6 +1,6 @@
 #include "ar/runtime.hpp"
 #include "ar/io_executor.hpp"
-
+#include "ar/logger.hpp"
 
 using namespace AsyncRuntime;
 
@@ -12,6 +12,7 @@ Runtime Runtime::g_runtime;
 
 Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
+    Logger::s_logger.SetStd();
 }
 
 
@@ -64,6 +65,12 @@ void Runtime::CreateDefaultExecutors()
 {
     main_executor = new Executor(MAIN_EXECUTOR_NAME);
     io_executor = new IOExecutor(IO_EXECUTOR_NAME);
+
+    for(const auto &processor : main_executor->GetProcessors()) {
+        io_executor->ThreadRegistration(processor->GetThreadId());
+    }
+
+    io_executor->Run();
 
     executors.insert(std::make_pair(main_executor->GetID(), main_executor));
     executors.insert(std::make_pair(io_executor->GetID(), io_executor));

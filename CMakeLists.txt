@@ -63,7 +63,7 @@ include_directories(src/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 
-add_library(${LIB_NAME} SHARED ${ASM_SOURCES} ${SOURCES})
+add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
 target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES})
 

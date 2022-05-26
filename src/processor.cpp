@@ -47,6 +47,16 @@ Processor::State Processor::GetState()
 }
 
 
+std::thread::id Processor::GetThreadId() const
+{
+    if(!thread_executor.GetThreads().empty()) {
+        return thread_executor.GetThreadIds().front();
+    } else {
+        return std::this_thread::get_id();
+    }
+}
+
+
 void Processor::Work()
 {
     //wait run

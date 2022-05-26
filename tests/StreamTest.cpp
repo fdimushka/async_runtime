@@ -15,7 +15,6 @@ class STREAM_TEST_FRIEND {
 public:
     STREAM_TEST_FRIEND() {
         stream = MakeStream();
-        REQUIRE(stream->fd == -1);
         REQUIRE(stream->seek == 0);
         REQUIRE(stream->length == 0);
         REQUIRE(stream->allocated_length == 0);
@@ -26,7 +25,6 @@ public:
 
     STREAM_TEST_FRIEND(const char *buffer, size_t size) {
         stream = MakeStream(buffer, size);
-        REQUIRE(stream->fd == -1);
         REQUIRE(stream->seek == 0);
         REQUIRE(stream->length == size);
         REQUIRE(stream->allocated_length == size);
@@ -50,7 +48,6 @@ public:
         REQUIRE(std::string(stream->buffer, stream->length).compare("helloworld") == 0);
 
         stream->Flush();
-        REQUIRE(stream->fd == -1);
         REQUIRE(stream->seek == 0);
         REQUIRE(stream->length == 0);
         REQUIRE(stream->allocated_length == 0);
@@ -82,7 +79,6 @@ public:
         REQUIRE(std::string(stream->buffer, stream->length).compare(msgs) == 0);
 
         stream->Flush();
-        REQUIRE(stream->fd == -1);
         REQUIRE(stream->seek == 0);
         REQUIRE(stream->length == 0);
         REQUIRE(stream->allocated_length == 0);
@@ -116,7 +112,6 @@ public:
         REQUIRE(std::string(stream->buffer, stream->length).compare(msgs) == 0);
 
         stream->Flush();
-        REQUIRE(stream->fd == -1);
         REQUIRE(stream->seek == 0);
         REQUIRE(stream->length == 0);
         REQUIRE(stream->allocated_length == 0);
@@ -133,32 +128,6 @@ public:
 
     IOStreamPtr stream;
 };
-
-
-SCENARIO( "Stream test" ) {
-    auto stream = MakeStream();
-    REQUIRE(stream->GetFd() == -1);
-
-    GIVEN("set fd") {
-        REQUIRE(stream->GetFd() == -1);
-        stream->SetFd(100);
-
-        THEN("fd = 100") {
-            REQUIRE(stream->GetFd() == 100);
-        }
-    }
-
-
-    GIVEN("flush fd") {
-        REQUIRE(stream->GetFd() == -1);
-        stream->SetFd(100);
-        stream->Flush();
-
-        THEN("fd = -1") {
-            REQUIRE(stream->GetFd() == -1);
-        }
-    }
-}
 
 
 TEST_CASE( "Stream test read", "[stream]" ) {

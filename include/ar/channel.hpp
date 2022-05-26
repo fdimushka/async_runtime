@@ -306,7 +306,7 @@ namespace AsyncRuntime {
 
 
         template<class Ret>
-        inline Ret Await(const std::shared_ptr<ChannelReceiver<Ret>>& receiver, ResumeCb resume_cb, CoroutineHandler* handler) {
+        inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> receiver, ResumeCb resume_cb, CoroutineHandler* handler) {
             assert(handler != nullptr);
 
             auto *channel = receiver->channel;

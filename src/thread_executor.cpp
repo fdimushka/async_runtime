@@ -20,3 +20,14 @@ void ThreadExecutor::Join()
     threads.clear();
 }
 
+
+std::vector<std::thread::id> ThreadExecutor::GetThreadIds() const
+{
+    std::vector<std::thread::id> ids;
+
+    for(const auto &th : threads)
+        ids.push_back(th.get_id());
+
+    return std::move(ids);
+}
+

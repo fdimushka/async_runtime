@@ -30,17 +30,16 @@ namespace AsyncRuntime {
 
         IOStream();
         IOStream(const char* buf, int64_t len);
+        IOStream(const IOStream& other);
+        IOStream(IOStream&& other) noexcept;
         ~IOStream();
 
 
+        IOStream& operator=(const IOStream& other) noexcept;
+        IOStream& operator=(IOStream&& other) noexcept;
+
+
         void Flush();
-
-
-        /**
-         * @brief set file descriptor
-         * @param file - file descriptor
-         */
-        void SetFd(uv_file file) { fd = file; }
 
 
         /**
@@ -48,13 +47,6 @@ namespace AsyncRuntime {
          * @param mode
          */
         void SetMode(const Mode& mode);
-
-
-        /**
-         * @brief get file descriptor
-         * @return file descriptor
-         */
-        uv_file GetFd() const { return fd; }
 
 
         /**
@@ -75,10 +67,9 @@ namespace AsyncRuntime {
         const char* GetBuffer() const { return buffer; };
 
 
-        friend void FsReadCb(uv_fs_s* req);
-        friend void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+        void SetLength(int64_t l) { length = l;}
+        int64_t GetLength() const { return length; };
     private:
-        uv_file                 fd;
         int64_t                 seek = 0;
         int64_t                 length = 0;
         int64_t                 allocated_length = 0;

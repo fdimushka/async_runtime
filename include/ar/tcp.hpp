@@ -4,6 +4,7 @@
 
 #include "ar/task.hpp"
 #include "ar/coroutine.hpp"
+#include "stream.hpp"
 #include "uv.h"
 
 
@@ -12,21 +13,38 @@ namespace AsyncRuntime {
         std::string                     hostname;
         int                             port;
         struct sockaddr_in              bind_addr;
-        uv_tcp_t                        server;
+        uv_tcp_t                        socket;
     };
 
 
     typedef std::shared_ptr<TCPServer>  TCPServerPtr;
 
+    class IOTask;
+    class NetReadTask;
+
+
+//    struct IONetReader {
+//        IOStream stream;
+//        IOTask *task;
+//        std::mutex  mutex;
+//
+//        void SetReadTask(IOTask *task_);
+//    };
+
 
     struct TCPConnection {
+        int                             fd;
         std::string                     hostname;
         int                             port;
         int                             keepalive;
         struct sockaddr_in              dest_addr;
         uv_tcp_t                        socket;
         uv_connect_t                    connect;
+        IOStream                        read_stream;
+        bool                            is_reading;
+        NetReadTask                     *read_task;
     };
+
 
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
 
@@ -42,9 +60,9 @@ namespace AsyncRuntime {
 
     class TCPSession : public std::enable_shared_from_this<TCPSession> {
     public:
-        typedef std::function<void(CoroutineHandler* ,std::shared_ptr<TCPSession>)> HandlerType;
+        typedef std::function<void(CoroutineHandler*, TCPConnectionPtr)> CallbackType;
 
-        explicit TCPSession(uv_stream_t *server, const HandlerType & connection_handler);
+        explicit TCPSession(uv_stream_t *server, const CallbackType & callback);
         ~TCPSession();
 
         void Run();
@@ -64,14 +82,15 @@ namespace AsyncRuntime {
 
         void Invoke(CoroutineHandler *handler);
     private:
-        static void Session(CoroutineHandler *handler, YieldVoid yield, const std::shared_ptr<TCPSession>& session);
+        static void Session(CoroutineHandler *handler, YieldVoid yield, std::shared_ptr<TCPSession> session);
 
 
         uv_loop_t                                           *loop_;
         uv_stream_t                                         *server_;
         uv_tcp_t                                            *client_;
-        HandlerType                                         fn;
+        CallbackType                                        fn;
         std::shared_ptr<Coroutine<void>>                    coroutine;
+        TCPConnectionPtr                                    connection_;
         bool                                                accepted_;
     };
 
@@ -87,6 +106,7 @@ namespace AsyncRuntime {
      * @return
      */
     TCPConnectionPtr MakeTCPConnection(const char* hostname, int port, int keepalive = 60);
+    TCPConnectionPtr MakeTCPConnection(int fd);
 
 
     /**

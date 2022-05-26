@@ -74,6 +74,13 @@ namespace AsyncRuntime {
          * @return
          */
         State GetState();
+
+
+        /**
+         * @brief
+         * @return
+         */
+        std::thread::id GetThreadId() const;
     protected:
         void Work();
         void ExecuteTask(Task* task);

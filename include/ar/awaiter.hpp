@@ -13,11 +13,11 @@ namespace AsyncRuntime::Awaiter {
 
     template<class Ret, class Res>
     inline
-    Ret Await(const std::shared_ptr<Res>& result, ResumeCb resume_cb, CoroutineHandler* handler = nullptr);
+    Ret Await(std::shared_ptr<Res> result, ResumeCb resume_cb, CoroutineHandler* handler = nullptr);
 
 
     template<class Ret>
-    inline Ret Await(const std::shared_ptr<Result<Ret>>& result, ResumeCb resume_cb, CoroutineHandler* handler) {
+    inline Ret Await(std::shared_ptr<Result<Ret>> result, ResumeCb resume_cb, CoroutineHandler* handler) {
         if(handler != nullptr) {
             if (result->Then(resume_cb, handler)) {
                 //suspend this

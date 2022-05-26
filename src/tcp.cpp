@@ -7,9 +7,24 @@ using namespace AsyncRuntime;
 TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive)
 {
     TCPConnectionPtr connection = std::make_shared<TCPConnection>();
+    connection->fd = -1;
     connection->hostname = std::string{hostname};
     connection->port = port;
+    connection->read_task = nullptr;
     connection->keepalive = keepalive;
+    connection->is_reading = false;
+    connection->read_stream.SetMode(IOStream::Mode::R);
+    return connection;
+}
+
+
+TCPConnectionPtr AsyncRuntime::MakeTCPConnection(int fd)
+{
+    TCPConnectionPtr connection = std::make_shared<TCPConnection>();
+    connection->fd = fd;
+    connection->read_task = nullptr;
+    connection->is_reading = false;
+    connection->read_stream.SetMode(IOStream::Mode::R);
     return connection;
 }
 
@@ -35,8 +50,8 @@ NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
 }
 
 
-TCPSession::TCPSession(uv_stream_t *server, const HandlerType & connection_handler) :
-        fn(connection_handler),
+TCPSession::TCPSession(uv_stream_t *server, const CallbackType & callback) :
+        fn(callback),
         loop_(server->loop),
         server_(server),
         client_(nullptr),
@@ -56,8 +71,12 @@ TCPSession::~TCPSession()
 void TCPSession::Accept()
 {
     if(!accepted_) {
+        int fd;
         int error = uv_accept(server_, (uv_stream_t *) client_);
         RNT_ASSERT_MSG(error == 0, FSErrorMsg(error));
+
+        uv_fileno((uv_handle_t *)client_, &fd);
+        connection_ = MakeTCPConnection(fd);
         accepted_ = true;
     }
 }
@@ -71,14 +90,19 @@ void TCPSession::Run() {
 
 void TCPSession::Invoke(CoroutineHandler *handler)
 {
-    if(fn)
-        fn(handler, shared_from_this());
+    assert(connection_);
+
+    int ret = Await(AsyncConnect(connection_), handler);
+    if(ret == IO_SUCCESS && fn) {
+        fn(handler, connection_);
+    }
+
+    Await(AsyncClose(connection_), handler);
 }
 
 
-void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, const std::shared_ptr<TCPSession> &session) {
+void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, std::shared_ptr<TCPSession> session) {
         //accept
         yield();
-
         session->Invoke(handler);
 }

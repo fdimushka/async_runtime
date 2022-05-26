@@ -28,6 +28,19 @@ namespace AsyncRuntime {
 
         /**
          * @brief
+         */
+        void Run();
+
+
+        /**
+         * @brief
+         * @param thread_id
+         */
+        void ThreadRegistration(std::thread::id thread_id);
+
+
+        /**
+         * @brief
          * @param task
          */
         void Post(Task* task) override;
@@ -43,11 +56,11 @@ namespace AsyncRuntime {
         void Loop();
 
 
-        ThreadExecutor                      loop_thread;
-        std::string                         name;
-        uv_loop_t                           *loop;
-        uv_async_t                          async_handler;
-        AsyncHandlerCtx                     async_handler_ctx;
+        std::unordered_map<std::thread::id, uv_async_t*>    async_handlers;
+        ThreadExecutor                                      loop_thread;
+        std::string                                         name;
+        uv_loop_t                                           *loop;
+        std::thread::id                                     main_thread_id;
     };
 }
 

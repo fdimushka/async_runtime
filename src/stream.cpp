@@ -7,8 +7,8 @@
 using namespace AsyncRuntime;
 
 
-IOStream::IOStream() : fd(-1), seek(0), length(0), allocated_length(0), allocated(false) { }
-IOStream::IOStream(const char *buf, int64_t len) : fd(-1), seek(0), length(len), allocated_length(len), allocated(true)
+IOStream::IOStream() : seek(0), length(0), allocated_length(0), allocated(false) { }
+IOStream::IOStream(const char *buf, int64_t len) : seek(0), length(len), allocated_length(len), allocated(true)
 {
     assert(length > 0);
     assert(allocated_length > 0);
@@ -26,9 +26,76 @@ IOStream::IOStream(const char *buf, int64_t len) : fd(-1), seek(0), length(len),
 }
 
 
+IOStream::IOStream(const IOStream& other) :
+    seek(other.seek),
+    length(other.length),
+    buffer(nullptr),
+    allocated_length(other.allocated_length),
+    allocated(other.allocated),
+    uv_buf{}
+{
+    if(other.length > 0) {
+        buffer = (char *) malloc(other.length);
+        memcpy(buffer, other.buffer, other.length);
+    }
+}
+
+
+IOStream::IOStream(IOStream&& other) noexcept :
+    seek(other.seek),
+    length(other.length),
+    buffer(other.buffer),
+    allocated_length(other.allocated_length),
+    allocated(other.allocated),
+    uv_buf{}
+{
+    other.uv_buf = {};
+    other.seek = 0;
+    other.length = 0;
+    other.buffer = nullptr;
+    other.allocated_length = 0;
+}
+
+
 IOStream::~IOStream()
 {
     Flush();
+}
+
+
+IOStream& IOStream::operator=(IOStream&& other) noexcept {
+    if (this != &other)
+    {
+        seek = other.seek;
+        length = other.length;
+        buffer = other.buffer;
+        allocated_length = other.allocated_length;
+        allocated = other.allocated;
+
+        other.seek = 0;
+        other.length = 0;
+        other.buffer = nullptr;
+        other.allocated_length = 0;
+    }
+    return *this;
+}
+
+
+IOStream& IOStream::operator=(const IOStream& other) noexcept {
+    if (this != &other)
+    {
+        seek = other.seek;
+        length = other.length;
+        if(other.length > 0) {
+            buffer = (char *) malloc(other.length);
+            memcpy(buffer, other.buffer, other.length);
+        }else{
+            buffer = nullptr;
+        }
+        allocated_length = other.allocated_length;
+        allocated = other.allocated;
+    }
+    return *this;
 }
 
 
@@ -39,7 +106,6 @@ void IOStream::Flush()
         buffer = nullptr;
     }
 
-    fd = -1;
     allocated_length = 0;
     length = 0;
     seek = 0;

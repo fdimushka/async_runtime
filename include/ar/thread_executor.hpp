@@ -43,6 +43,20 @@ namespace AsyncRuntime {
          * @brief
          */
         void Join();
+
+
+        /**
+         * @brief
+         * @return
+         */
+        const std::vector<std::thread>& GetThreads() const { return threads; }
+
+
+        /**
+         * @brief
+         * @return
+         */
+        std::vector<std::thread::id> GetThreadIds() const;
     private:
         std::vector<std::thread>     threads;
     };

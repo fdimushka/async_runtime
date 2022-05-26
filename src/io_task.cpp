@@ -1,7 +1,10 @@
 #include "ar/io_task.hpp"
+#include "ar/logger.hpp"
+#include "uv.h"
 
 
 using namespace AsyncRuntime;
+#define MAX_READING_SIZE    1024*1024*10
 
 
 const char* AsyncRuntime::FSErrorMsg(int error)
@@ -16,22 +19,305 @@ const char* AsyncRuntime::FSErrorName(int error)
 }
 
 
-void AsyncRuntime::FsOpenCb(uv_fs_s* req)
+bool FsOpenTask::Execute(uv_loop_t *loop)
 {
-    auto task = IOFsTaskCast<AsyncRuntime::IOFsOpen>(req->data);
-    const auto& stream = task->GetStream();
-    assert(req == task->GetRequest());
+    _request.data = this;
+    uv_fs_open(loop, &_request, _filename, _flags, _mode, &FsOpenCb);
+    return true;
+}
+
+
+bool FsReadTask::Execute(uv_loop_t *loop)
+{
+    _request.data = this;
+    _stream->SetMode(IOStream::R);
+    uv_buf_t *buf = _stream->Next();
+    int error = uv_fs_read(loop, &_request, _fd, buf, 1, _seek, &FsReadCb);
+    if(error){
+        Resolve(error);
+        return false;
+    }
+    return true;
+}
+
+bool FsWriteTask::Execute(uv_loop_t *loop)
+{
+    _request.data = this;
+    _stream->SetMode(IOStream::W);
+    uv_buf_t *buf = _stream->Next();
+    if(buf) {
+        uv_fs_write(loop, &_request, _fd, buf, 1, _seek, &FsWriteCb);
+        return true;
+    }else{
+        Resolve(EIO);
+        return false;
+    }
+}
+
+bool FsCloseTask::Execute(uv_loop_t *loop)
+{
+    _request.data = this;
+    uv_fs_close(loop, &_request, _fd, &FsCloseCb);
+    return true;
+}
+
+
+bool NetConnectionTask::Execute(uv_loop_t *loop)
+{
+    assert(_connection);
+    uv_connect_t *con = &_connection->connect;
+    con->data = this;
+    uv_tcp_init(loop, &_connection->socket);
+
+    if(_connection->fd == -1) {
+        uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
+        uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
+
+        int error = uv_tcp_connect(con, &_connection->socket, (sockaddr*)&_connection->dest_addr, &NetConnectionTask::NetConnectionCb);
+        if(error) {
+            Resolve(error);
+            return false;
+        }
+    }else{
+        int error = uv_tcp_open(&_connection->socket, _connection->fd);
+        if(error) {
+            Resolve(error);
+            return false;
+        }
+
+        auto *stream = (uv_stream_t*)&_connection->socket;
+        stream->data = _connection.get();
+        _connection->is_reading = true;
+        error = uv_read_start(stream, &NetAllocCb, &NetReadCb);
+
+        if(error) {
+            Resolve(error);
+            return false;
+        }
+
+        Resolve(IO_SUCCESS);
+        return false;
+    }
+
+    return true;
+}
+
+
+void NetConnectionTask::NetConnectionCb(uv_connect_t* connection, int status)
+{
+    assert(connection->data != nullptr);
+    auto *task = (NetConnectionTask *)connection->data;
+
+    if (status >= 0) {
+        auto *stream = (uv_stream_t*)&task->_connection->socket;
+        stream->data = task->_connection.get();
+        task->_connection->is_reading = true;
+        int error = uv_read_start(stream, &NetAllocCb, &NetReadCb);
+        if(!error) {
+            task->Resolve(IO_SUCCESS);
+            delete task;
+        }else{
+            task->Resolve(error);
+            delete task;
+        }
+    }else{
+        task->Resolve(status);
+        delete task;
+    }
+}
+
+
+void NetConnectionTask::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
+{
+    assert(handle->data != nullptr);
+    auto *connection = (TCPConnection*)handle->data;
+    if(connection) {
+        connection->read_stream.Next(buf, size);
+    }
+}
+
+
+void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
+{
+    assert(stream->data != nullptr);
+    auto *connection = (TCPConnection*)stream->data;
+    if(connection) {
+        if(nread >= 0) {
+            connection->read_stream.SetLength(connection->read_stream.GetLength() + nread);
+        }
+
+        if (connection->read_task != nullptr) {
+            if (nread >= 0) {
+                *(connection->read_task->_stream) = connection->read_stream;
+                connection->read_task->Resolve(IO_SUCCESS);
+            }else {
+                connection->read_task->Resolve(nread);
+            }
+
+            delete connection->read_task;
+            connection->read_task = nullptr;
+            connection->read_stream.Flush();
+        }else{
+            if(connection->is_reading && connection->read_stream.GetLength() > MAX_READING_SIZE) {
+                connection->is_reading = false;
+                uv_read_stop((uv_stream_t *)&connection->socket);
+            }
+        }
+    }
+}
+
+
+bool NetReadTask::Execute(uv_loop_t *loop)
+{
+    assert(_connection);
+    assert(_stream);
+    _stream->SetMode(IOStream::R);
+
+    if(!_connection->is_reading) {
+        _connection->is_reading = true;
+
+        auto *stream = (uv_stream_t*)&_connection->socket;
+        int error = uv_read_start(stream, &NetConnectionTask::NetAllocCb, &NetConnectionTask::NetReadCb);
+        if(!error) {
+            Resolve(ECANCELED);
+            return false;
+        }
+    }
+
+    if(_connection->read_stream.GetBufferSize() > 0) {
+        *_stream = _connection->read_stream;
+        _connection->read_stream.Flush();
+        Resolve(IO_SUCCESS);
+        return false;
+    }else{
+        if(_connection->read_task == nullptr) {
+            _connection->read_task = this;
+        }else{
+            Resolve(ECANCELED);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool NetWriteTask::Execute(uv_loop_t *loop)
+{
+    assert(_connection);
+    assert(_stream);
+    _stream->SetMode(IOStream::W);
+    uv_buf_t *buf = _stream->Next();
+    if(buf) {
+        auto *write_req = (uv_write_t*)malloc(sizeof(uv_write_t));
+        write_req->data = this;
+        int error = uv_write(write_req, (uv_stream_t *)&_connection->socket, buf, 1, &NetWriteCb);
+        if(error) {
+            Resolve(error);
+            return false;
+        }
+        return true;
+    }else{
+        Resolve(EIO);
+        return false;
+    }
+}
+
+
+bool NetCloseTask::Execute(uv_loop_t *loop)
+{
+    uv_tcp_t *tcp_client = &_connection->socket;
+    tcp_client->data = this;
+    uv_read_stop((uv_stream_t *)&_connection->socket);
+    uv_close((uv_handle_t*) tcp_client, &NetCloseCb);
+    return true;
+}
+
+
+void NetCloseTask::NetCloseCb(uv_handle_t* handle)
+{
+    assert(handle->data != nullptr);
+    auto *task = (NetCloseTask *)handle->data;
+    task->Resolve(IO_SUCCESS);
+    delete task;
+}
+
+
+bool NetAddrInfoTask::Execute(uv_loop_t *loop)
+{
+    assert(_info);
+    _info->resolver.data = this;
+    int error = uv_getaddrinfo(loop, &_info->resolver, &NetAddrInfoCb, _info->node.c_str(), NULL, &_info->hints);
+    if(error) {
+        Resolve(error);
+        return false;
+    }
+    return true;
+}
+
+
+void NetAddrInfoTask::NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+    assert(req->data != nullptr);
+    auto *task = (NetAddrInfoTask *)req->data;
+
+    if (status >= 0) {
+        char addr[17] = {'\0'};
+        uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
+        task->_info->hostname = std::string {addr};
+        task->Resolve(IO_SUCCESS);
+        delete task;
+    }else{
+        task->Resolve(status);
+        delete task;
+    }
+}
+
+
+bool NetListenTask::Execute(uv_loop_t *loop)
+{
+    assert(_server);
+
+    int error = 0;
+    uv_tcp_t *socket = &_server->socket;
+    socket->data = this;
+    uv_tcp_init(loop, socket);
+    uv_ip4_addr(_server->hostname.c_str(), _server->port, &_server->bind_addr);
+    error = uv_tcp_bind(socket, (struct sockaddr*)&_server->bind_addr, 0);
+    if (error) {
+        Resolve(error);
+        return false;
+    }
+
+    error = uv_listen((uv_stream_t*) socket, 128 /*backlog*/, &NetListenTask::NetConnectionCb);
+    if (error) {
+        Resolve(error);
+        return false;
+    }
+
+    return true;
+}
+
+
+
+void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
+{
+    assert(server->data != nullptr);
+    auto task = (NetListenTask* )server->data;
+
+    TCPSessionPtr session = std::make_shared<TCPSession>(server, task->_callback);
+    session->Accept();
+    session->Run();
+}
+
+
+void FsOpenTask::FsOpenCb(uv_fs_s* req)
+{
+    auto *task = (FsOpenTask*)req->data;
+    assert(req == &task->_request);
     assert(req->fs_type == UV_FS_OPEN);
 
-    uv_file fd = req->result;
-    stream->SetFd(fd);
-    stream->Begin();
-
-    if(req->result < 0) {
-        task->Resolve(req->result);
-    }else{
-        task->Resolve(IO_SUCCESS);
-    }
+    task->Resolve(req->result);
 
     uv_fs_req_cleanup(req);
     assert(req->path == nullptr);
@@ -39,25 +325,21 @@ void AsyncRuntime::FsOpenCb(uv_fs_s* req)
 }
 
 
-void AsyncRuntime::FsCloseCb(uv_fs_s* req)
+void FsCloseTask::FsCloseCb(uv_fs_s* req)
 {
-    auto task = IOFsTaskCast<AsyncRuntime::IOFsClose>(req->data);
-    const auto& stream = task->GetStream();
-    assert(req == task->GetRequest());
+    auto task = (FsCloseTask *)(req->data);
+    assert(req == &task->_request);
     assert(req->fs_type == UV_FS_CLOSE);
-
-    stream->SetFd(-1);
-    stream->Begin();
     task->Resolve(IO_SUCCESS);
     delete task;
 }
 
 
-void AsyncRuntime::FsReadCb(uv_fs_s* req)
+void FsReadTask::FsReadCb(uv_fs_s* req)
 {
-    auto *task = IOFsTaskCast<AsyncRuntime::IOFsRead>(req->data);
-    const auto& stream = task->GetStream();
-    assert(req == task->GetRequest());
+    auto *task = (FsReadTask*)req->data;
+    const auto& stream = task->_stream;
+    assert(req == &task->_request);
     assert(req->fs_type == UV_FS_READ);
 
     if (req->result == 0) {
@@ -71,26 +353,25 @@ void AsyncRuntime::FsReadCb(uv_fs_s* req)
         delete task;
         uv_fs_req_cleanup(req);
     } else {
-        stream->length += req->result;
+        stream->SetLength(stream->GetLength() + req->result);
         uv_buf_t *buf = stream->Next();
-        uv_file fd = stream->GetFd();
 
         int offset = -1;
-        int seek = task->GetMethod().seek;
+        int seek = task->_seek;
         if(seek >= 0) {
             offset = seek + stream->GetBufferSize();
         }
 
-        uv_fs_read(req->loop, task->GetRequest(), fd, buf, 1, offset, FsReadCb);
+        uv_fs_read(req->loop, &task->_request, task->_fd, buf, 1, offset, FsReadCb);
     }
 }
 
 
-void AsyncRuntime::FsWriteCb(uv_fs_s *req)
+void FsWriteTask::FsWriteCb(uv_fs_s *req)
 {
-    auto task = IOFsTaskCast<AsyncRuntime::IOFsWrite>(req->data);
-    const auto& stream = task->GetStream();
-    assert(req == task->GetRequest());
+    auto *task = (FsWriteTask*)req->data;
+    const auto& stream = task->_stream;
+    assert(req == &task->_request);
     assert(req->fs_type == UV_FS_WRITE);
 
     if (req->result == 0) {
@@ -104,11 +385,10 @@ void AsyncRuntime::FsWriteCb(uv_fs_s *req)
         delete task;
         uv_fs_req_cleanup(req);
     } else {
-        uv_file fd = stream->GetFd();
         uv_buf_t *buf = stream->Next();
 
         if(buf) {
-            uv_fs_write(req->loop, task->GetRequest(), fd, buf, 1, -1, FsWriteCb);
+            uv_fs_write(req->loop, &task->_request, task->_fd, buf, 1, -1, FsWriteCb);
         }else{
             stream->Begin();
             task->Resolve(IO_SUCCESS);
@@ -119,93 +399,16 @@ void AsyncRuntime::FsWriteCb(uv_fs_s *req)
 }
 
 
-void AsyncRuntime::NetConnectionCb(uv_stream_t *server, int status)
+void NetWriteTask::NetWriteCb(uv_write_t* req, int status)
 {
-    assert(server->data != nullptr);
-    auto task = IONetTaskCast<AsyncRuntime::IONetListen>(server->data);
-    auto &method = task->GetMethod();
-
-    TCPSessionPtr session = std::make_shared<TCPSession>(server, method.handle_connection);
-    session->Accept();
-    session->Run();
-}
-
-
-void AsyncRuntime::NetConnectionCb(uv_connect_t* connection, int status)
-{
-    assert(connection->data != nullptr);
-    auto task = IONetTaskCast<AsyncRuntime::IONetConnect>(connection->data);
+    auto *task = (NetWriteTask* )req->data;
+    assert(req->type == UV_WRITE);
 
     if (status >= 0) {
         task->Resolve(IO_SUCCESS);
-        delete task;
     }else{
         task->Resolve(status);
-        delete task;
     }
-}
-
-
-void AsyncRuntime::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
-{
-    assert(handle->data != nullptr);
-    auto *task = IONetTaskCast<AsyncRuntime::IONetRead>(handle->data);
-    task->GetStream()->Next(buf, size);
-}
-
-
-void AsyncRuntime::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
-{
-    assert(stream->data != nullptr);
-    auto *task = IONetTaskCast<AsyncRuntime::IONetRead>(stream->data);
-    auto &io_stream = task->GetStream();
-    uv_read_stop(stream);
-
-    if (nread >= 0) {
-        io_stream->length += nread;
-    }
-//    else if (nread == UV_EOF) {
-//
-//    }
-
-    io_stream->Begin();
-    task->Resolve(IO_SUCCESS);
-    delete task;
-}
-
-
-void AsyncRuntime::NetWriteCb(uv_write_t* req, int status)
-{
-    auto task = IONetTaskCast<AsyncRuntime::IONetWrite>(req->data);
-    assert(req->type == UV_WRITE);
-    task->Resolve(IO_SUCCESS);
     delete task;
     free(req);
-}
-
-
-void AsyncRuntime::NetCloseCb(uv_handle_t* handle)
-{
-    assert(handle->data != nullptr);
-    auto *task = IONetTaskCast<AsyncRuntime::IONetClose>(handle->data);
-    task->Resolve(IO_SUCCESS);
-    delete task;
-}
-
-
-void AsyncRuntime::NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
-{
-    assert(req->data != nullptr);
-    auto task = IONetTaskCast<AsyncRuntime::IONetAddrInfo>(req->data);
-
-    if (status >= 0) {
-        char addr[17] = {'\0'};
-        uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
-        task->GetInfo()->hostname = std::string {addr};
-        task->Resolve(IO_SUCCESS);
-        delete task;
-    }else{
-        task->Resolve(status);
-        delete task;
-    }
 }

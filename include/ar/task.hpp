@@ -11,6 +11,7 @@
 
 #include "ar/helper.hpp"
 #include "ar/object.hpp"
+#include "ar/logger.hpp"
 
 
 namespace AsyncRuntime {
@@ -165,9 +166,9 @@ namespace AsyncRuntime {
     protected:
         std::future<Ret>                    future;
         resume_cb_t                         completed_cb;
-        void*                               completed_opaque;
+        void*                               completed_opaque{};
         std::promise<Ret>                   promise;
-        std::atomic_bool                    resolved;
+        std::atomic_bool                    resolved{};
         std::mutex                          resolve_mutex;
         bool                                excepted;
     };
