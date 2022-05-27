@@ -202,6 +202,13 @@ bool NetReadTask::Execute(uv_loop_t *loop)
 }
 
 
+bool NetRecvTask::Execute(uv_loop_t *loop)
+{
+
+    return true;
+}
+
+
 bool NetWriteTask::Execute(uv_loop_t *loop)
 {
     assert(_connection);

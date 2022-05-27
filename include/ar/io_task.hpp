@@ -4,7 +4,7 @@
 
 #include "ar/task.hpp"
 #include "ar/stream.hpp"
-#include "ar/tcp.hpp"
+#include "ar/net.hpp"
 
 #include "uv.h"
 
@@ -130,6 +130,20 @@ namespace AsyncRuntime {
         NetReadTask(const TCPConnectionPtr& connection, const IOStreamPtr& stream): _connection(connection), _stream(stream) {}
         bool Execute(uv_loop_t *loop) override;
         friend void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+    private:
+        TCPConnectionPtr     _connection;
+        IOStreamPtr          _stream;
+    };
+
+
+    /**
+     * @brief
+     */
+    class NetRecvTask : public IOTask {
+    public:
+        NetRecvTask(const TCPConnectionPtr& connection, const IOStreamPtr& stream): _connection(connection), _stream(stream) {}
+        bool Execute(uv_loop_t *loop) override;
+        //friend void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
     private:
         TCPConnectionPtr     _connection;
         IOStreamPtr          _stream;

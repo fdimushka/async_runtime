@@ -23,15 +23,6 @@ namespace AsyncRuntime {
     class NetReadTask;
 
 
-//    struct IONetReader {
-//        IOStream stream;
-//        IOTask *task;
-//        std::mutex  mutex;
-//
-//        void SetReadTask(IOTask *task_);
-//    };
-
-
     struct TCPConnection {
         int                             fd;
         std::string                     hostname;
@@ -47,6 +38,22 @@ namespace AsyncRuntime {
 
 
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
+
+
+    struct UDPConnection {
+        int                             fd;
+        std::string                     hostname;
+        int                             port;
+        struct sockaddr_in              dest_addr;
+        uv_udp_t                        socket;
+        uv_connect_t                    connect;
+        IOStream                        read_stream;
+        bool                            is_reading;
+        NetReadTask                     *read_task;
+    };
+
+
+    typedef std::shared_ptr<UDPConnection>  UDPConnectionPtr;
 
 
     struct NetAddrInfo {
@@ -107,6 +114,9 @@ namespace AsyncRuntime {
      */
     TCPConnectionPtr MakeTCPConnection(const char* hostname, int port, int keepalive = 60);
     TCPConnectionPtr MakeTCPConnection(int fd);
+
+
+    UDPConnectionPtr MakeUDPConnection(const char* hostname, int port, int keepalive = 60);
 
 
     /**

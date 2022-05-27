@@ -31,4 +31,3 @@ foreach( name ${TARGETS_SINGLE_FILE} )
     add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp )
     target_link_libraries(${name} ar pthread)
 endforeach()
-git
