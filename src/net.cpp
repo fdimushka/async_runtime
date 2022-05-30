@@ -38,6 +38,15 @@ TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 }
 
 
+UDPPtr AsyncRuntime::MakeUDP(const char* hostname, int port)
+{
+    UDPPtr udp = std::make_shared<UDP>();
+    udp->hostname = std::string{hostname};
+    udp->port = port;
+    return udp;
+}
+
+
 NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
 {
     NetAddrInfoPtr info = std::make_shared<NetAddrInfo>();

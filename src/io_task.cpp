@@ -202,13 +202,6 @@ bool NetReadTask::Execute(uv_loop_t *loop)
 }
 
 
-bool NetRecvTask::Execute(uv_loop_t *loop)
-{
-
-    return true;
-}
-
-
 bool NetWriteTask::Execute(uv_loop_t *loop)
 {
     assert(_connection);
@@ -315,6 +308,73 @@ void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
     TCPSessionPtr session = std::make_shared<TCPSession>(server, task->_callback);
     session->Accept();
     session->Run();
+}
+
+
+bool NetUDPBindTask::Execute(uv_loop_t *loop)
+{
+    assert(_udp);
+    uv_udp_init(loop, &_udp->socket);
+    uv_ip4_addr(_udp->hostname.c_str(), _udp->port, &_udp->sock_addr);
+    int error = uv_udp_bind(&_udp->socket, (struct sockaddr*)&_udp->sock_addr, 0);
+
+    if(_broadcast)
+        uv_udp_set_broadcast(&_udp->socket, 1);
+
+    if (!error) {
+        Resolve(IO_SUCCESS);
+    }else{
+        Resolve(error);
+    }
+
+    //uv_udp_recv_start(&_udp->socket, alloc_buffer, on_read);
+    return false;
+}
+
+
+bool NetSendTask::Execute(uv_loop_t *loop)
+{
+    assert(_udp);
+    auto* req = (uv_udp_send_t*)malloc(sizeof(uv_udp_send_t));
+    req->data = this;
+
+    _stream->SetMode(IOStream::W);
+    uv_buf_t *buf = _stream->Next();
+    if(buf) {
+        uv_ip4_addr(_udp->hostname.c_str(), _udp->port, &_send_addr);
+        int error = uv_udp_send(req, &_udp->socket, buf, 1, (struct sockaddr *) &_send_addr, NetSendTask::NetSendCb);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+
+    }else{
+        Resolve(EIO);
+        return false;
+    }
+
+    return true;
+}
+
+
+void NetSendTask::NetSendCb(uv_udp_send_t *req, int status)
+{
+    assert(req->data != nullptr);
+    auto task = (NetSendTask* )req->data;
+    if (status == -1) {
+        task->Resolve(status);
+    }else{
+        task->Resolve(IO_SUCCESS);
+    }
+
+    free(req);
+    delete task;
+}
+
+
+bool NetRecvTask::Execute(uv_loop_t *loop)
+{
+    return true;
 }
 
 
