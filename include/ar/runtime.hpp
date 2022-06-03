@@ -431,8 +431,8 @@ namespace AsyncRuntime {
      * @param broadcast
      * @return
      */
-    inline IOResultPtr AsyncUDPBind(const UDPPtr & udp, bool broadcast = false) {
-        return Runtime::g_runtime.AsyncIO<NetUDPBindTask>(udp, broadcast);
+    inline IOResultPtr AsyncUDPBind(const UDPPtr & udp, int flags = 0, bool broadcast = false) {
+        return Runtime::g_runtime.AsyncIO<NetUDPBindTask>(udp, flags, broadcast);
     }
 
 
@@ -445,6 +445,17 @@ namespace AsyncRuntime {
      */
     inline IOResultPtr AsyncSend(const UDPPtr & udp, const IOStreamPtr & stream, const IPv4Addr &send_addr) {
         return Runtime::g_runtime.AsyncIO<NetSendTask>(udp, stream, send_addr);
+    }
+
+
+    /**
+     * @brief
+     * @param udp
+     * @param stream
+     * @return
+     */
+    inline IOResultPtr AsyncRecv(const UDPPtr & udp, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncIO<NetRecvTask>(udp, stream);
     }
 
 

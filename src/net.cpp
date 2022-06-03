@@ -59,6 +59,18 @@ NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
 }
 
 
+void AsyncRuntime::FlushUDPReceivedData(std::vector<UDPReceivedData> &all_recv_data)
+{
+    for(auto  &item : all_recv_data) {
+        if(item.buf) {
+            free(item.buf);
+        }
+    }
+
+    all_recv_data.clear();
+}
+
+
 TCPSession::TCPSession(uv_stream_t *server, const CallbackType & callback) :
         fn(callback),
         loop_(server->loop),

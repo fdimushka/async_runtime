@@ -201,9 +201,10 @@ namespace AsyncRuntime {
      */
     class NetUDPBindTask : public IOTask {
     public:
-        NetUDPBindTask(const UDPPtr &udp, bool broadcast = false): _udp(udp), _broadcast(broadcast) {}
+        NetUDPBindTask(const UDPPtr &udp, int flags, bool broadcast = false): _udp(udp), _broadcast(broadcast), _flags(flags) {}
         bool Execute(uv_loop_t *loop) override;
     private:
+        int       _flags;
         bool      _broadcast;
         UDPPtr    _udp;
     };
@@ -234,6 +235,12 @@ namespace AsyncRuntime {
     public:
         NetRecvTask(const UDPPtr &udp, const IOStreamPtr& stream): _udp(udp), _stream(stream) {}
         bool Execute(uv_loop_t *loop) override;
+        static void NetAllocCb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf);
+        static void NetRecvCb(uv_udp_t* handle,
+                              ssize_t nread,
+                              const uv_buf_t* buf,
+                              const struct sockaddr* addr,
+                              unsigned flags);
     private:
         UDPPtr               _udp;
         IOStreamPtr          _stream;

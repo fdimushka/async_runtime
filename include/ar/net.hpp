@@ -27,6 +27,7 @@ namespace AsyncRuntime {
 
     class IOTask;
     class NetReadTask;
+    class NetRecvTask;
 
 
     struct TCPConnection {
@@ -46,15 +47,24 @@ namespace AsyncRuntime {
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
 
 
+    struct UDPReceivedData {
+        const struct sockaddr*          addr;
+        char*                           buf;
+        ssize_t                         size;
+    };
+
+
+    void FlushUDPReceivedData(std::vector<UDPReceivedData>& all_recv_data);
+
+
     struct UDP {
         int                             fd;
         std::string                     hostname;
         int                             port;
         struct sockaddr_in              sock_addr;
         uv_udp_t                        socket;
-        IOStream                        read_stream;
-        bool                            is_reading;
-        NetReadTask                     *read_task;
+        NetRecvTask*                    recv_task;
+        std::vector<UDPReceivedData>    all_recv_data;
     };
 
 
