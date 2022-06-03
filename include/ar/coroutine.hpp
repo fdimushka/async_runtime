@@ -264,7 +264,7 @@ namespace AsyncRuntime {
         }
 
 
-        const ExecutorState& GetExecutorState() const {
+        const ExecutorState& GetExecutorState() const override {
             return executor;
         }
 

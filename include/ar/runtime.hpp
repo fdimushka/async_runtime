@@ -426,6 +426,40 @@ namespace AsyncRuntime {
 
 
     /**
+     * @brief async bind udp socket
+     * @param udp
+     * @param broadcast
+     * @return
+     */
+    inline IOResultPtr AsyncUDPBind(const UDPPtr & udp, int flags = 0, bool broadcast = false) {
+        return Runtime::g_runtime.AsyncIO<NetUDPBindTask>(udp, flags, broadcast);
+    }
+
+
+    /**
+     * @brief async send to address
+     * @param udp
+     * @param stream
+     * @param send_addr
+     * @return
+     */
+    inline IOResultPtr AsyncSend(const UDPPtr & udp, const IOStreamPtr & stream, const IPv4Addr &send_addr) {
+        return Runtime::g_runtime.AsyncIO<NetSendTask>(udp, stream, send_addr);
+    }
+
+
+    /**
+     * @brief
+     * @param udp
+     * @param stream
+     * @return
+     */
+    inline IOResultPtr AsyncRecv(const UDPPtr & udp, const IOStreamPtr & stream) {
+        return Runtime::g_runtime.AsyncIO<NetRecvTask>(udp, stream);
+    }
+
+
+    /**
      * @brief await
      * @tparam Ret
      * @param awaiter

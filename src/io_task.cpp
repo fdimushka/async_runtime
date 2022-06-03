@@ -2,6 +2,8 @@
 #include "ar/logger.hpp"
 #include "uv.h"
 
+#include <cstring>
+
 
 using namespace AsyncRuntime;
 #define MAX_READING_SIZE    1024*1024*10
@@ -177,8 +179,9 @@ bool NetReadTask::Execute(uv_loop_t *loop)
         _connection->is_reading = true;
 
         auto *stream = (uv_stream_t*)&_connection->socket;
+        stream->data = _connection.get();
         int error = uv_read_start(stream, &NetConnectionTask::NetAllocCb, &NetConnectionTask::NetReadCb);
-        if(!error) {
+        if(error) {
             Resolve(ECANCELED);
             return false;
         }
@@ -197,13 +200,6 @@ bool NetReadTask::Execute(uv_loop_t *loop)
             return false;
         }
     }
-
-    return true;
-}
-
-
-bool NetRecvTask::Execute(uv_loop_t *loop)
-{
 
     return true;
 }
@@ -306,7 +302,6 @@ bool NetListenTask::Execute(uv_loop_t *loop)
 }
 
 
-
 void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
 {
     assert(server->data != nullptr);
@@ -315,6 +310,134 @@ void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
     TCPSessionPtr session = std::make_shared<TCPSession>(server, task->_callback);
     session->Accept();
     session->Run();
+}
+
+
+bool NetUDPBindTask::Execute(uv_loop_t *loop)
+{
+    assert(_udp);
+    uv_udp_init(loop, &_udp->socket);
+    uv_ip4_addr(_udp->hostname.c_str(), _udp->port, &_udp->sock_addr);
+    int error = uv_udp_bind(&_udp->socket, (struct sockaddr*)&_udp->sock_addr, _flags);
+
+    if(_broadcast)
+        uv_udp_set_broadcast(&_udp->socket, 1);
+
+    if (!error) {
+        Resolve(IO_SUCCESS);
+    }else{
+        Resolve(error);
+    }
+
+    auto *socket = &_udp->socket;
+    socket->data = _udp.get();
+    error = uv_udp_recv_start(socket, &NetRecvTask::NetAllocCb, &NetRecvTask::NetRecvCb);
+    if(error) {
+        Resolve(ECANCELED);
+    }
+
+    return false;
+}
+
+
+bool NetSendTask::Execute(uv_loop_t *loop)
+{
+    assert(_udp);
+    auto* req = (uv_udp_send_t*)malloc(sizeof(uv_udp_send_t));
+    req->data = this;
+
+    _stream->SetMode(IOStream::W);
+    uv_buf_t *buf = _stream->Next();
+    if(buf) {
+        uv_ip4_addr(_addr.ip.c_str(), _addr.port, &_send_addr);
+        int error = uv_udp_send(req, &_udp->socket, buf, 1, (struct sockaddr *) &_send_addr, NetSendTask::NetSendCb);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+    }else{
+        Resolve(EIO);
+        return false;
+    }
+
+    return true;
+}
+
+
+void NetSendTask::NetSendCb(uv_udp_send_t *req, int status)
+{
+    assert(req->data != nullptr);
+    auto task = (NetSendTask* )req->data;
+    if (status < 0) {
+        task->Resolve(status);
+    }else{
+        task->Resolve(IO_SUCCESS);
+    }
+
+    free(req);
+    delete task;
+}
+
+
+bool NetRecvTask::Execute(uv_loop_t *loop)
+{
+    assert(_udp);
+    _stream->SetMode(IOStream::R);
+
+    if(!_udp->all_recv_data.empty()) {
+        Resolve(IO_SUCCESS);
+        return false;
+    }
+
+    auto *socket = &_udp->socket;
+    socket->data = _udp.get();
+    _udp->recv_task = this;
+    uv_udp_recv_start(socket, &NetRecvTask::NetAllocCb, &NetRecvTask::NetRecvCb);
+
+    return true;
+}
+
+
+void NetRecvTask::NetAllocCb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf)
+{
+    buf->base = (char*)malloc(suggested_size);
+    buf->len = suggested_size;
+}
+
+
+void NetRecvTask::NetRecvCb(uv_udp_t* handle,
+                            ssize_t nread,
+                            const uv_buf_t* buf,
+                            const struct sockaddr* addr,
+                            unsigned flags)
+{
+    assert(handle->data != nullptr);
+    auto *udp = (UDP*)handle->data;
+
+    if(nread > 0) {
+        UDPReceivedData data = {};
+        data.buf = (char *) malloc(nread);
+        data.size = nread;
+        memcpy(data.buf, buf->base, nread);
+        data.addr = addr;
+
+        udp->all_recv_data.push_back(data);
+    }
+
+    if(udp->recv_task != nullptr) {
+        if (nread >= 0) {
+            udp->recv_task->Resolve(IO_SUCCESS);
+        }else {
+            udp->recv_task->Resolve(nread);
+        }
+
+        delete udp->recv_task;
+        udp->recv_task = nullptr;
+    }else{
+        uv_udp_recv_stop(&udp->socket);
+    }
+
+    free(buf->base);
 }
 
 

@@ -9,6 +9,12 @@
 
 
 namespace AsyncRuntime {
+    struct IPv4Addr {
+        std::string                     ip;
+        int                             port;
+    };
+
+
     struct TCPServer {
         std::string                     hostname;
         int                             port;
@@ -21,6 +27,7 @@ namespace AsyncRuntime {
 
     class IOTask;
     class NetReadTask;
+    class NetRecvTask;
 
 
     struct TCPConnection {
@@ -40,20 +47,28 @@ namespace AsyncRuntime {
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
 
 
-    struct UDPConnection {
-        int                             fd;
-        std::string                     hostname;
-        int                             port;
-        struct sockaddr_in              dest_addr;
-        uv_udp_t                        socket;
-        uv_connect_t                    connect;
-        IOStream                        read_stream;
-        bool                            is_reading;
-        NetReadTask                     *read_task;
+    struct UDPReceivedData {
+        const struct sockaddr*          addr;
+        char*                           buf;
+        ssize_t                         size;
     };
 
 
-    typedef std::shared_ptr<UDPConnection>  UDPConnectionPtr;
+    void FlushUDPReceivedData(std::vector<UDPReceivedData>& all_recv_data);
+
+
+    struct UDP {
+        int                             fd;
+        std::string                     hostname;
+        int                             port;
+        struct sockaddr_in              sock_addr;
+        uv_udp_t                        socket;
+        NetRecvTask*                    recv_task;
+        std::vector<UDPReceivedData>    all_recv_data;
+    };
+
+
+    typedef std::shared_ptr<UDP>  UDPPtr;
 
 
     struct NetAddrInfo {
@@ -116,7 +131,7 @@ namespace AsyncRuntime {
     TCPConnectionPtr MakeTCPConnection(int fd);
 
 
-    UDPConnectionPtr MakeUDPConnection(const char* hostname, int port, int keepalive = 60);
+    UDPPtr MakeUDP(const char* hostname, int port);
 
 
     /**

@@ -137,20 +137,6 @@ namespace AsyncRuntime {
 
 
     /**
-     * @brief
-     */
-    class NetRecvTask : public IOTask {
-    public:
-        NetRecvTask(const TCPConnectionPtr& connection, const IOStreamPtr& stream): _connection(connection), _stream(stream) {}
-        bool Execute(uv_loop_t *loop) override;
-        //friend void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
-    private:
-        TCPConnectionPtr     _connection;
-        IOStreamPtr          _stream;
-    };
-
-
-    /**
      * @brief write to socket task
      * @class NetWriteTask
      */
@@ -206,6 +192,58 @@ namespace AsyncRuntime {
     private:
         TCPServerPtr    _server;
         CallbackType    _callback;
+    };
+
+
+    /**
+     * @class NetUDPBindTask
+     * @brief Listen
+     */
+    class NetUDPBindTask : public IOTask {
+    public:
+        NetUDPBindTask(const UDPPtr &udp, int flags, bool broadcast = false): _udp(udp), _broadcast(broadcast), _flags(flags) {}
+        bool Execute(uv_loop_t *loop) override;
+    private:
+        int       _flags;
+        bool      _broadcast;
+        UDPPtr    _udp;
+    };
+
+
+    /**
+     * @brief send to socket task
+     * @class NetSendTask
+     */
+    class NetSendTask : public IOTask {
+    public:
+        NetSendTask(const UDPPtr &udp, const IOStreamPtr& stream, const IPv4Addr& addr): _udp(udp), _stream(stream), _addr(addr) {}
+        bool Execute(uv_loop_t *loop) override;
+        static void NetSendCb(uv_udp_send_t *req, int status);
+    private:
+        UDPPtr               _udp;
+        IPv4Addr             _addr;
+        struct sockaddr_in   _send_addr;
+        IOStreamPtr          _stream;
+    };
+
+
+    /**
+     * @brief
+     * @class NetRecvTask
+     */
+    class NetRecvTask : public IOTask {
+    public:
+        NetRecvTask(const UDPPtr &udp, const IOStreamPtr& stream): _udp(udp), _stream(stream) {}
+        bool Execute(uv_loop_t *loop) override;
+        static void NetAllocCb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf);
+        static void NetRecvCb(uv_udp_t* handle,
+                              ssize_t nread,
+                              const uv_buf_t* buf,
+                              const struct sockaddr* addr,
+                              unsigned flags);
+    private:
+        UDPPtr               _udp;
+        IOStreamPtr          _stream;
     };
 }
 
