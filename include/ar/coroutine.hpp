@@ -22,6 +22,12 @@ namespace AsyncRuntime {
         virtual Task* MakeExecTask() = 0;
         virtual void Suspend() = 0;
         virtual const ExecutorState& GetExecutorState() const = 0;
+
+
+        void SetName(const char* name) { name_ = name; }
+        const char* GetName() const { return name_; }
+    private:
+        const char *name_;
     };
 
 
@@ -48,14 +54,14 @@ namespace AsyncRuntime {
         }
 
 
-        std::shared_ptr<ResultType> GetResult() const {
+        [[nodiscard]] std::shared_ptr<ResultType> GetResult() const {
             return result;
         }
 
 
         void SetException(std::exception_ptr e) {
             if(result)
-                result->SetException(std::current_exception());
+                result->SetException(e);
         }
 
 
@@ -135,7 +141,8 @@ namespace AsyncRuntime {
                 salloc_(salloc),
                 sctx_(sctx),
                 fn_(fn),
-                coroutine_(coroutine) { };
+                coroutine_(coroutine) {
+        };
 
 
         ContextRecord(const ContextRecord& other) = delete;
@@ -209,11 +216,13 @@ namespace AsyncRuntime {
                 yield(this),
                 state{kExecuting} {
             yield.ResetResult();
+
+            SetName(__FUNCTION__);
+
             CreateRecord(std::bind( std::forward<Function>(fn),
                                     std::placeholders::_1,
                                     std::placeholders::_2,
                                     std::forward<Arguments>(args)...) );
-
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 

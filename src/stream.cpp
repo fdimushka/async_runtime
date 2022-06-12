@@ -7,8 +7,8 @@
 using namespace AsyncRuntime;
 
 
-IOStream::IOStream() : seek(0), length(0), allocated_length(0), allocated(false) { }
-IOStream::IOStream(const char *buf, int64_t len) : seek(0), length(len), allocated_length(len), allocated(true)
+IOStream::IOStream() : seek(0), length(0), allocated_length(0), allocated(false), uv_buf{} { }
+IOStream::IOStream(const char *buf, int64_t len) : seek(0), length(len), allocated_length(len), allocated(true), uv_buf{}
 {
     assert(length > 0);
     assert(allocated_length > 0);

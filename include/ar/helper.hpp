@@ -6,7 +6,7 @@
 #include <vector>
 #include <thread>
 #include <sstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <cassert>
 
 #include <functional>

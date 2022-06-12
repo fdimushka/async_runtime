@@ -1,4 +1,6 @@
 #include "ar/net.hpp"
+
+#include <utility>
 #include "ar/runtime.hpp"
 
 using namespace AsyncRuntime;
@@ -71,8 +73,8 @@ void AsyncRuntime::FlushUDPReceivedData(std::vector<UDPReceivedData> &all_recv_d
 }
 
 
-TCPSession::TCPSession(uv_stream_t *server, const CallbackType & callback) :
-        fn(callback),
+TCPSession::TCPSession(uv_stream_t *server, CallbackType  callback) :
+        fn(std::move(callback)),
         loop_(server->loop),
         server_(server),
         client_(nullptr),

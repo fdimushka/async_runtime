@@ -100,7 +100,7 @@ void AsyncRuntime::Logger::WriteMode(Mode mode, const std::string & domain, cons
     if (_mode != E2E || mode != E2E)
         return;
 
-    Write(GetModePrefix(mode), domain.empty() ? _domain : domain, message);
+    Write(GetModePrefix(), domain.empty() ? _domain : domain, message);
 }
 
 void AsyncRuntime::Logger::WriteLog(Level level, const std::string & domain, const std::string & message) const
@@ -191,8 +191,8 @@ const char *AsyncRuntime::Logger::GetLogPrefix( Level level_ ) {
 
 
 // static
-const char *AsyncRuntime::Logger::GetModePrefix(Mode mode_) {
-    switch (mode_) {
+const char *AsyncRuntime::Logger::GetModePrefix() {
+    switch (1) {
         case E2E:
             return "E2E";
         case Production:
@@ -223,11 +223,11 @@ void AsyncRuntime::Logger::DumpMemoryUsage()
 
 AsyncRuntime::FunScope::FunScope(const char * ctx_) : _ctx(ctx_)
 {
-    AR_LOG_SS(Logger::Verbose, _ctx << " started...");
+    AR_LOG_SS(Logger::Verbose, _ctx << " started...")
 }
 
 AsyncRuntime::FunScope::~FunScope()
 {
-    AR_LOG_SS(Logger::Verbose, _ctx << " finished.");
+    AR_LOG_SS(Logger::Verbose, _ctx << " finished.")
 }
 

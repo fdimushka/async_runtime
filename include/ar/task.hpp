@@ -12,6 +12,7 @@
 #include "ar/helper.hpp"
 #include "ar/object.hpp"
 #include "ar/logger.hpp"
+#include "ar/timestamp.hpp"
 
 
 namespace AsyncRuntime {
@@ -152,14 +153,14 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        bool Valid() const { return future.valid(); }
+        [[nodiscard]] bool Valid() const { return future.valid(); }
 
 
         /**
          * @brief
          * @return
          */
-        bool Resolved() const {
+        [[nodiscard]] bool Resolved() const {
             bool res = resolved.load(std::memory_order_relaxed);
             return res;
         }
@@ -192,16 +193,55 @@ namespace AsyncRuntime {
     {
         friend class runtime;
     public:
-        Task() = default;
+        struct LessThanByDelay
+        {
+            bool operator()(const Task* lhs, const Task* rhs) const {
+                return lhs->GetDelay() > rhs->GetDelay();
+            }
+        };
+
+        Task() : origin_id_(0), delayed(false), delay(0), start_time(TIMESTAMP_NOW_MICRO()) {};
         virtual ~Task() = default;
-        virtual void Execute(const ExecutorState& executor = ExecutorState()) = 0;
+        virtual void Execute(const ExecutorState& executor) = 0;
+
+
+        template<typename Rep, typename T>
+        void SetDelay(T time) {
+            if(time > 0) {
+                delayed = true;
+                delay = Timestamp::Cast<Rep, Timestamp::Micro>(time);
+                start_time = TIMESTAMP_NOW_MICRO() + delay;
+            }
+        }
+
+
+        [[nodiscard]] bool Delayed() const { return delayed; }
+        [[nodiscard]] Timespan GetDelay() const {
+            if(!delayed) return 0;
+            return start_time - TIMESTAMP_NOW_MICRO();
+        }
+
+
+        void SetOriginId(uintptr_t origin_id) { origin_id_ = origin_id; }
+        [[nodiscard]] uintptr_t GetOriginId() const { return origin_id_; }
 
 
         void SetDesirableExecutor(const ExecutorState& executor_) { desirable_executor = executor_; }
-        const ExecutorState& GetDesirableExecutor() const { return desirable_executor; }
+        [[nodiscard]] const ExecutorState& GetDesirableExecutor() const { return desirable_executor; }
+
+#ifdef USE_TESTS
+        Timespan delay;
+#else
+    protected:
+        Timespan delay;
+#endif
+
     protected:
         ExecutorState executor;
         ExecutorState desirable_executor;
+        uintptr_t origin_id_;
+        bool delayed;
+        Timespan start_time;
     };
 
 
@@ -272,6 +312,35 @@ namespace AsyncRuntime {
     };
 
 
+    class DummyTaskImpl : public Task
+    {
+    public:
+        explicit DummyTaskImpl() : result(new Result<void>() ){ };
+        ~DummyTaskImpl() override = default;
+
+
+        void Execute(const ExecutorState& executor_) override {
+            try {
+                executor = executor_;
+                result->SetValue();
+            } catch(...) {
+                try {
+                    result->SetException(std::current_exception());
+                } catch(...) { }
+            }
+        }
+
+
+        std::shared_ptr<Result<void>> GetResult() {
+            return result;
+        }
+    private:
+
+
+        std::shared_ptr<Result<void>>                                   result;
+    };
+
+
     /**
      * @brief
      * @tparam Callable
@@ -281,6 +350,15 @@ namespace AsyncRuntime {
     template<class Fn>
     inline TaskImpl<Fn>* MakeTask(Fn &&f) {
         return new TaskImpl(std::forward<Fn>(f));
+    }
+
+
+    /**
+     * @brief
+     * @return
+     */
+    inline DummyTaskImpl* MakeDummyTask() {
+        return new DummyTaskImpl();
     }
 
 

@@ -79,19 +79,10 @@ void Runtime::CreateDefaultExecutors()
 
 void Runtime::Post(Task *task)
 {
-    assert(task != nullptr);
-
     const auto& executor_state = task->GetDesirableExecutor();
     if(executor_state.executor == nullptr) {
-        Post(main_executor, task);
+        main_executor->Post(task);
     }else{
-        Post(executor_state.executor, task);
+        executor_state.executor->Post(task);
     }
-}
-
-
-void Runtime::Post(IExecutor *executor, Task *task)
-{
-    assert(executor != nullptr);
-    executor->Post(task);
 }

@@ -107,7 +107,7 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        size_t Size() const { return _waiters.size(); }
+        [[nodiscard]] size_t Size() const { return _waiters.size(); }
 
 
         /**

@@ -102,7 +102,7 @@ TEST_CASE( "Coroutine create task test", "[coroutine]" ) {
 
     coro.MakeResult();
     auto *task = coro.MakeExecTask();
-    task->Execute();
+    task->Execute(ExecutorState());
     delete task;
     REQUIRE(coro.GetResult()->Get() == 100);
 }

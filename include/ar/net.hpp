@@ -84,7 +84,7 @@ namespace AsyncRuntime {
     public:
         typedef std::function<void(CoroutineHandler*, TCPConnectionPtr)> CallbackType;
 
-        explicit TCPSession(uv_stream_t *server, const CallbackType & callback);
+        explicit TCPSession(uv_stream_t *server, CallbackType  callback);
         ~TCPSession();
 
         void Run();

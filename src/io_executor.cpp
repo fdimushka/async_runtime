@@ -1,4 +1,6 @@
 #include "ar/io_executor.hpp"
+
+#include <utility>
 #include "ar/logger.hpp"
 #include "uv.h"
 
@@ -32,7 +34,7 @@ static void AsyncIOCb(uv_async_t* handle)
 }
 
 
-IOExecutor::IOExecutor(const std::string & name_) : name(name_)
+IOExecutor::IOExecutor(std::string  name_) : name(std::move(name_))
 {
     loop = uv_default_loop();
     uv_async_init(loop, &exit_handle, ExitAsyncCb);

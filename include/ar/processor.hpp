@@ -32,7 +32,7 @@ namespace AsyncRuntime {
             WAIT            =2,
         };
 
-        Processor(Executor* executor_ = nullptr);
+        explicit Processor(Executor* executor_ = nullptr);
         ~Processor() override;
 
 
@@ -80,7 +80,7 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        std::thread::id GetThreadId() const;
+        [[nodiscard]] std::thread::id GetThreadId() const;
     protected:
         void Work();
         void ExecuteTask(Task* task);

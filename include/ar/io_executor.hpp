@@ -16,7 +16,7 @@ namespace AsyncRuntime {
             WorkStealQueue<IOTask *>       run_queue;
         };
 
-        explicit IOExecutor(const std::string & name_);
+        explicit IOExecutor(std::string  name_);
         ~IOExecutor() override;
 
 

@@ -94,7 +94,7 @@ namespace AsyncRuntime
 
         static const char *GetLogPrefix(Level level_);
 
-        static const char *GetModePrefix(Mode level_);
+        static const char *GetModePrefix();
 
         static void RemoveEscapeSymbols(std::string & str);
 

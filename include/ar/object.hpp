@@ -28,7 +28,7 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        ObjectID GetID() const { return id; }
+        [[nodiscard]] ObjectID GetID() const { return id; }
 
     protected:
         ObjectID id;
