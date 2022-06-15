@@ -20,7 +20,8 @@ namespace AsyncRuntime {
         template< typename Rep, typename Period >
         explicit Ticker(const std::chrono::duration<Rep, Period>& rtime):
             delay( Timestamp::Cast<std::chrono::duration<Rep, Period>, Timestamp::Micro>(rtime.count()) )
-            , last_tick_ts(TIMESTAMP_NOW_MICRO()) { };
+            , last_tick_ts(TIMESTAMP_NOW_MICRO())
+            , is_continue {true} { };
         ~Ticker() = default;
 
 
@@ -36,8 +37,10 @@ namespace AsyncRuntime {
          */
         std::shared_ptr<Result<bool >> AsyncTick();
     private:
-        Timespan last_tick_ts;
-        Timespan delay;
+        Timespan                        last_tick_ts;
+        Timespan                        delay;
+        std::shared_ptr<Result<bool>>   tick_result;
+        std::atomic_bool                is_continue;
     };
 }
 

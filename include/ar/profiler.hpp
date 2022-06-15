@@ -3,6 +3,7 @@
 
 
 #include "ar/task.hpp"
+#include "ar/ticker.hpp"
 #include "ar/work_steal_queue.hpp"
 
 
@@ -18,7 +19,7 @@ namespace AsyncRuntime {
      */
     class Profiler {
     public:
-        Profiler() = default;
+        Profiler();
         ~Profiler() = default;
 
 
@@ -70,6 +71,7 @@ namespace AsyncRuntime {
         std::mutex                                      mutex;
         std::unordered_map<uintptr_t, Work>             work_ground;
         WorkStealQueue<Event>                           events;
+        Ticker                                          ticker;
     };
 
 

@@ -263,8 +263,8 @@ namespace AsyncRuntime {
      */
     template <  class Callable,
                 class... Arguments>
-    inline auto Async(Callable&& f, Arguments&&... args, Timespan DelayMs =0) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
-        return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)..., DelayMs);
+    inline auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+        return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
     }
 
 

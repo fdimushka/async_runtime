@@ -6,11 +6,10 @@ using namespace AsyncRuntime;
 using namespace std::chrono_literals;
 
 
-void async_fun(CoroutineHandler* handler, YieldVoid & yield) {
+void async_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) {
     yield();
 
-    Ticker ticker(1s);
-    while (Await(ticker.AsyncTick(), handler)) {
+    while (Await(ticker->AsyncTick(), handler)) {
         std::cout << "tick: " << TIMESTAMP_NOW_SEC() << std::endl;
     }
 }
@@ -18,8 +17,12 @@ void async_fun(CoroutineHandler* handler, YieldVoid & yield) {
 
 int main() {
     SetupRuntime();
-    auto coro = MakeCoroutine(&async_fun);
-    Await(Async(coro));
+    Ticker ticker(10s);
+    auto coro = MakeCoroutine(&async_fun, &ticker);
+    auto result_async_fun = Async(coro);
+    //std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    //ticker.Stop();
+    //result_async_fun->Wait();
     Terminate();
     return 0;
 }

@@ -92,9 +92,8 @@ namespace AsyncRuntime {
         template<typename T>
         void SetValue(T && v) {
             std::lock_guard<std::mutex>   lock(resolve_mutex);
-            resolved.store(true, std::memory_order_relaxed);
-
-            if(!excepted) {
+            if(!excepted && !Resolved()) {
+                resolved.store(true, std::memory_order_relaxed);
                 promise.set_value(v);
 
                 if (completed_cb)
@@ -111,9 +110,8 @@ namespace AsyncRuntime {
          */
         void SetValue() {
             std::lock_guard<std::mutex>   lock(resolve_mutex);
-            resolved.store(true, std::memory_order_relaxed);
-
-            if(!excepted) {
+            if(!excepted && !Resolved()) {
+                resolved.store(true, std::memory_order_relaxed);
                 promise.set_value();
 
                 if (completed_cb)

@@ -11,6 +11,9 @@ inline int64_t Now()
 }
 
 
+Profiler::Profiler() : ticker(5s) { }
+
+
 void Profiler::RegWork(uintptr_t id, const char *name)
 {
     std::lock_guard<std::mutex> lock(mutex);
