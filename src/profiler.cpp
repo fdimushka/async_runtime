@@ -1,4 +1,5 @@
 #include "ar/profiler.hpp"
+#include "ar/runtime.hpp"
 
 
 using namespace AsyncRuntime;
@@ -11,7 +12,37 @@ inline int64_t Now()
 }
 
 
-Profiler::Profiler() : ticker(5s) { }
+static void AsyncProfilerLoop(CoroutineHandler *handler, YieldVoid yield, Ticker *ticker) {
+    yield();
+    while (Await(ticker->AsyncTick(), handler)) {
+        Profiler::GetSingletonPtr()->Update();
+    }
+}
+
+
+Profiler::Profiler() :
+    ticker(1s)
+    , coroutine(MakeCoroutine(&AsyncProfilerLoop, &ticker)) { }
+
+
+void Profiler::Start()
+{
+    result = Async(coroutine);
+}
+
+
+void Profiler::Stop()
+{
+    ticker.Stop();
+    if(result)
+        result->Wait();
+}
+
+
+void Profiler::Update()
+{
+
+}
 
 
 void Profiler::RegWork(uintptr_t id, const char *name)
@@ -28,7 +59,7 @@ void Profiler::RegWork(uintptr_t id, const char *name)
 
 void Profiler::AddWorkEvent(uintptr_t id, uint8_t type)
 {
-    Event event{
+    auto *event = new Event{
         id,
         type,
         std::hash<std::thread::id>{}(std::this_thread::get_id()),

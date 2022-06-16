@@ -1,6 +1,7 @@
 #include "ar/runtime.hpp"
 #include "ar/io_executor.hpp"
 #include "ar/logger.hpp"
+#include "ar/profiler.hpp"
 
 using namespace AsyncRuntime;
 
@@ -29,6 +30,8 @@ void Runtime::Setup(/*...*/)
 
     CreateDefaultExecutors();
     is_setup = true;
+
+    Profiler::GetSingletonPtr()->Start();
 }
 
 
@@ -36,6 +39,8 @@ void Runtime::Terminate()
 {
     if(!is_setup)
         return;
+
+    Profiler::GetSingletonPtr()->Stop();
 
     if(io_executor != nullptr) {
         delete io_executor;

@@ -17,12 +17,12 @@ void async_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) {
 
 int main() {
     SetupRuntime();
-    Ticker ticker(10s);
+    Ticker ticker(1s);
     auto coro = MakeCoroutine(&async_fun, &ticker);
     auto result_async_fun = Async(coro);
-    //std::this_thread::sleep_for(std::chrono::milliseconds(5100));
-    //ticker.Stop();
-    //result_async_fun->Wait();
+    std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    ticker.Stop();
+    result_async_fun->Wait();
     Terminate();
     return 0;
 }

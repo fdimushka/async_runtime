@@ -2,6 +2,6 @@
 #define AR_CONFIG_H
 
 /* #undef USE_TRACE */
-/* #undef USE_TESTS */
+#define USE_TESTS
 
 #endif
