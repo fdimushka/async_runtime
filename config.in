@@ -3,5 +3,6 @@
 
 #cmakedefine USE_TRACE
 #cmakedefine USE_TESTS
+#cmakedefine USE_PROFILER
 
 #endif

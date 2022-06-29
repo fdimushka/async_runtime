@@ -24,11 +24,11 @@ namespace AsyncRuntime {
         virtual ~BaseObject() = default;
 
 
-        /**
+        virtual /**
          * @brief
          * @return
          */
-        [[nodiscard]] ObjectID GetID() const { return id; }
+        ObjectID GetID() const { return id; }
 
     protected:
         ObjectID id;

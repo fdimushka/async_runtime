@@ -4,22 +4,59 @@
 
 #include "ar/task.hpp"
 #include "ar/ticker.hpp"
-#include "ar/coroutine.hpp"
 #include "ar/work_steal_queue.hpp"
+#include "ar/coroutine.hpp"
+
+#include <list>
 
 
 namespace AsyncRuntime {
-
-
-#define PROFILER_BEGIN_WORK_EVENT 0
-#define PROFILER_END_WORK_EVENT 1
-
     /**
      * @brief
      * @class Profiler
      */
     class Profiler {
     public:
+        enum EventType: uint8_t {
+            BEGIN_WORK,
+            END_WORK,
+            NEW_COROUTINE,
+            DELETE_COROUTINE,
+            NEW_THREAD,
+            DELETE_THREAD,
+            REG_ASYNC_FUNCTION
+        };
+
+
+        struct WorkStep {
+            uint64_t thread;
+            int64_t begin;
+            int64_t end;
+        };
+
+
+        struct Work {
+            uintptr_t id;
+            std::string name;
+            std::list<WorkStep>   work_time;
+            int64_t begin_at = -1;
+            int64_t updated_at = -1;
+        };
+
+
+        struct State {
+            int64_t                                 coroutines_count = 0;
+            std::unordered_map<uintptr_t, Work>     work_ground;
+            std::list<uint64_t>                     threads;
+
+            State() = default;
+            State(State &&other) = delete;
+            State(State &other);
+
+            State& operator=(State other);
+        };
+
+
         Profiler();
         ~Profiler() = default;
 
@@ -34,7 +71,7 @@ namespace AsyncRuntime {
          * @param id
          * @param name
          */
-        void RegWork(uintptr_t id, const char* name);
+        void RegAsyncFunction(uintptr_t id, const char* name);
 
 
         /**
@@ -42,7 +79,14 @@ namespace AsyncRuntime {
          * @param id
          * @param type
          */
-        void AddWorkEvent(uintptr_t id, uint8_t type);
+        void AddEvent(uintptr_t id, EventType type);
+
+
+        /**
+         * @brief
+         * @return
+         */
+        State GetCurrentState();
 
 
         static Profiler* GetSingletonPtr() {
@@ -53,38 +97,39 @@ namespace AsyncRuntime {
 
         struct Event {
             uintptr_t id;
-            uint8_t type;
-            uint64_t cpu;
+            EventType type;
+            uint64_t thread;
             int64_t ts;
         };
 
 
-        struct WorkStep {
-            uint64_t cpu;
-            int64_t begin;
-            int64_t end;
-        };
-
-
-        struct Work {
-            uintptr_t id;
-            std::string name;
-            std::vector<WorkStep>   work_time;
-            int64_t updated_at;
-        };
-
-
-        Coroutine<void>                                 coroutine;
+        std::shared_ptr<Coroutine<void>>                coroutine;
         ResultVoidPtr                                   result;
         std::mutex                                      mutex;
-        std::unordered_map<uintptr_t, Work>             work_ground;
+        State                                           state;
         WorkStealQueue<Event*>                          events;
         Ticker                                          ticker;
+        int64_t                                         time_interval;
     };
 
 
-//#define PROFILE_BEGIN_TASK(TASK) Profiler::GetSingletonPtr()->BeginTask(TASK)
-//#define PROFILE_END_TASK(TASK) Profiler::GetSingletonPtr()->EndTask(TASK)
+#if defined(USE_PROFILER)
+#define PROFILER_START() Profiler::GetSingletonPtr()->Start();
+#define PROFILER_STOP() Profiler::GetSingletonPtr()->Stop();
+#define PROFILER_ADD_EVENT(ID, TYPE)                                                \
+    if((ID) > 0) {                                                                  \
+        if(TYPE != Profiler::REG_ASYNC_FUNCTION) {                                  \
+            Profiler::GetSingletonPtr()->AddEvent(ID, TYPE);                        \
+        }else{                                                                      \
+            Profiler::GetSingletonPtr()->RegAsyncFunction(ID, __PRETTY_FUNCTION__); \
+        }                                                                           \
+    };
+#else
+#define PROFILER_START()
+#define PROFILER_STOP()
+#define PROFILER_ADD_EVENT(ID, TYPE)
+#endif
+
 }
 
 #endif //AR_PROFILER_H

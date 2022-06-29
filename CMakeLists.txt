@@ -9,6 +9,7 @@ option(WITH_TRACE "Build with tracing" OFF)
 option(WITH_TESTS "Build with tests" OFF)
 option(WITH_EXAMPLES "Build with examples" ON)
 option(WITH_DOCS "Build with docs" OFF)
+option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
@@ -16,9 +17,11 @@ message(STATUS "Build with tests: ${WITH_TESTS}")
 message(STATUS "Build with examples: ${WITH_EXAMPLES}")
 message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
+message(STATUS "Build with profiler: ${WITH_PROFILER}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
+set(USE_PROFILER OFF)
 
 if (WITH_TESTS)
     set(USE_TESTS ON)
@@ -26,6 +29,10 @@ endif()
 
 if (WITH_TRACE)
     set(USE_TRACE ON)
+endif()
+
+if (WITH_PROFILER)
+    set(USE_PROFILER ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)

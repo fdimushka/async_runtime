@@ -10,6 +10,13 @@
 namespace AsyncRuntime {
 
 
+    class ThreadHelper {
+    public:
+        static void SetName(const char* name);
+        static std::string GetName();
+    };
+
+
     /**
      * @brief
      */

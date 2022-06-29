@@ -9,6 +9,7 @@
 #include "ar/function.hpp"
 #include "ar/config.hpp"
 #include "ar/ticker.hpp"
+#include "ar/profiler.hpp"
 
 
 #endif //AR_ARRAY_H

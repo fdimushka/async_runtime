@@ -2,6 +2,7 @@
 
 #include <utility>
 #include "ar/logger.hpp"
+#include "ar/profiler.hpp"
 #include "uv.h"
 
 
@@ -70,7 +71,13 @@ void IOExecutor::ThreadRegistration(std::thread::id thread_id)
 
 void IOExecutor::Run()
 {
-    loop_thread.Submit([this] { Loop(); });
+    loop_thread.Submit([this] {
+        std::string th_name = ThreadHelper::GetName() + "/io/" + std::to_string(id);
+        ThreadHelper::SetName(th_name.c_str());
+        PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
+        Loop();
+        PROFILER_ADD_EVENT(1, Profiler::DELETE_THREAD);
+    });
 }
 
 

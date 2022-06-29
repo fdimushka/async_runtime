@@ -37,6 +37,18 @@ namespace AsyncRuntime {
         static inline Timespan Cast(T time) {
             return std::chrono::duration_cast<To>(From(time)).count();
         }
+
+
+        template< typename Rep, typename Period >
+        static inline Timespan CastMicro(const std::chrono::duration<Rep, Period>& rtime) {
+            return Timestamp::Cast<std::chrono::duration<Rep, Period>, Timestamp::Micro>(rtime.count());
+        }
+
+
+        template< typename Rep, typename Period >
+        static inline Timespan CastMilli(const std::chrono::duration<Rep, Period>& rtime) {
+            return Timestamp::Cast<std::chrono::duration<Rep, Period>, Timestamp::Milli>(rtime.count());
+        }
     };
 
 #define TIMESTAMP_NOW()          Timestamp::Now()

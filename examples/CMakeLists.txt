@@ -6,9 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(AR_INSTALL_DIR /usr/local/)
+
 OPTION(WITH_EXTRA_TESTS "build also module tests and others" OFF)
 
 include_directories(${CATCH_HEADER_DIR})
+
+link_directories(/usr/local/lib64/)
 
 # sources:
 file(GLOB EXAMPLES_SRC_CPP *.cpp)
@@ -33,5 +37,5 @@ set( TARGETS_ALL ${TARGETS_SINGLE_FILE})
 foreach( name ${TARGETS_SINGLE_FILE} )
     message( STATUS "Example: ${name}" )
     add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp )
-    target_link_libraries(${name} ar pthread)
+    target_link_libraries(${name} ar uv)
 endforeach()

@@ -17,7 +17,11 @@ Processor::Processor(Executor* executor_) :
     state{IDLE}
 {
     assert(executor != nullptr);
-    thread_executor.Submit([this] { Work(); });
+    thread_executor.Submit([this] {
+        PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
+        Work();
+        PROFILER_ADD_EVENT(1, Profiler::DELETE_THREAD);
+    });
 }
 
 
@@ -105,9 +109,9 @@ void Processor::ExecuteTask(Task *task)
     assert(task != nullptr);
 
     state.store(EXECUTE, std::memory_order_relaxed);
-    //PROFILE_BEGIN_TASK(task);
+    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::BEGIN_WORK);
     task->Execute(executor_state);
-    //PROFILE_END_TASK(task);
+    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::END_WORK);
     delete task;
 }
 

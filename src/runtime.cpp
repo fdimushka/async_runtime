@@ -11,6 +11,7 @@ using namespace AsyncRuntime;
 
 Runtime Runtime::g_runtime;
 
+
 Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
     Logger::s_logger.SetStd();
@@ -31,7 +32,7 @@ void Runtime::Setup(/*...*/)
     CreateDefaultExecutors();
     is_setup = true;
 
-    Profiler::GetSingletonPtr()->Start();
+    PROFILER_START();
 }
 
 
@@ -40,7 +41,7 @@ void Runtime::Terminate()
     if(!is_setup)
         return;
 
-    Profiler::GetSingletonPtr()->Stop();
+    PROFILER_STOP();
 
     if(io_executor != nullptr) {
         delete io_executor;
