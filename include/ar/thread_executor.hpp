@@ -10,6 +10,13 @@
 namespace AsyncRuntime {
 
 
+    class ThreadHelper {
+    public:
+        static void SetName(const char* name);
+        static std::string GetName();
+    };
+
+
     /**
      * @brief
      */
@@ -49,14 +56,14 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        const std::vector<std::thread>& GetThreads() const { return threads; }
+        [[nodiscard]] const std::vector<std::thread>& GetThreads() const { return threads; }
 
 
         /**
          * @brief
          * @return
          */
-        std::vector<std::thread::id> GetThreadIds() const;
+        [[nodiscard]] std::vector<std::thread::id> GetThreadIds() const;
     private:
         std::vector<std::thread>     threads;
     };

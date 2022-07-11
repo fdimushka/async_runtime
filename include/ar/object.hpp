@@ -24,7 +24,7 @@ namespace AsyncRuntime {
         virtual ~BaseObject() = default;
 
 
-        /**
+        virtual /**
          * @brief
          * @return
          */

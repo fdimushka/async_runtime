@@ -1,5 +1,8 @@
 #include "ar/io_executor.hpp"
+
+#include <utility>
 #include "ar/logger.hpp"
+#include "ar/profiler.hpp"
 #include "uv.h"
 
 
@@ -32,7 +35,7 @@ static void AsyncIOCb(uv_async_t* handle)
 }
 
 
-IOExecutor::IOExecutor(const std::string & name_) : name(name_)
+IOExecutor::IOExecutor(std::string  name_) : name(std::move(name_))
 {
     loop = uv_default_loop();
     uv_async_init(loop, &exit_handle, ExitAsyncCb);
@@ -68,7 +71,13 @@ void IOExecutor::ThreadRegistration(std::thread::id thread_id)
 
 void IOExecutor::Run()
 {
-    loop_thread.Submit([this] { Loop(); });
+    loop_thread.Submit([this] {
+        std::string th_name = ThreadHelper::GetName() + "/io/" + std::to_string(id);
+        ThreadHelper::SetName(th_name.c_str());
+        PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
+        Loop();
+        PROFILER_ADD_EVENT(1, Profiler::DELETE_THREAD);
+    });
 }
 
 

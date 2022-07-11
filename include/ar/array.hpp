@@ -38,12 +38,12 @@ namespace AsyncRuntime {
         }
 
 
-        int64_t capacity() const noexcept {
+        [[nodiscard]] int64_t capacity() const noexcept {
             return C;
         }
 
 
-        size_t size() const noexcept {
+        [[nodiscard]] size_t size() const noexcept {
             return U.load(std::memory_order_relaxed);
         }
 

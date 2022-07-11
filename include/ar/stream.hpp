@@ -63,12 +63,12 @@ namespace AsyncRuntime {
          * @brief get size of current read buffer
          * @return
          */
-        int64_t GetBufferSize() const { return length; };
-        const char* GetBuffer() const { return buffer; };
+        [[nodiscard]] int64_t GetBufferSize() const { return length; };
+        [[nodiscard]] const char* GetBuffer() const { return buffer; };
 
 
         void SetLength(int64_t l) { length = l;}
-        int64_t GetLength() const { return length; };
+        [[nodiscard]] int64_t GetLength() const { return length; };
     private:
         int64_t                 seek = 0;
         int64_t                 length = 0;

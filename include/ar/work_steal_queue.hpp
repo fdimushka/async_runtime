@@ -32,17 +32,17 @@ namespace AsyncRuntime {
         /**
         @brief queries if the queue is empty at the time of this call
         */
-        bool empty() const noexcept;
+        [[nodiscard]] bool empty() const noexcept;
 
         /**
         @brief queries the number of items at the time of this call
         */
-        size_t size() const noexcept;
+        [[nodiscard]] size_t size() const noexcept;
 
         /**
         @brief queries the capacity of the queue
         */
-        int64_t capacity() const noexcept;
+        [[nodiscard]] int64_t capacity() const noexcept;
 
         /**
         @brief inserts an item to the queue
@@ -53,7 +53,7 @@ namespace AsyncRuntime {
         @param item the item to perfect-forward to the queue
         */
         template<typename O>
-        void push(O &&item);
+        void push(O &&o);
 
         /**
         @brief pops out an item from the queue

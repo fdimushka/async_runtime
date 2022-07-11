@@ -9,6 +9,7 @@ option(WITH_TRACE "Build with tracing" OFF)
 option(WITH_TESTS "Build with tests" OFF)
 option(WITH_EXAMPLES "Build with examples" ON)
 option(WITH_DOCS "Build with docs" OFF)
+option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
@@ -16,9 +17,11 @@ message(STATUS "Build with tests: ${WITH_TESTS}")
 message(STATUS "Build with examples: ${WITH_EXAMPLES}")
 message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
+message(STATUS "Build with profiler: ${WITH_PROFILER}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
+set(USE_PROFILER OFF)
 
 if (WITH_TESTS)
     set(USE_TESTS ON)
@@ -26,6 +29,10 @@ endif()
 
 if (WITH_TRACE)
     set(USE_TRACE ON)
+endif()
+
+if (WITH_PROFILER)
+    set(USE_PROFILER ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -44,6 +51,7 @@ configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
 include(cmake/asm.cmake)
 include(cmake/libuv.cmake)
+include(cmake/llhttp.cmake)
 
 if (WITH_TRACE)
     include(cmake/trace.cmake)
@@ -55,17 +63,18 @@ endif()
 
 configure_file(config.in ${CMAKE_CURRENT_SOURCE_DIR}/include/ar/config.hpp)
 
-file(GLOB SOURCES src/*.cpp)
+file(GLOB SOURCES src/*.cpp src/http/*.cpp)
 file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
 
 include_directories(include/)
 include_directories(src/)
+include_directories(src/http)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 
 add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES})
 
 if (WITH_TESTS)
     add_subdirectory(tests)
@@ -78,6 +87,7 @@ endif()
 if (WITH_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
 
 set(INSTALL_HEADERS ${HEADERS})
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "${INSTALL_HEADERS}")

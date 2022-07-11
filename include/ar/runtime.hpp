@@ -13,12 +13,16 @@
 
 
 namespace AsyncRuntime {
+    class Ticker;
+
+
     /**
      * @class Runtime
      * @brief runtime class
      */
     class Runtime {
         friend class Processor;
+        friend class Ticker;
     public:
         static Runtime g_runtime;
 
@@ -48,50 +52,32 @@ namespace AsyncRuntime {
          * @return
          */
         template <  class Callable,
-                    class... Arguments  >
+                    class... Arguments >
         auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
 
 
         /**
-         * @brief async call
+         * @brief
          * @tparam Callable
          * @tparam Arguments
-         * @param wg
          * @param f
+         * @param delay_ms
          * @param args
          * @return
          */
         template <  class Callable,
-                    class... Arguments  >
-        auto Async(IExecutor* ex, Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
+                    class... Arguments >
+        auto AsyncDelayed(Callable&& f, Timespan delay_ms, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
+
 
 
         /**
          * @brief async call
          * @tparam CoroutineType
          */
-        template<class CoroutineType>
+        template< class CoroutineType >
         std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine);
 
-
-        /**
-         * @brief
-         * @tparam CoroutineType
-         * @param coroutine
-         * @return
-         */
-        template<class CoroutineType>
-        std::shared_ptr<Result<typename CoroutineType::RetType>> Async(IExecutor* ex, CoroutineType & coroutine);
-
-
-        /**
-         * @brief async sleep
-         * @tparam _Rep
-         * @tparam _Period
-         * @param rtime
-         */
-        template<typename Rep, typename Period>
-        ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime);
 
 
         /**
@@ -103,6 +89,18 @@ namespace AsyncRuntime {
         std::shared_ptr<Result<IOResult>> AsyncIO(Arguments&&... args);
 
 
+
+        /**
+         * @brief
+         * @tparam Rep
+         * @tparam Period
+         * @param rtime
+         * @return
+         */
+        template< typename Rep, typename Period >
+        inline ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime);
+
+
         /**
          * @brief
          * @tparam Ret
@@ -110,7 +108,7 @@ namespace AsyncRuntime {
          * @param context
          * @return
          */
-        template<class Ret>
+        template< class Ret >
         Ret Await(std::shared_ptr<Result<Ret>> result);
 
 
@@ -121,23 +119,17 @@ namespace AsyncRuntime {
          * @param context
          * @return
          */
-        template<class Ret, class Res>
+        template< class Ret, class Res >
         Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
     private:
         void CheckRuntime();
+
 
         /**
          * @brief
          * @param task
          */
         void Post(Task * task);
-
-
-        /**
-         * @brief
-         * @param task
-         */
-        void Post(IExecutor* ex, Task * task);
 
 
         /**
@@ -164,11 +156,12 @@ namespace AsyncRuntime {
 
 
     template<class Callable, class... Arguments>
-    auto Runtime::Async(IExecutor* ex, Callable &&f, Arguments &&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
+    auto Runtime::AsyncDelayed(Callable&& f, Timespan delay_ms, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
         CheckRuntime();
         auto task = MakeTask(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         auto result = task->GetResult();
-        Post(ex, task);
+        task->template SetDelay<Timestamp::Milli>(delay_ms);
+        Post(task);
         return result;
     }
 
@@ -181,7 +174,7 @@ namespace AsyncRuntime {
             result->Wait();
         }
 
-        auto task = coroutine.MakeExecTask();
+        Task* task = coroutine.MakeExecTask();
         if(task != nullptr) {
             coroutine.MakeResult();
             auto result = coroutine.GetResult();
@@ -193,32 +186,14 @@ namespace AsyncRuntime {
     }
 
 
-    template<class CoroutineType>
-    std::shared_ptr<Result<typename CoroutineType::RetType>> Runtime::Async(IExecutor* ex, CoroutineType & coroutine) {
+    template< typename Rep, typename Period >
+    inline ResultVoidPtr Runtime::AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
         CheckRuntime();
-        if(coroutine.GetState() != CoroutineState::kWaiting) {
-            auto result = coroutine.GetResult();
-            result->Wait();
-        }
-
-        auto task = coroutine.MakeExecTask();
-        if(task != nullptr) {
-            coroutine.MakeResult();
-            auto result = coroutine.GetResult();
-            Post(ex, task);
-            return result;
-        }else{
-            return {};
-        }
-    }
-
-
-    template<typename Rep, typename Period>
-    ResultVoidPtr Runtime::AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
-        CheckRuntime();
-        return std::move(Async([](const std::chrono::duration<Rep, Period>& t){
-            std::this_thread::sleep_for(t);
-        }, rtime));
+        auto task = MakeDummyTask();
+        task->template SetDelay< std::chrono::duration<Rep, Period> >(rtime.count());
+        auto result = task->GetResult();
+        Post(task);
+        return result;
     }
 
 
@@ -262,8 +237,6 @@ namespace AsyncRuntime {
     }
 
 
-
-
     /**
      * @brief
      */
@@ -289,7 +262,7 @@ namespace AsyncRuntime {
      * @return
      */
     template <  class Callable,
-                class... Arguments  >
+                class... Arguments>
     inline auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
         return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
     }
@@ -299,7 +272,7 @@ namespace AsyncRuntime {
      * @brief async call
      * @tparam CoroutineType
      */
-    template< class CoroutineType >
+    template<class CoroutineType >
     inline std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine) {
         return Runtime::g_runtime.Async(coroutine);
     }
@@ -313,7 +286,7 @@ namespace AsyncRuntime {
      */
     template< typename Rep, typename Period >
     inline ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
-        return Runtime::g_runtime.AsyncSleep(rtime);
+        return Runtime::g_runtime.AsyncSleep<Rep, Period>(rtime);
     }
 
 

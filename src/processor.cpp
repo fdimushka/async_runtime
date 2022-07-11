@@ -1,5 +1,6 @@
 #include "ar/processor.hpp"
 #include "ar/executor.hpp"
+#include "ar/profiler.hpp"
 
 #include "trace.h"
 
@@ -10,13 +11,17 @@ using namespace AsyncRuntime;
 Processor::Processor(Executor* executor_) :
     BaseObject(),
     executor(executor_),
-    is_continue(true),
+    is_continue{true},
     notify_count{0},
     executor_state{executor_, this},
     state{IDLE}
 {
     assert(executor != nullptr);
-    thread_executor.Submit([this] { Work(); });
+    thread_executor.Submit([this] {
+        PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
+        Work();
+        PROFILER_ADD_EVENT(1, Profiler::DELETE_THREAD);
+    });
 }
 
 
@@ -104,7 +109,9 @@ void Processor::ExecuteTask(Task *task)
     assert(task != nullptr);
 
     state.store(EXECUTE, std::memory_order_relaxed);
+    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::BEGIN_WORK);
     task->Execute(executor_state);
+    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::END_WORK);
     delete task;
 }
 

@@ -24,7 +24,7 @@ namespace AsyncRuntime {
      * @brief
      */
     struct StackContext {
-        StackContext() :sp(0), size(0) {};
+        StackContext() :sp(nullptr), begin(nullptr), size(0) {};
         std::size_t              size;
         void                    *sp;
         void                    *begin;
@@ -45,7 +45,7 @@ namespace AsyncRuntime {
         typedef TraitsT traits_type;
 
 
-        BasicFixedSizeStack( std::size_t size = traits_type::DefaultSize() ) RNT_NOEXCEPT_OR_NOTHROW :
+        explicit BasicFixedSizeStack( std::size_t size = traits_type::DefaultSize() ) RNT_NOEXCEPT_OR_NOTHROW :
                 size_( size) {
         }
 

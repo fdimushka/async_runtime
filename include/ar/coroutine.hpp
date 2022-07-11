@@ -3,12 +3,12 @@
 
 #include <iterator>
 #include <type_traits>
-#include <assert.h>
 
 #include "ar/object.hpp"
 #include "ar/task.hpp"
 #include "ar/stack.hpp"
 #include "ar/context_switcher.hpp"
+//#include "ar/profiler.hpp"
 
 
 namespace AsyncRuntime {
@@ -22,6 +22,10 @@ namespace AsyncRuntime {
         virtual Task* MakeExecTask() = 0;
         virtual void Suspend() = 0;
         virtual const ExecutorState& GetExecutorState() const = 0;
+
+    protected:
+        void Begin();
+        void End();
     };
 
 
@@ -48,14 +52,14 @@ namespace AsyncRuntime {
         }
 
 
-        std::shared_ptr<ResultType> GetResult() const {
+        [[nodiscard]] std::shared_ptr<ResultType> GetResult() const {
             return result;
         }
 
 
         void SetException(std::exception_ptr e) {
             if(result)
-                result->SetException(std::current_exception());
+                result->SetException(e);
         }
 
 
@@ -99,7 +103,7 @@ namespace AsyncRuntime {
     class Yield<void> : public BaseYield<void> {
         typedef BaseYield<void> base;
     public:
-        Yield(CoroutineHandler*  handler) : base(handler) {};
+        Yield(CoroutineHandler*  handler) : base(handler) { };
         virtual ~Yield() =default;
 
         void operator() () {
@@ -135,7 +139,8 @@ namespace AsyncRuntime {
                 salloc_(salloc),
                 sctx_(sctx),
                 fn_(fn),
-                coroutine_(coroutine) { };
+                coroutine_(coroutine) {
+        };
 
 
         ContextRecord(const ContextRecord& other) = delete;
@@ -188,7 +193,6 @@ namespace AsyncRuntime {
         kWaiting,
     };
 
-
     template< class StackAlloc,
               class Ret >
     class BaseCoroutine: public CoroutineHandler {
@@ -201,7 +205,6 @@ namespace AsyncRuntime {
         typedef Ret                                                                 RetType;
         typedef std::function<void(CoroutineHandler*, YieldType&)>                  Callable;
 
-
         template< class Function,
                   class ...Arguments>
         explicit BaseCoroutine(Function &&fn, Arguments &&... args) :
@@ -209,11 +212,13 @@ namespace AsyncRuntime {
                 yield(this),
                 state{kExecuting} {
             yield.ResetResult();
+
             CreateRecord(std::bind( std::forward<Function>(fn),
                                     std::placeholders::_1,
                                     std::placeholders::_2,
                                     std::forward<Arguments>(args)...) );
 
+            Begin();
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 
@@ -222,7 +227,9 @@ namespace AsyncRuntime {
         BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
         BaseCoroutine(BaseCoroutine&& other) = delete;
         BaseCoroutine& operator =(BaseCoroutine&& other) = delete;
-        virtual ~BaseCoroutine() = default;
+        ~BaseCoroutine() override {
+            End();
+        };
 
 
         void operator() (const ExecutorState& executor_ = ExecutorState()) {
@@ -277,6 +284,7 @@ namespace AsyncRuntime {
             if(!is_completed.load(std::memory_order_relaxed)) {
                 auto task = MakeTask(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
                 task->SetDesirableExecutor(executor);
+                task->SetOriginId(GetID());
                 return task;
             }else{
                 return nullptr;

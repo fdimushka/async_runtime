@@ -1,6 +1,7 @@
 #include "ar/runtime.hpp"
 #include "ar/io_executor.hpp"
 #include "ar/logger.hpp"
+#include "ar/profiler.hpp"
 
 using namespace AsyncRuntime;
 
@@ -9,6 +10,7 @@ using namespace AsyncRuntime;
 #define IO_EXECUTOR_NAME "io"
 
 Runtime Runtime::g_runtime;
+
 
 Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
@@ -29,6 +31,8 @@ void Runtime::Setup(/*...*/)
 
     CreateDefaultExecutors();
     is_setup = true;
+
+    PROFILER_START();
 }
 
 
@@ -36,6 +40,8 @@ void Runtime::Terminate()
 {
     if(!is_setup)
         return;
+
+    PROFILER_STOP();
 
     if(io_executor != nullptr) {
         delete io_executor;
@@ -79,19 +85,10 @@ void Runtime::CreateDefaultExecutors()
 
 void Runtime::Post(Task *task)
 {
-    assert(task != nullptr);
-
     const auto& executor_state = task->GetDesirableExecutor();
     if(executor_state.executor == nullptr) {
-        Post(main_executor, task);
+        main_executor->Post(task);
     }else{
-        Post(executor_state.executor, task);
+        executor_state.executor->Post(task);
     }
-}
-
-
-void Runtime::Post(IExecutor *executor, Task *task)
-{
-    assert(executor != nullptr);
-    executor->Post(task);
 }

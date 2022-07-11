@@ -11,6 +11,14 @@
 
 #include <mutex>
 #include <string>
+#include <cassert>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <thread>
+#include <string>
+#include <vector>
+#include <algorithm>
 #include <map>
 
 
@@ -94,7 +102,7 @@ namespace AsyncRuntime
 
         static const char *GetLogPrefix(Level level_);
 
-        static const char *GetModePrefix(Mode level_);
+        static const char *GetModePrefix();
 
         static void RemoveEscapeSymbols(std::string & str);
 
