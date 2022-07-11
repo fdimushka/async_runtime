@@ -10,6 +10,7 @@
 #include "ar/config.hpp"
 #include "ar/ticker.hpp"
 #include "ar/profiler.hpp"
+#include "ar/http.hpp"
 
 
 #endif //AR_ARRAY_H

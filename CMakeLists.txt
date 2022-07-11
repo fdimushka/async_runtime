@@ -51,6 +51,7 @@ configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
 include(cmake/asm.cmake)
 include(cmake/libuv.cmake)
+include(cmake/llhttp.cmake)
 
 if (WITH_TRACE)
     include(cmake/trace.cmake)
@@ -62,17 +63,18 @@ endif()
 
 configure_file(config.in ${CMAKE_CURRENT_SOURCE_DIR}/include/ar/config.hpp)
 
-file(GLOB SOURCES src/*.cpp)
+file(GLOB SOURCES src/*.cpp src/http/*.cpp)
 file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
 
 include_directories(include/)
 include_directories(src/)
+include_directories(src/http)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 
 add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES})
 
 if (WITH_TESTS)
     add_subdirectory(tests)
@@ -85,6 +87,7 @@ endif()
 if (WITH_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
 
 set(INSTALL_HEADERS ${HEADERS})
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "${INSTALL_HEADERS}")

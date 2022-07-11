@@ -189,8 +189,9 @@ namespace AsyncRuntime {
         NetListenTask(const TCPServerPtr& server, const CallbackType& callback): _server(server), _callback(callback) {}
         bool Execute(uv_loop_t *loop) override;
         static void NetConnectionCb(uv_stream_t *server, int status);
-    private:
+
         TCPServerPtr    _server;
+    private:
         CallbackType    _callback;
     };
 

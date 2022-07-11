@@ -98,10 +98,6 @@ namespace AsyncRuntime {
         const uv_tcp_t* GetClient() const { return client_; }
 
 
-        uv_stream_t* GetServer() { return server_; }
-        const uv_stream_t* GetServer() const { return server_; }
-
-
         void Invoke(CoroutineHandler *handler);
     private:
         static void Session(CoroutineHandler *handler, YieldVoid yield, std::shared_ptr<TCPSession> session);
