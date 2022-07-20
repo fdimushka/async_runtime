@@ -33,6 +33,7 @@ endif()
 
 if (WITH_PROFILER)
     set(USE_PROFILER ON)
+    include(cmake/flatbuffers.cmake)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -71,10 +72,20 @@ include_directories(src/)
 include_directories(src/http)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
+include_directories(third_party)
 
 add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES} flatbuffers)
+
+if (WITH_PROFILER)
+    add_custom_target(
+            fbs_generation
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc --cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs &&
+                    ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc -o ${CMAKE_CURRENT_SOURCE_DIR}/data/profiler/ --ts ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs
+            DEPENDS flatc)
+    add_dependencies(${LIB_NAME} fbs_generation)
+endif()
 
 if (WITH_TESTS)
     add_subdirectory(tests)

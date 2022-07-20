@@ -1,0 +1,27 @@
+//fbs version 1.12.1
+namespace AsyncRuntime;
+
+
+struct WorkStepSchema {
+    thread:uint64;
+    begin:int64;
+    end:int64;
+}
+
+
+table WorkSchema {
+    id:uint64;
+    name:string;
+    work_time:[WorkStepSchema];
+    begin_at:int64;
+    updated_at:int64;
+}
+
+
+table StateSchema {
+    system_info:string;
+    created_at:int64 = 0;
+    coroutines_count:int64 = 0;
+    work_ground:[WorkSchema];
+    threads:[uint64];
+}

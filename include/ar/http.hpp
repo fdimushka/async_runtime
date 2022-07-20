@@ -561,12 +561,15 @@ static  const std::string default_content_type = "text/html; charset=UTF-8";
         }
 
 
+        void SetAccessAllowOrigin(const std::string &origin);
+
+
         /**
          * @brief
          * @param response
          * @return
          */
-        IOResultPtr AsyncResponse(const HTTPResponse &response);
+        IOResultPtr AsyncResponse(HTTPResponse &response);
         IOResultPtr AsyncResponse(HTTPStatus code,
                                   const char* data, size_t size,
                                   const std::string& content_type=default_content_type);
@@ -582,7 +585,7 @@ static  const std::string default_content_type = "text/html; charset=UTF-8";
     private:
         void Init();
 
-
+        std::string         access_allow_origin;
         HTTPRequest         http_request;
         TCPConnectionPtr    tcp_connection;
         CoroutineHandler    *coroutine_handler;

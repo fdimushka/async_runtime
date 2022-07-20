@@ -2,3 +2,5 @@ cmake-build-debug
 cmake-build-release
 build
 .*
+/data/profiler/node_modules/
+/data/profiler/async-runtime/

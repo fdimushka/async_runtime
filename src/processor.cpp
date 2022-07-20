@@ -109,9 +109,8 @@ void Processor::ExecuteTask(Task *task)
     assert(task != nullptr);
 
     state.store(EXECUTE, std::memory_order_relaxed);
-    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::BEGIN_WORK);
+    PROFILER_TASK_WORK_TIME(task->GetOriginId());
     task->Execute(executor_state);
-    PROFILER_ADD_EVENT(task->GetOriginId(), Profiler::END_WORK);
     delete task;
 }
 

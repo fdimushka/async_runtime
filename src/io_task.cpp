@@ -210,7 +210,7 @@ bool NetWriteTask::Execute(uv_loop_t *loop)
     assert(_connection);
     assert(_stream);
     _stream->SetMode(IOStream::W);
-    uv_buf_t *buf = _stream->Next();
+    uv_buf_t *buf = _stream->Next(_stream->GetLength());
     if(buf) {
         auto *write_req = (uv_write_t*)malloc(sizeof(uv_write_t));
         write_req->data = this;
@@ -535,10 +535,25 @@ void NetWriteTask::NetWriteCb(uv_write_t* req, int status)
     assert(req->type == UV_WRITE);
 
     if (status >= 0) {
-        task->Resolve(IO_SUCCESS);
+        const auto& stream = task->_stream;
+        uv_buf_t *buf = stream->Next();
+
+        if(buf) {
+            int error = uv_write(req, (uv_stream_t *)&task->_connection->socket, buf, 1, &NetWriteCb);
+            if(error) {
+                task->Resolve(error);
+                delete task;
+                free(req);
+            }
+        }else{
+            stream->Begin();
+            task->Resolve(IO_SUCCESS);
+            delete task;
+            free(req);
+        }
     }else{
         task->Resolve(status);
+        delete task;
+        free(req);
     }
-    delete task;
-    free(req);
 }

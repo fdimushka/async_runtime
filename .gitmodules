@@ -1,3 +1,6 @@
 [submodule "third_party/llhttp"]
 	path = third_party/llhttp
 	url = https://github.com/nodejs/llhttp.git
+[submodule "third_party/flatbuffers"]
+	path = third_party/flatbuffers
+	url = https://github.com/google/flatbuffers.git
