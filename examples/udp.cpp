@@ -5,7 +5,7 @@
 using namespace AsyncRuntime;
 
 
-int main() {
+int main(int argc, char *argv[]) {
     SetupRuntime();
 
     auto recv_udp = MakeUDP("0.0.0.0", 5000);

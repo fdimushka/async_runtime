@@ -272,3 +272,16 @@ HttpServer::AsyncBind(const std::string &host, int port)
         AsyncHandleConnection(handler, connection);
     });
 }
+
+
+IOResultPtr
+HttpServer::AsyncBind(const std::string &host,
+                      int port,
+                      const std::function<void(void)> &on_bind_success,
+                      const std::function<void(int)> &on_bind_error)
+{
+    tcp_server = MakeTCPServer(host.c_str(), port, on_bind_success, on_bind_error);
+    return AsyncListen(tcp_server, [this](CoroutineHandler *handler, const TCPConnectionPtr& connection) {
+        AsyncHandleConnection(handler, connection);
+    });
+}

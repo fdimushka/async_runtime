@@ -20,6 +20,8 @@ namespace AsyncRuntime {
         int                             port;
         struct sockaddr_in              bind_addr;
         uv_tcp_t                        socket;
+        std::function<void(void)>       on_bind_success;
+        std::function<void(int)>        on_bind_error;
     };
 
 
@@ -138,6 +140,19 @@ namespace AsyncRuntime {
      */
     TCPServerPtr MakeTCPServer(const char* hostname, int port);
 
+
+    /**
+     * @brief
+     * @param hostname
+     * @param port
+     * @param on_bind_success
+     * @param on_bind_error
+     * @return
+     */
+    TCPServerPtr MakeTCPServer(const char* hostname,
+                               int port, const
+                               std::function<void(void)> &on_bind_success,
+                               const std::function<void(int)> &on_bind_error);
 
     /**
      * @brief

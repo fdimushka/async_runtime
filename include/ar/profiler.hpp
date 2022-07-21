@@ -53,7 +53,9 @@ namespace AsyncRuntime {
 
 
         struct State {
+            std::string                             app_info;
             std::string                             system_info;
+            int64_t                                 profiling_interval = 0;
             int64_t                                 coroutines_count = 0;
             int64_t                                 created_at = 0;
             std::unordered_map<uintptr_t, Work>     work_ground;
@@ -68,7 +70,18 @@ namespace AsyncRuntime {
 
 
         Profiler();
-        ~Profiler() = default;
+        ~Profiler();
+
+
+        void SetAppInfo(int argc, char *argv[]);
+
+
+        template< typename Rep, typename Period >
+        void SetProfilingInterval(const std::chrono::duration<Rep, Period>& rtime);
+
+
+        void SetServerPort(int port);
+        void SetServerHost(const std::string& host);
 
 
         void Start();
@@ -124,6 +137,8 @@ namespace AsyncRuntime {
         };
 
 
+        std::string                                     profiler_server_host;
+        int                                             profiler_server_port;
         HttpServer                                      profiler_server;
         std::shared_ptr<Coroutine<void>>                coroutine;
         ResultVoidPtr                                   result;
@@ -131,11 +146,21 @@ namespace AsyncRuntime {
         State                                           state;
         WorkStealQueue<Event*>                          events;
         Ticker                                          ticker;
-        int64_t                                         time_interval;
     };
 
 
+    template<typename Rep, typename Period>
+    void Profiler::SetProfilingInterval(const std::chrono::duration<Rep, Period> &rtime) {
+        std::lock_guard<std::mutex> lock(mutex);
+        state.profiling_interval = Timestamp::CastMicro(rtime);
+    }
+
+
 #if defined(USE_PROFILER)
+#define PROFILER_SET_APP_INFO(ARGC, ARGV) Profiler::GetSingletonPtr()->SetAppInfo(ARGC, ARGV);
+#define PROFILER_SET_PROFILING_INTERVAL(INTERVAL) Profiler::GetSingletonPtr()->SetProfilingInterval(INTERVAL);
+#define PROFILER_SET_SERVER_PORT(PORT) Profiler::GetSingletonPtr()->SetServerPort(PORT);
+#define PROFILER_SET_SERVER_HOST(HOST) Profiler::GetSingletonPtr()->SetServerHost(HOST);
 #define PROFILER_START() Profiler::GetSingletonPtr()->Start();
 #define PROFILER_STOP() Profiler::GetSingletonPtr()->Stop();
 #define PROFILER_ADD_EVENT(ID, TYPE)                                                \
@@ -151,6 +176,10 @@ namespace AsyncRuntime {
 #define PROFILER_REG_ASYNC_FUNCTION(ID) PROFILER_ADD_EVENT(ID, Profiler::REG_ASYNC_FUNCTION)
 
 #else
+#define PROFILER_SET_APP_INFO(ARGC, ARGV)
+#define PROFILER_SET_PROFILING_INTERVAL(INTERVAL)
+#define PROFILER_SET_SERVER_PORT(PORT)
+#define PROFILER_SET_SERVER_HOST(HOST)
 #define PROFILER_START()
 #define PROFILER_STOP()
 #define PROFILER_ADD_EVENT(ID, TYPE)

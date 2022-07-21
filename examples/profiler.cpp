@@ -1,6 +1,7 @@
 #include "ar/ar.hpp"
 
 using namespace AsyncRuntime;
+using namespace std::chrono;
 
 
 void async_fun_a(CoroutineHandler* handler, YieldVoid & yield) {
@@ -23,7 +24,13 @@ void async_fun_b(CoroutineHandler* handler, YieldVoid & yield) {
 }
 
 
-int main() {
+int main(int argc, char *argv[]) {
+    LOGGER_SET_STD();
+    PROFILER_SET_APP_INFO(argc, argv);
+    PROFILER_SET_PROFILING_INTERVAL(5min);
+    PROFILER_SET_SERVER_HOST("0.0.0.0");
+    PROFILER_SET_SERVER_PORT(9002);
+
     SetupRuntime();
     Coroutine coro_a = MakeCoroutine(&async_fun_a);
     Coroutine coro_b = MakeCoroutine(&async_fun_b);

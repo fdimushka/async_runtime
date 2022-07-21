@@ -19,7 +19,9 @@ table WorkSchema {
 
 
 table StateSchema {
+    app_info:string;
     system_info:string;
+    profiling_interval:int64 = 0;
     created_at:int64 = 0;
     coroutines_count:int64 = 0;
     work_ground:[WorkSchema];

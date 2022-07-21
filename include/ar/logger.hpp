@@ -174,6 +174,9 @@ namespace AsyncRuntime
         const char * _ctx;
     };
 
+#define LOGGER_SET_STD() \
+    Logger::s_logger.SetStd();
+
     // It should be written in the beginning of a function's body. Its level is Verbose.
 #define AR_LOG_FUNC \
     AsyncRuntime::FunScope __func_scope__( FUNCTION );

@@ -617,7 +617,6 @@ static  const std::string default_content_type = "text/html; charset=UTF-8";
          */
         void AddRoute(const std::string &path, HTTPMethod method, const RequestCallbackType& callback);
 
-
         /**
          * @brief async bind http server
          * @param host
@@ -625,6 +624,20 @@ static  const std::string default_content_type = "text/html; charset=UTF-8";
          * @return
          */
         IOResultPtr AsyncBind(const std::string &host, int port);
+
+
+        /**
+         * @brief
+         * @param host
+         * @param port
+         * @param on_bind_success
+         * @param on_bind_error
+         * @return
+         */
+        IOResultPtr AsyncBind(const std::string &host,
+                              int port,
+                              const std::function<void(void)>& on_bind_success,
+                              const std::function<void(int)>& on_bind_error);
 
 
         /**

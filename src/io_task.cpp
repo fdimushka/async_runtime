@@ -289,15 +289,28 @@ bool NetListenTask::Execute(uv_loop_t *loop)
     error = uv_tcp_bind(socket, (struct sockaddr*)&_server->bind_addr, 0);
     if (error) {
         Resolve(error);
+        if(_server->on_bind_error) {
+            //@TODO reimplement to async call
+            _server->on_bind_error(error);
+        }
+
         return false;
     }
 
     error = uv_listen((uv_stream_t*) socket, 128 /*backlog*/, &NetListenTask::NetConnectionCb);
     if (error) {
         Resolve(error);
+        if(_server->on_bind_error) {
+            //@TODO reimplement to async call
+            _server->on_bind_error(error);
+        }
         return false;
     }
 
+    if(_server->on_bind_success) {
+        //@TODO reimplement to async call
+        _server->on_bind_success();
+    }
     return true;
 }
 

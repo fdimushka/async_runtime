@@ -82,7 +82,7 @@ if (WITH_PROFILER)
     add_custom_target(
             fbs_generation
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc --cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs &&
-                    ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc -o ${CMAKE_CURRENT_SOURCE_DIR}/data/profiler/ --ts ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs
+                    ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc -o ${CMAKE_CURRENT_SOURCE_DIR}/profiler-viewer/ --ts ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs
             DEPENDS flatc)
     add_dependencies(${LIB_NAME} fbs_generation)
 endif()
@@ -108,5 +108,3 @@ install(TARGETS ${LIB_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         PUBLIC_HEADER DESTINATION include/${LIB_NAME} COMPONENT
         )
-
-file(COPY data/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/data)

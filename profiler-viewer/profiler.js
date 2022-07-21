@@ -348,48 +348,62 @@
       bb.setPosition(bb.position() + SIZE_PREFIX_LENGTH);
       return (obj || new StateSchema()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
     }
-    systemInfo(optionalEncoding) {
+    appInfo(optionalEncoding) {
       const offset = this.bb.__offset(this.bb_pos, 4);
       return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
     }
-    createdAt() {
+    systemInfo(optionalEncoding) {
       const offset = this.bb.__offset(this.bb_pos, 6);
-      return offset ? this.bb.readInt64(this.bb_pos + offset) : BigInt("0");
+      return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
     }
-    coroutinesCount() {
+    profilingInterval() {
       const offset = this.bb.__offset(this.bb_pos, 8);
       return offset ? this.bb.readInt64(this.bb_pos + offset) : BigInt("0");
     }
-    workGround(index, obj) {
+    createdAt() {
       const offset = this.bb.__offset(this.bb_pos, 10);
+      return offset ? this.bb.readInt64(this.bb_pos + offset) : BigInt("0");
+    }
+    coroutinesCount() {
+      const offset = this.bb.__offset(this.bb_pos, 12);
+      return offset ? this.bb.readInt64(this.bb_pos + offset) : BigInt("0");
+    }
+    workGround(index, obj) {
+      const offset = this.bb.__offset(this.bb_pos, 14);
       return offset ? (obj || new WorkSchema()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + offset) + index * 4), this.bb) : null;
     }
     workGroundLength() {
-      const offset = this.bb.__offset(this.bb_pos, 10);
+      const offset = this.bb.__offset(this.bb_pos, 14);
       return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
     }
     threads(index) {
-      const offset = this.bb.__offset(this.bb_pos, 12);
+      const offset = this.bb.__offset(this.bb_pos, 16);
       return offset ? this.bb.readUint64(this.bb.__vector(this.bb_pos + offset) + index * 8) : BigInt(0);
     }
     threadsLength() {
-      const offset = this.bb.__offset(this.bb_pos, 12);
+      const offset = this.bb.__offset(this.bb_pos, 16);
       return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
     }
     static startStateSchema(builder) {
-      builder.startObject(5);
+      builder.startObject(7);
+    }
+    static addAppInfo(builder, appInfoOffset) {
+      builder.addFieldOffset(0, appInfoOffset, 0);
     }
     static addSystemInfo(builder, systemInfoOffset) {
-      builder.addFieldOffset(0, systemInfoOffset, 0);
+      builder.addFieldOffset(1, systemInfoOffset, 0);
+    }
+    static addProfilingInterval(builder, profilingInterval) {
+      builder.addFieldInt64(2, profilingInterval, BigInt("0"));
     }
     static addCreatedAt(builder, createdAt) {
-      builder.addFieldInt64(1, createdAt, BigInt("0"));
+      builder.addFieldInt64(3, createdAt, BigInt("0"));
     }
     static addCoroutinesCount(builder, coroutinesCount) {
-      builder.addFieldInt64(2, coroutinesCount, BigInt("0"));
+      builder.addFieldInt64(4, coroutinesCount, BigInt("0"));
     }
     static addWorkGround(builder, workGroundOffset) {
-      builder.addFieldOffset(3, workGroundOffset, 0);
+      builder.addFieldOffset(5, workGroundOffset, 0);
     }
     static createWorkGroundVector(builder, data) {
       builder.startVector(4, data.length, 4);
@@ -402,7 +416,7 @@
       builder.startVector(4, numElems, 4);
     }
     static addThreads(builder, threadsOffset) {
-      builder.addFieldOffset(4, threadsOffset, 0);
+      builder.addFieldOffset(6, threadsOffset, 0);
     }
     static createThreadsVector(builder, data) {
       builder.startVector(8, data.length, 8);
@@ -418,9 +432,11 @@
       const offset = builder.endObject();
       return offset;
     }
-    static createStateSchema(builder, systemInfoOffset, createdAt, coroutinesCount, workGroundOffset, threadsOffset) {
+    static createStateSchema(builder, appInfoOffset, systemInfoOffset, profilingInterval, createdAt, coroutinesCount, workGroundOffset, threadsOffset) {
       StateSchema.startStateSchema(builder);
+      StateSchema.addAppInfo(builder, appInfoOffset);
       StateSchema.addSystemInfo(builder, systemInfoOffset);
+      StateSchema.addProfilingInterval(builder, profilingInterval);
       StateSchema.addCreatedAt(builder, createdAt);
       StateSchema.addCoroutinesCount(builder, coroutinesCount);
       StateSchema.addWorkGround(builder, workGroundOffset);
@@ -430,15 +446,8 @@
   };
 
   // profiler.ts
-  function base64_to_array(base64) {
-    let binary_string = window.atob(base64);
-    let len = binary_string.length;
-    let bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binary_string.charCodeAt(i);
-    }
-    return bytes;
-  }
+  var PROFILER_SERVER_HOST = "localhost";
+  var PROFILER_SERVER_PORT = 9002;
   function to_ms(ts_ns) {
     return Math.round(Number(ts_ns) / 1e3);
   }
@@ -467,12 +476,14 @@
     return colour;
   }
   function compute_profiler_state(data) {
-    let buf = new ByteBuffer(base64_to_array(data));
+    let buf = new ByteBuffer(new Uint8Array(data));
     let state = StateSchema.getRootAsStateSchema(buf);
     let threads = {};
     let strip_lines = [];
     let data_point = [];
     let start_time = Date.now();
+    document.getElementById("application-info").innerText = "Application: " + state.appInfo();
+    document.getElementById("profiling-interval-info").innerText = "Profiling time interval: last " + to_ms(state.profilingInterval()) + " ms";
     document.getElementById("system-info").innerText = state.systemInfo();
     document.getElementById("coro_stat_count").innerText = state.coroutinesCount().toString();
     for (let i = 0; i < state.threadsLength(); ++i) {
@@ -577,8 +588,8 @@
     var chart = new CanvasJS.Chart("chart", options);
     chart.render();
   }
-  fetch(`http://127.0.0.1:9002/profiler/state`).then((response) => {
-    return response.text();
+  fetch("http://" + PROFILER_SERVER_HOST + ":" + PROFILER_SERVER_PORT + "/profiler/state").then((response) => {
+    return response.arrayBuffer();
   }).then((data) => {
     compute_profiler_state(data);
   });

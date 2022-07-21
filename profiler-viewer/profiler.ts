@@ -3,6 +3,10 @@ import { StateSchema } from './async-runtime/state-schema';
 import * as flatbuffers from 'flatbuffers';
 
 
+const PROFILER_SERVER_HOST = "localhost"
+const PROFILER_SERVER_PORT = 9002
+
+
 function base64_to_array(base64) {
     let binary_string = window.atob(base64);
     let len = binary_string.length;
@@ -48,13 +52,15 @@ function string_to_colour(str) {
 }
 
 function compute_profiler_state(data) {
-    let buf = new flatbuffers.ByteBuffer(base64_to_array(data));
+    let buf = new flatbuffers.ByteBuffer(new Uint8Array(data));
     let state = StateSchema.getRootAsStateSchema(buf);
     let threads = {}
     let strip_lines = [];
     let data_point = [];
     let start_time = Date.now();
 
+    document.getElementById('application-info').innerText = 'Application: ' + state.appInfo();
+    document.getElementById('profiling-interval-info').innerText = 'Profiling time interval: last ' + to_ms(state.profilingInterval()) + ' ms';
     document.getElementById('system-info').innerText = state.systemInfo();
     document.getElementById('coro_stat_count').innerText = state.coroutinesCount().toString();
 
@@ -178,9 +184,9 @@ function compute_profiler_state(data) {
 }
 
 
-fetch(`http://127.0.0.1:9002/profiler/state`)
+fetch("http://" + PROFILER_SERVER_HOST + ":" + PROFILER_SERVER_PORT + "/profiler/state")
     .then(response => {
-        return response.text();
+        return response.arrayBuffer();
     })
     .then(data => {
         compute_profiler_state(data)

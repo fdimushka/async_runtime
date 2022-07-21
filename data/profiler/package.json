@@ -1,9 +1,0 @@
-{
-  "dependencies": {
-    "esbuild": "^0.14.49",
-    "flatbuffers": "^2.0.6"
-  },
-  "scripts": {
-    "build": "esbuild profiler.ts --bundle --outfile=profiler.js"
-  }
-}

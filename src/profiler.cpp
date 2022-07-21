@@ -13,7 +13,6 @@ using namespace std::chrono;
 #define NO_TS (-1)
 #define PROFILER_SERVER_DEFAULT_HOST "127.0.0.1"
 #define PROFILER_SERVER_DEFAULT_PORT 9002
-#define PROFILER_INDEX_HTML "../data/templates/profile.html"
 
 
 inline int64_t Now()
@@ -59,7 +58,9 @@ void AsyncGetProfilerState(CoroutineHandler *handler, HTTPConnectionPtr http_con
     }
 
     auto fb_state = CreateStateSchema(fbb,
+                                      fbb.CreateString(state.app_info),
                                       fbb.CreateString(state.system_info),
+                                      state.profiling_interval,
                                       state.created_at,
                                       state.coroutines_count,
                                       fbb.CreateVector(fb_works),
@@ -67,29 +68,8 @@ void AsyncGetProfilerState(CoroutineHandler *handler, HTTPConnectionPtr http_con
 
     fbb.Finish(fb_state);
     http_connection->SetAccessAllowOrigin("*");
-    std::string base64_str = std::move(Base64::base64_encode(fbb.GetBufferPointer(), fbb.GetSize()));
-    http_connection->AsyncResponse(HTTPStatus::OK, base64_str.c_str(), base64_str.size(), "plain/text");
+    http_connection->AsyncResponse(HTTPStatus::OK, (const char*)fbb.GetBufferPointer(), fbb.GetSize(), "application/octet-stream");
 }
-
-
-//void AsyncGetProfilerHTML(CoroutineHandler *handler, HTTPConnectionPtr http_connection)
-//{
-//    auto in_file_stream = MakeStream();
-//    int res = 0;
-//    if( (res = Await(AsyncFsOpen(PROFILER_INDEX_HTML), handler)) < 0 ) {
-//        http_connection->AsyncResponse(HTTPStatus::NOT_FOUND);
-//        return;
-//    }
-//
-//    int fd = res;
-//    if( (res = Await(AsyncFsRead(fd, in_file_stream), handler)) != IO_SUCCESS ) {
-//        http_connection->AsyncResponse(HTTPStatus::NOT_FOUND);
-//        return;
-//    }
-//
-//    Await(AsyncFsClose(fd), handler);
-//    http_connection->AsyncResponse(HTTPStatus::OK, in_file_stream->GetBuffer(), in_file_stream->GetBufferSize());
-//}
 
 
 Profiler::WorkTimeEstimator::WorkTimeEstimator(uintptr_t id) : work_id(id), begin_ts(Now())
@@ -111,6 +91,8 @@ Profiler::State::State(Profiler::State &other)
     work_ground = other.work_ground;
     coroutines_count = other.coroutines_count;
     system_info = other.system_info;
+    profiling_interval = other.profiling_interval;
+    app_info = other.app_info;
 }
 
 
@@ -121,15 +103,52 @@ Profiler::State &Profiler::State::operator=(Profiler::State other)
     work_ground = other.work_ground;
     coroutines_count = other.coroutines_count;
     system_info = other.system_info;
+    profiling_interval = other.profiling_interval;
+    app_info = other.app_info;
     return *this;
 }
 
 
 Profiler::Profiler() :
+    profiler_server_port(PROFILER_SERVER_DEFAULT_PORT),
+    profiler_server_host(PROFILER_SERVER_DEFAULT_HOST),
     events(2048),
-    ticker(5s),
-    time_interval(Timestamp::CastMicro(5min)) {
+    ticker(5s) {
+    state.profiling_interval = Timestamp::CastMicro(5min);
     state.system_info = "CPU: " + OS::GetCPUInfo();
+}
+
+
+Profiler::~Profiler()
+{
+    ticker.Stop();
+    if(result && coroutine) {
+        result->Wait();
+        coroutine.reset();
+    }
+}
+
+
+void Profiler::SetAppInfo(int argc, char *argv[])
+{
+    std::string app_str;
+    for (int i = 0; i < argc; ++i)
+        app_str += std::string(argv[i]) + " ";
+
+    std::lock_guard<std::mutex> lock(mutex);
+    state.app_info = app_str;
+}
+
+
+void Profiler::SetServerPort(int port)
+{
+    profiler_server_port = port;
+}
+
+
+void Profiler::SetServerHost(const std::string &host)
+{
+    profiler_server_host = host;
 }
 
 
@@ -140,15 +159,22 @@ void Profiler::Start()
     //profiler_server.AddRoute("/profiler", GET, &AsyncGetProfilerHTML);
     coroutine = std::make_shared<Coroutine<void>>(&AsyncProfilerLoop, &ticker);
     result = Async(*coroutine);
-    profiler_server.AsyncBind(PROFILER_SERVER_DEFAULT_HOST, PROFILER_SERVER_DEFAULT_PORT);
+    profiler_server.AsyncBind(profiler_server_host, profiler_server_port, [this](){
+        AR_LOG_SS(Info, "Profiler server started on: "
+        << "http://" << profiler_server_host << ":" << profiler_server_port << "/profiler/state");
+    }, [this](int error){
+        AR_LOG_SS(Error, "Profiler server bind error: " << FSErrorMsg(error));
+    });
 }
 
 
 void Profiler::Stop()
 {
     ticker.Stop();
-    if(result)
+    if(result && coroutine) {
         result->Wait();
+        coroutine.reset();
+    }
 }
 
 
@@ -184,7 +210,7 @@ void Profiler::Update()
 
                     if (work.updated_at > 0 && work.begin_at > 0) {
                         while (!work.work_time.empty() &&
-                               work.updated_at - work.begin_at > time_interval) {
+                               work.updated_at - work.begin_at > state.profiling_interval) {
                             work.work_time.pop_front();
 
                             if (!work.work_time.empty())
