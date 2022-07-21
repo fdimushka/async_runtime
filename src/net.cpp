@@ -40,6 +40,21 @@ TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 }
 
 
+TCPServerPtr
+AsyncRuntime::MakeTCPServer(const char *hostname,
+                            int port,
+                            const std::function<void(void)> &on_bind_success,
+                            const std::function<void(int)> &on_bind_error)
+{
+    TCPServerPtr server = std::make_shared<TCPServer>();
+    server->hostname = std::string{hostname};
+    server->port = port;
+    server->on_bind_error = on_bind_error;
+    server->on_bind_success = on_bind_success;
+    return server;
+}
+
+
 UDPPtr AsyncRuntime::MakeUDP(const char* hostname, int port)
 {
     UDPPtr udp = std::make_shared<UDP>();

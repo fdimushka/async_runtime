@@ -57,8 +57,8 @@ bool HTTPResponse::Exist(HTTPField f)
 }
 
 
-std::ostream &AsyncRuntime::operator<<(std::ostream &os, const HTTPResponse &resp) {
-
+std::ostream &AsyncRuntime::operator<<(std::ostream &os, const HTTPResponse &resp)
+{
     unsigned code = static_cast<unsigned>(resp.status_code);
     char buf_[13];
     buf_[0] = 'H';
@@ -111,13 +111,15 @@ static int HttpOnHeaderValue(llhttp_t* http_t, const char *at, size_t length)
     return HPE_OK;
 }
 
-static int HttpOnStatus(llhttp_t* http_t, const char *at, size_t length) {
+static int HttpOnStatus(llhttp_t* http_t, const char *at, size_t length)
+{
     auto *http_request = (HTTPRequest *)http_t->data;
     return HPE_OK;
 }
 
 
-static int HttpOnBody(llhttp_t* http_t, const char *at, size_t length) {
+static int HttpOnBody(llhttp_t* http_t, const char *at, size_t length)
+{
     auto *http_request = (HTTPRequest *)http_t->data;
     http_request->body = at;
     http_request->body_size = length;
@@ -125,14 +127,16 @@ static int HttpOnBody(llhttp_t* http_t, const char *at, size_t length) {
 }
 
 
-static int HttpRequestOnUrl(llhttp_t* http_t, const char *at, size_t length) {
+static int HttpRequestOnUrl(llhttp_t* http_t, const char *at, size_t length)
+{
     auto *http_request = (HTTPRequest *)http_t->data;
     http_request->url = std::move(std::string(at, length));
     return HPE_OK;
 }
 
 
-static int HttpRequestOnUrlComplete(llhttp_t* http_t) {
+static int HttpRequestOnUrlComplete(llhttp_t* http_t)
+{
     auto *http_request = (HTTPRequest *)http_t->data;
     Url url(http_request->url);
     http_request->path = url.path();
@@ -149,7 +153,8 @@ static int HttpRequestOnUrlComplete(llhttp_t* http_t) {
 }
 
 
-static int HttpOnHeaderValueComplete(llhttp_t* http_t) {
+static int HttpOnHeaderValueComplete(llhttp_t* http_t)
+{
     auto *http_request = (HTTPRequest *)http_t->data;
     http_request->header_iterator = http_request->headers.end();
     return HPE_OK;
@@ -182,9 +187,18 @@ void HTTPConnection::Init()
 }
 
 
-IOResultPtr
-HTTPConnection::AsyncResponse(const HTTPResponse &response)
+void HTTPConnection::SetAccessAllowOrigin(const std::string &origin)
 {
+    access_allow_origin = origin;
+}
+
+
+IOResultPtr
+HTTPConnection::AsyncResponse(HTTPResponse &response)
+{
+    if(!access_allow_origin.empty())
+        response.Set(HTTPField::ACCESS_CONTROL_ALLOW_ORIGIN, access_allow_origin);
+
     std::stringstream ss;
     ss << response;
     std::string str = std::move(ss.str());
@@ -216,7 +230,6 @@ HttpServer::AsyncHandleConnection(CoroutineHandler *handler, const TCPConnection
 {
     auto http_connection = std::make_shared<HTTPConnection>(handler, connection);
     http_connection->Init();
-
     if(http_connection->Ok()) {
         const auto &request = http_connection->GetRequest();
         auto route_it = routes.find(request.path);
@@ -255,6 +268,19 @@ IOResultPtr
 HttpServer::AsyncBind(const std::string &host, int port)
 {
     tcp_server = MakeTCPServer(host.c_str(), port);
+    return AsyncListen(tcp_server, [this](CoroutineHandler *handler, const TCPConnectionPtr& connection) {
+        AsyncHandleConnection(handler, connection);
+    });
+}
+
+
+IOResultPtr
+HttpServer::AsyncBind(const std::string &host,
+                      int port,
+                      const std::function<void(void)> &on_bind_success,
+                      const std::function<void(int)> &on_bind_error)
+{
+    tcp_server = MakeTCPServer(host.c_str(), port, on_bind_success, on_bind_error);
     return AsyncListen(tcp_server, [this](CoroutineHandler *handler, const TCPConnectionPtr& connection) {
         AsyncHandleConnection(handler, connection);
     });

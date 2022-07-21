@@ -29,4 +29,16 @@
   #define CACHELINE_SIZE 64
 #endif
 
+
+#include <string>
+
+namespace AsyncRuntime::OS {
+
+        /**
+         * @brief
+         * @return
+         */
+        std::string GetCPUInfo();
+    }
+
 #endif //AR_OS_H

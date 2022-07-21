@@ -1,26 +1,47 @@
 #include "ar/ar.hpp"
 
 using namespace AsyncRuntime;
+using namespace std::chrono;
 
 
-void async_fun(CoroutineHandler* handler, YieldVoid & yield) {
-    PROFILER_ADD_EVENT(handler->GetID(), Profiler::REG_ASYNC_FUNCTION);
+void async_fun_a(CoroutineHandler* handler, YieldVoid & yield) {
+    PROFILER_REG_ASYNC_FUNCTION(handler->GetID());
     yield();
     for(;;) {
-        Profiler::State s = Profiler::GetSingletonPtr()->GetCurrentState();
-        std::cout << "call async_fun" << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         yield();
     }
 }
 
 
-int main() {
-    SetupRuntime();
-    Coroutine coro = MakeCoroutine(&async_fun);
+void async_fun_b(CoroutineHandler* handler, YieldVoid & yield) {
+    PROFILER_REG_ASYNC_FUNCTION(handler->GetID());
+    yield();
+    for(;;) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        yield();
+    }
+}
 
-    for(;;)
-        Await(Async(coro));
+
+int main(int argc, char *argv[]) {
+    LOGGER_SET_STD();
+    PROFILER_SET_APP_INFO(argc, argv);
+    PROFILER_SET_PROFILING_INTERVAL(5min);
+    PROFILER_SET_SERVER_HOST("0.0.0.0");
+    PROFILER_SET_SERVER_PORT(9002);
+
+    SetupRuntime();
+    Coroutine coro_a = MakeCoroutine(&async_fun_a);
+    Coroutine coro_b = MakeCoroutine(&async_fun_b);
+
+    for(;;) {
+        auto r_a = Async(coro_a);
+        auto r_b = Async(coro_b);
+
+        r_a->Wait();
+        r_b->Wait();
+    }
 
     Terminate();
     return 0;

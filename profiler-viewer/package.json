@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "esbuild": "^0.14.49",
+    "flatbuffers": "^2.0.6",
+    "live-server": "^1.2.2"
+  },
+  "scripts": {
+    "build": "node_modules/.bin/esbuild profiler.ts --bundle --outfile=profiler.js",
+    "start": "npm run build && node_modules/.bin/live-server ./ --entry-file='./profiler.html'"
+  }
+}

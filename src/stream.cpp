@@ -16,13 +16,13 @@ IOStream::IOStream(const char *buf, int64_t len) : seek(0), length(len), allocat
     assert(buf != nullptr);
 
     //@todo add alignment
-    buffer = (char*)malloc(sizeof(char*) * allocated_length);
+    buffer = (char*)malloc(allocated_length);
 
     if(!buffer) {
         RNT_ASSERT_MSG( false, "memory out of bound");
     }
 
-    std::memcpy(buffer, buf, sizeof(char*) * allocated_length);
+    std::memcpy(buffer, buf, allocated_length);
 }
 
 
@@ -129,7 +129,7 @@ uv_buf_t *IOStream::Next(int64_t size)
             allocated_length = seek + size;
 
             //@todo add alignment
-            buffer = (char *) realloc(buffer, sizeof(char *) * allocated_length);
+            buffer = (char *) realloc(buffer, allocated_length);
 
             if (!buffer) {
                 RNT_ASSERT_MSG(false, "memory out of bound");
@@ -163,7 +163,7 @@ bool IOStream::Next(uv_buf_t* buf, int64_t size) {
             allocated_length = seek + size;
 
             //@todo add alignment
-            buffer = (char *) realloc(buffer, sizeof(char *) * allocated_length);
+            buffer = (char *) realloc(buffer, allocated_length);
 
             if (!buffer) {
                 RNT_ASSERT_MSG(false, "memory out of bound");

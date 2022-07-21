@@ -36,7 +36,7 @@ CMake option:
 
 | Option            | Description                       | Default  |
 | :---              |    :----:                         | :----:   |
-| `WITH_TRACE`      | build with trace profiler         | OFF      |
+| `WITH_PROFILER`   | build with trace profiler         | ON       |
 | `WITH_TESTS`      | build with unittests              | OFF      |
 | `WITH_BENCHMARKS` | build with benchmarks             | OFF      |
 | `WITH_EXAMPLES`   | build with samples                | ON       |
@@ -56,3 +56,17 @@ CPU Caches:
 |context switch       |       183 ns       |   183 ns  |    3770529|
 |concurrent task_call |      3850 ns       | 0.004 ns  |    1000000|
 |await empty task     |      6428 ns       |  4069 ns  |     173605|
+
+
+## Profiler and tracing tool
+Inner profilers allows you to get the following information:
+* System info.
+* Async functions work time tracking peer threads.
+* Info of functions call.
+* Info of threads.
+* Coroutines count.
+
+![Arch](docs/profiler.png)
+
+For build library with profiler use `cmake` option `-DWITH_PROFILER=ON`.
+For more details see [this page](docs/profiling.md).
