@@ -8,7 +8,7 @@ It preview this data:
 * Info of threads.
 * Coroutines count.
 
-![Arch](../docs/profiler.png)
+![profiler](../docs/profiler.png)
 
 
 ### Build and run instructions
