@@ -465,10 +465,10 @@ namespace AsyncRuntime {
      * @param handler
      * @return
      */
-    template< class Ret >
-    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
-        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
-    }
+//    template< class Ret >
+//    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
+//        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
+//    }
 }
 
 
