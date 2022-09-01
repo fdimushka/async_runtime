@@ -2,10 +2,16 @@
 #define AR_CHANNEL_H
 
 
+#include "ar/task.hpp"
 #include "ar/object.hpp"
 #include "ar/array.hpp"
-#include "ar/task.hpp"
-#include "ar/config.hpp"
+#include "ar/work_steal_queue.hpp"
+
+#include <iostream>
+#include <map>
+#include <cstdint>
+#include <cstring>
+#include <atomic>
 
 #ifdef USE_TESTS
 class CHANNEL_TEST_FRIEND;
@@ -13,330 +19,159 @@ class CHANNEL_TEST_FRIEND;
 
 
 namespace AsyncRuntime {
-    class Runtime;
+
+    template<typename T>
+    class Channel;
 
     /**
+     * @brief
      * @class Channel
-     * @brief Lock-free unbounded single-producer single-consumer queue.
-     * @tparam T
      */
     template<typename T>
-    class Channel {
-        friend Runtime;
+    class Watcher : public BaseObject {
+        friend Channel<T>;
+    public:
+        Watcher() = default;
+        ~Watcher() override;
 
+        std::optional<T*> Receive();
+        std::optional<T*> TryReceive();
+        std::shared_ptr<Result<T*>>   AsyncReceive();
+    private:
+        void Send(T *msg);
+
+        WorkStealQueue<T*>                              queue;
+        std::condition_variable                         cv;
+        std::mutex                                      mutex;
+        std::shared_ptr<Result<T*>>                     async_result_;
+    };
+
+
+    template<typename T>
+    class Channel {
+        static_assert(std::is_copy_constructible_v<T>);
 #ifdef USE_TESTS
         friend CHANNEL_TEST_FRIEND;
 #endif
     public:
-        struct Watcher {
-            ObjectID                    id;
-            std::function<void(void*)>  cb;
-            void*                       data;
-        };
-
+        typedef Watcher<T>  WatcherType;
 
         /**
-        @brief constructs the queue with a given capacity
-        @param capacity the capacity of the queue (must be power of 2)
-        */
-        explicit Channel(int64_t capacity = 1024);
-
-
-        /**
-        @brief destructs the queue
-        */
-        ~Channel();
-
-
-        /**
-        @brief queries if the queue is empty at the time of this call
-        */
-        bool Empty() const noexcept;
-
-
-        /**
-        @brief queries if the queue is full at the time of this call
-        */
-        bool Full() const noexcept;
-
-
-        /**
-        @brief queries the number of items at the time of this call
-        */
-        size_t Size() const noexcept;
+         * @brief
+         * @param buff
+         * @param size
+         */
+        void Send(const T& msg);
 
 
         /**
          * @brief
-         * @return
+         * @param watcher_id
          */
-        int64_t Capacity() const noexcept { return _capacity; }
+        std::shared_ptr<WatcherType> Watch();
 
 
         /**
          * @brief
-         * @tparam O
-         * @param item
-         * @return
+         * @param watcher
          */
-        bool Send(T && item);
-        bool Send(T & item);
-
-
-        /**
-         * @brief
-         */
-        void Flush();
-
-
-        /**
-         * @brief
-         * @return
-         */
-        std::optional<T> Receive();
-
-
-        /**
-         * @brief
-         */
-        void Watch(ObjectID id, std::function<void(void*)> cb, void* data);
+        void UnWatch(const std::shared_ptr<WatcherType>& watcher);
     private:
-        bool Push(T & item);
-        std::optional<T> Pop();
-
-
-        void CallWatcher();
-
-
-        std::atomic<int64_t> _top;
-        std::atomic<int64_t> _bottom;
-        std::atomic<AtomicArray<T> *> _array;
-        std::vector<AtomicArray<T> *> _garbage;
-        int64_t                     _capacity;
-        Watcher *      watcher = nullptr;
+        std::mutex                                             mutex;
+        std::map<ObjectID, std::shared_ptr<WatcherType>>       watchers;
     };
 
 
     template<typename T>
-    Channel<T>::Channel(int64_t c) {
-        assert(c && (!(c & (c - 1))));
-        _top.store(0, std::memory_order_relaxed);
-        _bottom.store(0, std::memory_order_relaxed);
-        _array.store(new AtomicArray<T>{c}, std::memory_order_relaxed);
-        _garbage.reserve(32);
-        _capacity = c;
+    std::shared_ptr<Watcher<T>> Channel<T>::Watch() {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto watcher = std::make_shared<Watcher<T>>();
+        watchers.insert(std::make_pair(watcher->GetID(), watcher));
+        return watcher;
     }
 
 
     template<typename T>
-    Channel<T>::~Channel() {
-        for (auto a: _garbage) {
-            delete a;
-        }
-        delete _array.load();
-
-        if(watcher != nullptr) {
-            delete watcher;
-            watcher = nullptr;
-        }
+    void Channel<T>::UnWatch(const std::shared_ptr<WatcherType> &watcher) {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto it = watchers.find(watcher->GetID());
+        if(it != watchers.end())
+            watchers.erase(it);
     }
 
 
     template<typename T>
-    bool Channel<T>::Empty() const noexcept {
-        int64_t b = _bottom.load(std::memory_order_relaxed);
-        int64_t t = _top.load(std::memory_order_relaxed);
-        return b <= t;
-    }
+    void Channel<T>::Send(const T& msg) {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto it = watchers.begin(); it != watchers.end(); ) {
+            const std::shared_ptr<WatcherType>& watcher = it->second;
 
-
-    template<typename T>
-    bool Channel<T>::Full() const noexcept {
-        int64_t b = _bottom.load(std::memory_order_relaxed);
-        int64_t t = _top.load(std::memory_order_acquire);
-        AtomicArray<T> *a = _array.load(std::memory_order_relaxed);
-        return a->capacity() - 1 < (b - t);
-    }
-
-
-    template<typename T>
-    size_t Channel<T>::Size() const noexcept {
-        int64_t b = _bottom.load(std::memory_order_relaxed);
-        int64_t t = _top.load(std::memory_order_relaxed);
-        return static_cast<size_t>(b >= t ? b - t : 0);
-    }
-
-
-    template<typename T>
-    void Channel<T>::Flush() {
-        while (!Empty()) {
-            Pop();
-        }
-    }
-
-
-    template<typename T>
-    bool Channel<T>::Push(T & o) {
-        int64_t b = _bottom.load(std::memory_order_relaxed);
-        int64_t t = _top.load(std::memory_order_acquire);
-        AtomicArray<T> *a = _array.load(std::memory_order_relaxed);
-
-        // queue is full
-        if (a->capacity() - 1 < (b - t)) {
-            return false;
-        }
-
-        a->store(b, o);
-        std::atomic_thread_fence(std::memory_order_release);
-        _bottom.store(b + 1, std::memory_order_relaxed);
-
-        return true;
-    }
-
-
-    template<typename T>
-    bool Channel<T>::Send(T && v) {
-        bool res = Push(v);
-
-        if(res) {
-            CallWatcher();
-        }
-
-        return res;
-    }
-
-
-    template<typename T>
-    bool Channel<T>::Send(T & v) {
-        bool res = Push(v);
-
-        if(res) {
-            CallWatcher();
-        }
-
-        return res;
-    }
-
-
-    template<typename T>
-    std::optional<T> Channel<T>::Receive() {
-        return Pop();
-    }
-
-
-    template<typename T>
-    std::optional<T> Channel<T>::Pop() {
-        int64_t b = _bottom.load(std::memory_order_relaxed) - 1;
-        AtomicArray<T> *a = _array.load(std::memory_order_relaxed);
-        _bottom.store(b, std::memory_order_relaxed);
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        int64_t t = _top.load(std::memory_order_relaxed);
-
-        std::optional<T> item;
-
-        if (t <= b) {
-            item = a->load(b);
-            if (t == b) {
-                // the last item just got stolen
-                if (!_top.compare_exchange_strong(t, t + 1,
-                                                  std::memory_order_seq_cst,
-                                                  std::memory_order_relaxed)) {
-                    item = std::nullopt;
-                }
-                _bottom.store(b + 1, std::memory_order_relaxed);
-            }
-        } else {
-            _bottom.store(b + 1, std::memory_order_relaxed);
-        }
-
-        return item;
-    }
-
-
-    template<typename T>
-    void Channel<T>::Watch(ObjectID id, std::function<void(void*)> cb, void* data) {
-        if(watcher != nullptr) {
-            delete watcher;
-            watcher = nullptr;
-        }
-
-        watcher = new Watcher{id, cb, data};
-    }
-
-
-    template<typename T>
-    void Channel<T>::CallWatcher() {
-        if(watcher != nullptr) {
-
-            if( watcher->cb )
-                watcher->cb( watcher->data );
-
-            delete watcher;
-            watcher = nullptr;
-        }
-    }
-
-
-    /**
-     * @brief ChannelReceiver
-     * @todo temporary implementation
-     * @tparam T
-     */
-    template<typename T>
-    struct ChannelReceiver {
-        Channel<T>  *channel;
-    };
-
-
-    /**
-     * @brief async receive
-     * @tparam T
-     * @return
-     */
-    template<class T>
-    static std::shared_ptr<ChannelReceiver<T>> AsyncReceive(Channel<T> *channel) {
-        std::shared_ptr<ChannelReceiver<T>> receiver = std::make_shared<ChannelReceiver<T>>();
-        receiver->channel = channel;
-        return receiver;
-    }
-
-
-    namespace Awaiter {
-        typedef std::function<void(void*)> ResumeCb;
-
-
-        template<class Ret>
-        inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> receiver, ResumeCb resume_cb, CoroutineHandler* handler) {
-            assert(handler != nullptr);
-
-            auto *channel = receiver->channel;
-
-            assert(channel != nullptr);
-
-            auto o = channel->Receive();
-            if( o ) {
-                return o.value();
+            if (watcher.use_count() > 1) {
+                auto* clone_msg = new T(msg);
+                watcher->Send(clone_msg);
+                ++it;
             } else {
-                channel->Watch(handler->GetID(), resume_cb, (void *)handler);
-
-                //suspend the coroutine
-                handler->Suspend();
-
-                //resume the coroutine
-                return channel->Receive().value();
+                it = watchers.erase(it);
             }
         }
     }
 
 
-    /**
-     * @brief
-     * @tparam T
-     * @return
-     */
-    template <typename T>
-    inline Channel<T> MakeChannel(size_t cap = 64) {
-        return Channel<T>(cap);
+    template<typename T>
+    Watcher<T>::~Watcher() {
+        while (!queue.empty()) {
+            auto v = queue.steal();
+            if(v) {
+                delete v.value();
+            }
+        }
+
+        //@TODO check and release async_result_
+    }
+
+
+    template<typename T>
+    void Watcher<T>::Send(T *msg) {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            if( async_result_ && !async_result_->Resolved() ) {
+                async_result_->SetValue(msg);
+            }else{
+                queue.push(msg);
+            }
+        }
+
+        cv.notify_one();
+    }
+
+
+    template<typename T>
+    std::optional<T*> Watcher<T>::Receive() {
+        std::unique_lock<std::mutex>  lock(mutex);
+        while(queue.empty()) {
+            cv.wait(lock);
+        }
+        return queue.steal();
+    }
+
+
+    template<typename T>
+    std::optional<T*> Watcher<T>::TryReceive() {
+        return queue.steal();
+    }
+
+
+    template<typename T>
+    std::shared_ptr<Result<T*>> Watcher<T>::AsyncReceive() {
+        auto v = queue.steal();
+        if(!v) {
+            std::lock_guard<std::mutex> lock(mutex);
+            //@TODO check and release prev async_result_
+            async_result_ = std::make_shared<Result<T*>>();
+            return async_result_;
+        } else {
+            return std::make_shared<Result<T*>>(v.value());
+        }
     }
 }
 

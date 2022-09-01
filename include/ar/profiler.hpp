@@ -12,6 +12,8 @@
 
 
 namespace AsyncRuntime {
+
+#if defined(USE_PROFILER)
     /**
      * @brief
      * @class Profiler
@@ -154,7 +156,7 @@ namespace AsyncRuntime {
         std::lock_guard<std::mutex> lock(mutex);
         state.profiling_interval = Timestamp::CastMicro(rtime);
     }
-
+#endif
 
 #if defined(USE_PROFILER)
 #define PROFILER_SET_APP_INFO(ARGC, ARGV) Profiler::GetSingletonPtr()->SetAppInfo(ARGC, ARGV);

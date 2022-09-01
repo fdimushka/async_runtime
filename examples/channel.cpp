@@ -2,41 +2,40 @@
 
 
 namespace AR = AsyncRuntime;
-typedef AR::Channel<int>  Channel;
 
 
-void coro_a_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, Channel *channel) {
+[[noreturn]] void async_fun_a(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channel<std::string> *channel) {
     yield();
-    int i = 0;
-
     for(;;) {
-        channel->Send(i);
-        i++;
-        yield();
+        channel->Send("ping");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
-
-void coro_b_fun(AR::CoroutineHandler* handler, AR::YieldVoid & yield, Channel *channel) {
+[[noreturn]] void async_fun_b(AR::CoroutineHandler* handler, AR::YieldVoid & yield, AR::Channel<std::string> *channel) {
+    auto watcher = channel->Watch();
     yield();
     for(;;) {
-        int res = AR::Await(AsyncReceive(channel), handler);
-        std::cout << "Hello from a: " << res << std::endl;
+        auto v = AR::Await(watcher->AsyncReceive(), handler);
+        std::cout << "recv from channel: " << v->c_str() << std::endl;
+        delete v;
     }
 }
 
 
 int main() {
     AR::SetupRuntime();
-    auto channel = AR::MakeChannel<int>();
-    AR::Coroutine coro_a = AR::MakeCoroutine(&coro_a_fun, &channel);
-    AR::Coroutine coro_b = AR::MakeCoroutine(&coro_b_fun, &channel);
+    AR::Channel<std::string> channel;
 
-    AR::Async(coro_b);
+    //send a -> b
+    AR::Coroutine coro_a = AR::MakeCoroutine(&async_fun_a, &channel);
+    AR::Coroutine coro_b = AR::MakeCoroutine(&async_fun_b, &channel);
 
-    while (coro_a.Valid()) {
-        AR::Await(AR::Async(coro_a));
-    }
+    const auto& future_a = AR::Async(coro_a);
+    const auto& future_b = AR::Async(coro_b);
+
+    AR::Await(future_a);
+    AR::Await(future_b);
 
     return 0;
 }

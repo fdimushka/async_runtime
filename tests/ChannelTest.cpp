@@ -6,116 +6,148 @@
 #include "ar/ar.hpp"
 
 
+#include <vector>
+#include <thread>
+
+
 using namespace AsyncRuntime;
 
+struct Message {
+    int v_int = 0;
 
-SCENARIO( "Channel test" ) {
-    GIVEN("An empty channel") {
-        Channel<int> channel(32);
-
-        THEN("The size and capacity start at 0") {
-            REQUIRE(channel.Size() == 0);
-            REQUIRE(channel.Empty());
-            REQUIRE(channel.Capacity() == 32);
-        }
-
-
-        WHEN("send") {
-            channel.Send(0);
-            THEN("The size changes") {
-                REQUIRE(channel.Size() == 1);
-            }
-        }
+    Message() = default;
+    ~Message() = default;
+    Message(const Message& other) {
+        v_int = other.v_int;
+    };
+};
 
 
-        WHEN("receive") {
-            srand (time(NULL));
-            int i = std::rand();
-            channel.Send(i);
-            std::optional<int> res = channel.Receive();
-            REQUIRE(res);
-            THEN("The size changes") {
-                REQUIRE(i == res);
-            }
-        }
-
-
-        WHEN("full") {
-            for(size_t i = 0; i < 33; ++i )
-                channel.Send(0);
-
-            THEN("The size changes") {
-                REQUIRE(!channel.Send(0));
-                REQUIRE(channel.Size() == channel.Capacity());
-                REQUIRE(channel.Full());
-                REQUIRE(!channel.Empty());
-            }
-        }
-
-
-        WHEN("flush") {
-            REQUIRE(channel.Empty());
-            for(size_t i = 0; i < 10; ++i )
-                channel.Send(0);
-
-            REQUIRE(!channel.Empty());
-            channel.Flush();
-
-            THEN("The size changes") {
-                REQUIRE(channel.Empty());
-                REQUIRE(channel.Size() == 0);
-            }
-        }
-    }
+TEMPLATE_TEST_CASE( "Create channel test", "[channel]", int, std::string, std::vector<int>, Message ) {
+    Channel<TestType> channel;
 }
 
 
-struct WatchCtx {
-    bool called = false;
-};
+TEMPLATE_TEST_CASE( "Send and receive to channel test (type)", "[channel]", int, std::string, std::vector<int>, Message ) {
+    Channel<TestType> channel;
+    auto watcher = channel.Watch();
+
+    TestType msg;
+    channel.Send(msg);
+    auto recv_v = watcher->Receive();
+    REQUIRE(recv_v);
+}
 
 
-class CHANNEL_TEST_FRIEND {
-public:
-    void watcher_alloc_dealloc() {
-        WatchCtx ctx;
-        channel_watcher_alloc_dealloc.Watch(1, [](void* p) {
-            auto *c = (WatchCtx*)p;
-            c->called = true;
-        }, &ctx);
-
-        REQUIRE(channel_watcher_alloc_dealloc.watcher != nullptr);
-        REQUIRE(channel_watcher_alloc_dealloc.watcher->id == 1);
-        REQUIRE(channel_watcher_alloc_dealloc.watcher->data == std::addressof(ctx));
-        channel_watcher_alloc_dealloc.Send(0);
-        REQUIRE(channel_watcher_alloc_dealloc.watcher == nullptr);
-        REQUIRE(ctx.called);
-    }
-
-    Channel<int>    channel_watcher_alloc_dealloc;
-};
-
-
-
-TEST_CASE( "Channel watch test", "[channel]" ) {
-    srand (time(NULL));
+TEST_CASE( "Send and receive to channel test", "[channel]" ) {
     Channel<int> channel;
-    WatchCtx ctx;
-    channel.Watch(0, [](void* p) {
-        auto *c = (WatchCtx*)p;
-        c->called = true;
-    }, &ctx);
-
-    int v = std::rand()%100;
-    channel.Send(v);
-
-    REQUIRE(ctx.called);
-    REQUIRE(channel.Receive().value() == v);
+    auto watcher = channel.Watch();
+    int msg = 10;
+    channel.Send(msg);
+    auto recv_v = watcher->Receive();
+    REQUIRE(recv_v);
+    int *v_ptr = recv_v.value();
+    REQUIRE(*v_ptr == 10);
+    delete v_ptr;
 }
 
 
-TEST_CASE( "Channel watch alloc/dealloc test", "[channel]" ) {
-    CHANNEL_TEST_FRIEND test;
-    test.watcher_alloc_dealloc();
+TEST_CASE( "Try receive from channel test", "[channel]" ) {
+    Channel<int> channel;
+    int msg = 10;
+
+    std::thread th([=](std::shared_ptr<Watcher<int>> watcher){
+        for(;;) {
+            auto recv_v = watcher->TryReceive();
+            if(recv_v) {
+                int &v = *recv_v.value();
+                REQUIRE(v == 10);
+                break;
+            }
+        }
+    }, channel.Watch());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    channel.Send(msg);
+    th.join();
 }
 
+
+void async_fun(CoroutineHandler* handler, Yield<int> & yield, Channel<int> *channel) {
+    auto watcher = channel->Watch();
+    yield(0);
+    auto v = Await(watcher->AsyncReceive(), handler);
+    yield(*v);
+}
+
+
+TEST_CASE( "Async receive from channel test", "[channel]" ) {
+    SetupRuntime();
+    Channel<int> channel;
+    int msg = 10;
+    Coroutine<int> coro = MakeCoroutine<int>(&async_fun, &channel);
+
+    channel.Send(msg);
+
+    int v = Await(Async(coro));
+    REQUIRE(msg == v);
+}
+
+
+TEST_CASE( "Async receive from channel test 2", "[channel]" ) {
+    SetupRuntime();
+    Channel<int> channel;
+    std::shared_ptr<Watcher<int>> watcher = channel.Watch();
+
+
+    for(int i = 0; i < 100; ++i) {
+        int msg = i;
+        channel.Send(msg);
+    }
+
+    for(int i = 0; i < 100; ++i) {
+        Coroutine<int*> coro = MakeCoroutine<int*>([](CoroutineHandler* handler, Yield<int*> & yield, const std::shared_ptr<Watcher<int>>& watcher){
+            yield(nullptr);
+            auto v = Await(watcher->AsyncReceive(), handler);
+            yield(v);
+        }, watcher);
+        int *v = Await(Async(coro));
+        REQUIRE(i == *v);
+        delete v;
+    }
+}
+
+
+TEST_CASE( "Watch channel test", "[channel]" ) {
+    Channel<int> channel;
+    int msg = 10;
+    auto watcher1 = channel.Watch();
+    auto watcher2 = channel.Watch();
+
+    channel.Send(msg);
+    auto v1 = watcher1->Receive();
+    auto v2 = watcher2->Receive();
+
+    REQUIRE(v1);
+    REQUIRE(v2);
+    auto msg1 = v1.value();
+    auto msg2 = v2.value();
+
+    REQUIRE(*msg1 == msg);
+    REQUIRE(*msg2 == msg);
+
+    delete msg1;
+    delete msg2;
+}
+
+
+TEST_CASE( "Watch channel test 2", "[channel]" ) {
+    Channel<int> channel;
+    int msg = 10;
+
+    {
+        auto watcher = channel.Watch();
+        channel.Send(msg);
+    }
+}

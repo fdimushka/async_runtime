@@ -3,7 +3,7 @@
 #include "ar/os.hpp"
 
 #include "base64.h"
-
+#if defined(USE_PROFILER)
 #include "profiler_schema_generated.h"
 
 
@@ -184,7 +184,7 @@ void Profiler::Update()
     size_t events_size = events.size();
 
     for(size_t i = 0; i < events_size; ++i){
-        auto v = events.pop();
+        auto v = events.steal();
         if(v) {
             new_events.push_back(v.value());
         }
@@ -280,3 +280,5 @@ Profiler::State Profiler::GetCurrentState()
     std::lock_guard<std::mutex> lock(mutex);
     return state;
 }
+
+#endif
