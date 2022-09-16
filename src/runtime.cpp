@@ -43,14 +43,8 @@ void Runtime::Terminate()
 
     PROFILER_STOP();
 
-    if(io_executor != nullptr) {
-        delete io_executor;
-        io_executor = nullptr;
-    }
-
-    if(main_executor != nullptr) {
-        delete main_executor;
-        main_executor = nullptr;
+    for(auto const& it : executors) {
+        delete it.second;
     }
 
     executors.clear();
@@ -69,17 +63,14 @@ void Runtime::CheckRuntime()
 
 void Runtime::CreateDefaultExecutors()
 {
-    main_executor = new Executor(MAIN_EXECUTOR_NAME);
-    io_executor = new IOExecutor(IO_EXECUTOR_NAME);
+    main_executor = CreateExecutor<Executor>(MAIN_EXECUTOR_NAME);
+    io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
 
     for(const auto &processor : main_executor->GetProcessors()) {
         io_executor->ThreadRegistration(processor->GetThreadId());
     }
 
     io_executor->Run();
-
-    executors.insert(std::make_pair(main_executor->GetID(), main_executor));
-    executors.insert(std::make_pair(io_executor->GetID(), io_executor));
 }
 
 

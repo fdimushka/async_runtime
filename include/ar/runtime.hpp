@@ -35,6 +35,14 @@ namespace AsyncRuntime {
         Runtime(Runtime&&) = delete;
         Runtime& operator =(Runtime&&) = delete;
 
+        /**
+         * @brief
+         * @param executor
+         */
+        template < typename ExecutorType,
+                    class... Arguments >
+        ExecutorType* CreateExecutor(Arguments&&... args);
+
 
         /**
          * @brief
@@ -78,6 +86,15 @@ namespace AsyncRuntime {
         template< class CoroutineType >
         std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine);
 
+
+        /**
+         * @brief
+         * @return
+         */
+        template< typename ExecutorType,
+                typename TaskType,
+                class... Arguments >
+        inline std::shared_ptr<Result<typename TaskType::return_type>> AsyncTask(Arguments&&... args);
 
 
         /**
@@ -138,7 +155,7 @@ namespace AsyncRuntime {
         void CreateDefaultExecutors();
 
 
-        std::unordered_map<ObjectID, IExecutor*>    executors;
+        std::map<size_t , IExecutor*>               executors;
         Executor*                                   main_executor;
         IOExecutor*                                 io_executor;
         bool                                        is_setup;
@@ -209,6 +226,18 @@ namespace AsyncRuntime {
     }
 
 
+    template<typename ExecutorType, typename TaskType, class... Arguments>
+    std::shared_ptr<Result<typename TaskType::return_type>> Runtime::AsyncTask(Arguments &&... args) {
+        static_assert(std::is_base_of<Task, TaskType>::value, "TaskType must derive from Task");
+        CheckRuntime();
+        auto *task = new TaskType(std::forward<Arguments>(args)...);
+        auto result = task->GetResult();
+        const std::type_info& eti = typeid(ExecutorType);
+        ((ExecutorType*)executors.at(eti.hash_code()))->Post(task);
+        return result;
+    }
+
+
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
         CheckRuntime();
@@ -237,6 +266,17 @@ namespace AsyncRuntime {
     }
 
 
+    template < typename ExecutorType,
+            class... Arguments >
+    ExecutorType* Runtime::CreateExecutor(Arguments &&... args) {
+        static_assert(std::is_base_of<IExecutor, ExecutorType>::value, "ExecutorType must derive from IExecutor");
+        const std::type_info& eti = typeid(ExecutorType);
+        auto *executor = new ExecutorType(std::forward<Arguments>(args)...);
+        executors.insert(std::make_pair(eti.hash_code(), executor));
+        return executor;
+    }
+
+
     /**
      * @brief
      */
@@ -250,6 +290,19 @@ namespace AsyncRuntime {
      */
     inline void Terminate() {
         return Runtime::g_runtime.Terminate();
+    }
+
+    /**
+     * @brief
+     * @tparam ExecutorType
+     * @tparam Arguments
+     * @param args
+     * @return
+     */
+    template < typename ExecutorType,
+               class... Arguments >
+    inline ExecutorType* CreateExecutor(Arguments&&... args) {
+        return Runtime::g_runtime.CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
     }
 
 
