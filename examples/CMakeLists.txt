@@ -11,8 +11,10 @@ option(AR_INSTALL_DIR /usr/local/)
 OPTION(WITH_EXTRA_TESTS "build also module tests and others" OFF)
 
 include_directories(${CATCH_HEADER_DIR})
+include_directories("/usr/local/include/")
 
 link_directories(/usr/local/lib64/)
+link_directories(/usr/local/lib/)
 
 # sources:
 file(GLOB EXAMPLES_SRC_CPP *.cpp)
