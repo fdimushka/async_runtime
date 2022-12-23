@@ -138,6 +138,21 @@ namespace AsyncRuntime {
          */
         template< class Ret, class Res >
         Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
+
+        [[nodiscard]] const Executor* GetMainExecutor() const { return main_executor; }
+        Executor* GetMainExecutor() { return main_executor; }
+
+        template< typename ExecutorType>
+        const ExecutorType* GetExecutor() const {
+            const std::type_info& eti = typeid(ExecutorType);
+            return ((ExecutorType*)executors.at(eti.hash_code()));
+        }
+
+        template< typename ExecutorType>
+        ExecutorType* GetExecutor() {
+            const std::type_info& eti = typeid(ExecutorType);
+            return ((ExecutorType*)executors.at(eti.hash_code()));
+        }
     private:
         void CheckRuntime();
 
