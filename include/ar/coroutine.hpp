@@ -8,6 +8,7 @@
 #include "ar/task.hpp"
 #include "ar/stack.hpp"
 #include "ar/context_switcher.hpp"
+#include "ar/processor_group.hpp"
 //#include "ar/profiler.hpp"
 
 
@@ -39,6 +40,11 @@ namespace AsyncRuntime {
         BaseYield(CoroutineHandler*  handler) : coroutine_handler(handler) { };
         virtual ~BaseYield() =default;
 
+        BaseYield& operator =(const BaseYield& other) {
+            //coroutine_handler = other.coroutine_handler;
+            result = other.result;
+            return *this;
+        }
 
         void Suspend() {
             coroutine_handler->Suspend();
@@ -205,6 +211,10 @@ namespace AsyncRuntime {
         typedef Ret                                                                 RetType;
         typedef std::function<void(CoroutineHandler*, YieldType&)>                  Callable;
 
+        BaseCoroutine() : is_completed{false},
+                          yield(this),
+                          state{kExecuting} { }
+
         template< class Function,
                   class ...Arguments>
         explicit BaseCoroutine(Function &&fn, Arguments &&... args) :
@@ -222,11 +232,9 @@ namespace AsyncRuntime {
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 
-
         BaseCoroutine(const BaseCoroutine& other) = delete;
         BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
-        BaseCoroutine(BaseCoroutine&& other) = delete;
-        BaseCoroutine& operator =(BaseCoroutine&& other) = delete;
+
         ~BaseCoroutine() override {
             End();
         };
@@ -243,7 +251,7 @@ namespace AsyncRuntime {
 
             yield.ResetResult();
 
-            executor = executor_;
+            executor_state = executor_;
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 
@@ -265,15 +273,23 @@ namespace AsyncRuntime {
         }
 
 
-        CoroutineState GetState() const {
+        [[nodiscard]] CoroutineState GetState() const {
             CoroutineState s = state.load(std::memory_order_relaxed);
             return s;
         }
 
 
-        const ExecutorState& GetExecutorState() const override {
-            return executor;
+        void SetWorkGroup(ObjectID wg) {
+            if (executor_state.work_group != wg)
+                executor_state.processor = INVALID_OBJECT_ID;
+            executor_state.work_group = wg;
         }
+
+
+        const ExecutorState& GetExecutorState() const override {
+            return executor_state;
+        }
+
 
         void MakeResult() override {
             yield.ResetResult();
@@ -283,7 +299,7 @@ namespace AsyncRuntime {
         Task* MakeExecTask() override {
             if(!is_completed.load(std::memory_order_relaxed)) {
                 auto task = MakeTask(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
-                task->SetDesirableExecutor(executor);
+                task->SetExecutorState(executor_state);
                 task->SetOriginId(GetID());
                 return task;
             }else{
@@ -299,7 +315,7 @@ namespace AsyncRuntime {
             }
 
             state.store(kExecuting, std::memory_order_relaxed);
-            executor = executor_;
+            executor_state = executor_;
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 
@@ -319,7 +335,7 @@ namespace AsyncRuntime {
         }
 
 
-        ExecutorState                                       executor;
+        ExecutorState                                       executor_state;
         std::atomic_bool                                    is_completed;
         std::mutex                                          mutex;
         std::atomic<CoroutineState>                         state;
@@ -351,7 +367,7 @@ namespace AsyncRuntime {
             // start executing
             t.fctx = rec->Run( t);
         }catch ( ... ) {
-            std::cerr << "Exception" << std::endl;
+            std::cerr << "Coroutine exception" << std::endl;
         }
         RNT_ASSERT( nullptr !=  t.fctx);
 
@@ -392,6 +408,7 @@ namespace AsyncRuntime {
         template<   class Fn,
                     class ...Arguments>
         explicit Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) { };
+        Coroutine() = default;
         virtual ~Coroutine() = default;
     };
 

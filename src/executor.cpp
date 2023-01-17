@@ -1,113 +1,65 @@
 #include "ar/executor.hpp"
-
+#include "ar/logger.hpp"
 #include <utility>
-
 
 using namespace AsyncRuntime;
 
-
-Executor::Executor(std::string  name_, uint max_processors_count_) :
-            name(std::move(name_)),
-            notify_inc(0),
-            max_processors_count(max_processors_count_),
-            is_continue{true}
+Executor::Executor(std::string name_, std::vector<WorkGroupOption> work_groups_option, uint max_processors_count_) :
+        name(std::move(name_)),
+        processor_groups_option(std::move(work_groups_option)),
+        max_processors_count(max_processors_count_)
 {
-    Spawn();
-}
-
-
-Executor::~Executor()
-{
-    is_continue.store(false, std::memory_order_relaxed);
-    delayed_task_cv.notify_one();
-    scheduler_executor.Join();
-
-    for(auto & processor : processors)
-    {
-        processor->Terminate();
-        delete processor;
-        processor = nullptr;
-    }
-    processors.clear();
-}
-
-
-void Executor::Spawn()
-{
-    scheduler_executor.Submit([this] { SchedulerLoop(); });
-
-    for(int i = 0; i < max_processors_count; ++i) {
-        auto *processor = new Processor(this);
-        processors.emplace_back(processor);
+    for (int i = 0; i < max_processors_count; ++i) {
+        auto *processor = new Processor(i);
+        processors.push_back(processor);
     }
 
+    for (int i = 0; i < processor_groups_option.size(); ++i) {
+        const auto &option = processor_groups_option[i];
+        auto *group = new ProcessorGroup(i, processors, option.name, option.util, option.cap, option.priority);
+        processor_groups.push_back(group);
+    }
 
-    for(auto *processor : processors){
+    main_processor_group = processor_groups[0];
+
+    for (auto processor: processors) {
         processor->Run();
     }
 }
 
 
-void Executor::SchedulerLoop()
-{
-    while (is_continue.load(std::memory_order_relaxed)) {
-        std::unique_lock<std::mutex>  lock(delayed_task_mutex);
-        if(!delayed_task.empty()) {
-            Task *task = delayed_task.top();
-
-            if(task) {
-                int64_t delay = task->GetDelay();
-                if (delay <= 0) {
-                    Post(task);
-                    delayed_task.pop();
-                }else{
-                    delayed_task_cv.wait_for(lock, std::chrono::microseconds (delay));
-                }
-            }
-        }else{
-            delayed_task_cv.wait(lock);
-        }
+Executor::~Executor() {
+    for (auto processor: processors) {
+        processor->Terminate();
+        delete processor;
     }
+
+    processors.clear();
+
+    for (auto group: processor_groups) {
+        delete group;
+    }
+
+    processor_groups.clear();
 }
 
 
-void Executor::Post(Task *task)
-{
-    if(task->GetDelay() <= 0) {
-        const auto &execute_state = task->GetDesirableExecutor();
-        if (execute_state.processor != nullptr) {
-            Processor *processor = execute_state.processor;
-            processor->Post(task);
-        } else {
-            RunQueuePush(task);
+void Executor::Post(Task *task) {
+    const auto &execute_state = task->GetExecutorState();
+    task->SetExecutorExecutorState(this);
 
-            bool notified = false;
-            for (size_t i = 0; i < processors.size(); ++i) {
-                notify_inc = (notify_inc + 1) % processors.size();
-                size_t pid = notify_inc;
-
-                auto p_state = processors[pid]->GetState();
-                if (p_state != Processor::EXECUTE) {
-                    notified = true;
-                    processors[pid]->Notify();
-                    break;
-                }
-            }
-
-            if (!notified) {
-                processors[notify_inc]->Notify();
-            }
-        }
-    }else{
-        std::unique_lock<std::mutex> lock(delayed_task_mutex);
-        delayed_task.push(task);
-        delayed_task_cv.notify_one();
+    if (task->GetDelay() <= 0 &&
+        execute_state.processor != INVALID_OBJECT_ID &&
+        execute_state.processor >= 0 &&
+        execute_state.processor < processors.size())
+    {
+        processors[execute_state.processor]->Post(task);
+    } else if ( execute_state.work_group != INVALID_OBJECT_ID &&
+                execute_state.work_group >= 0 &&
+                execute_state.work_group < processor_groups.size())
+    {
+        processor_groups[execute_state.work_group]->Post(task);
+    } else {
+        main_processor_group->Post(task);
     }
-}
-
-
-void Executor::RunQueuePush(Task *task)
-{
-    std::lock_guard<std::mutex> lock(run_queue_mutex);
-    run_queue.push(task);
 }

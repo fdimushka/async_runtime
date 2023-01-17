@@ -16,11 +16,14 @@
 
 namespace AsyncRuntime {
     typedef std::uintptr_t ObjectID;
+#define INVALID_OBJECT_ID UINT_MAX
 
 
     class BaseObject {
     public:
-        BaseObject() { id = reinterpret_cast<std::uintptr_t>(this); }
+        BaseObject() {
+            id = reinterpret_cast<std::uintptr_t>(this);
+        }
         virtual ~BaseObject() = default;
 
 
