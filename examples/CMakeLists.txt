@@ -15,6 +15,9 @@ include_directories(${CATCH_HEADER_DIR})
 link_directories(/usr/local/lib64/)
 
 
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 # sources:
 file(GLOB EXAMPLES_SRC_CPP *.cpp)
 set(EXAMPLES_SRC ${EXAMPLES_SRC_CPP})
@@ -38,5 +41,5 @@ set( TARGETS_ALL ${TARGETS_SINGLE_FILE})
 foreach( name ${TARGETS_SINGLE_FILE} )
     message( STATUS "Example: ${name}" )
     add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp )
-    target_link_libraries(${name} ar uv)
+    target_link_libraries(${name} ar uv ${OpenCV_LIBS})
 endforeach()
