@@ -52,14 +52,7 @@ IOExecutor::~IOExecutor()
     loop_thread.Join();
 
     for(const auto & async : async_handlers) {
-        auto* ctx = (IOExecutor::AsyncHandlerCtx*)async.second->data;
-        while(!ctx->run_queue.empty()) {
-            auto v = ctx->run_queue.steal();
-            if(v) {
-                delete (IOTask *) v.value();
-            }
-        }
-        delete ctx;
+        delete (AsyncHandlerCtx *)async.second->data;
         delete async.second;
     }
 

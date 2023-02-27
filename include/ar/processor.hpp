@@ -7,7 +7,6 @@
 #include "ar/task.hpp"
 #include "ar/notifier.hpp"
 
-
 #include <map>
 #include <set>
 #include <thread>
@@ -18,7 +17,7 @@
 
 namespace AsyncRuntime {
     class Executor;
-
+    class ProcessorGroup;
 
     /**
      * @class Processor
@@ -32,15 +31,19 @@ namespace AsyncRuntime {
             WAIT            =2,
         };
 
-        explicit Processor(Executor* executor_ = nullptr);
+        explicit Processor(int id = -1);
         ~Processor() override;
 
 
         Processor(Processor&&) = delete;
         Processor(const Processor&) = delete;
 
+
         Processor& operator =(const Processor&) = delete;
         Processor& operator =(Processor&&) = delete;
+
+
+        void AddGroup(ProcessorGroup *group);
 
 
         /**
@@ -68,7 +71,6 @@ namespace AsyncRuntime {
         void Notify();
 
 
-
         /**
          * @brief
          * @return
@@ -81,27 +83,34 @@ namespace AsyncRuntime {
          * @return
          */
         [[nodiscard]] std::thread::id GetThreadId() const;
+        bool IsSteal() const;
+        bool IsSteal(ObjectID group_id) const;
+        std::optional<Task*> Steal();
+        std::optional<Task*> Steal(ObjectID group_id);
+        std::vector<ProcessorGroup *> GetGroups();
+        size_t GetGroupsSize();
+        bool IsInGroup(const ProcessorGroup *group);
+
     protected:
         void Work();
-        void ExecuteTask(Task* task);
+
+        void ExecuteTask(Task* task, const ExecutorState &executor_state);
         void WaitTask();
 
-
-        std::optional<Task*> ConsumeWork();
-        std::optional<Task*> StealWorkGlobal();
-        std::optional<Task*> StealWorkLocal();
-        std::optional<Task*> StealWorkOnOthers();
+        bool IsStealGlobal();
+        std::optional<Task*> StealGlobal();
     private:
+        std::vector<ProcessorGroup *>               groups;
+
         ThreadExecutor                              thread_executor;
-        WorkStealQueue<Task*>                       local_run_queue;
+        std::vector<int>                            rq_by_priority;
+        std::vector<WorkStealQueue<Task*>>          local_run_queue;
         std::atomic_bool                            is_continue;
         std::atomic<State>                          state;
 
-        Executor*                                   executor;
-        ExecutorState                               executor_state;
-
         std::condition_variable                     cv;
         std::mutex                                  mutex;
+        std::mutex                                  group_mutex;
 
         std::atomic_int                             notify_count;
     };

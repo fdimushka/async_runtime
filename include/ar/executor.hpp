@@ -2,6 +2,7 @@
 #define AR_EXECUTOR_H
 
 #include "ar/processor.hpp"
+#include "ar/processor_group.hpp"
 
 #ifdef USE_TESTS
 class EXECUTOR_TEST_FRIEND;
@@ -9,6 +10,15 @@ class EXECUTOR_TEST_FRIEND;
 
 
 namespace AsyncRuntime {
+
+
+    struct WorkGroupOption {
+        std::string                     name;
+        double                          cap;
+        double                          util;
+        int                             priority = WG_PRIORITY_MEDIUM;
+    };
+
 
     class IExecutor: public BaseObject {
     public:
@@ -22,10 +32,9 @@ namespace AsyncRuntime {
         friend EXECUTOR_TEST_FRIEND;
 #endif
     public:
-        typedef std::priority_queue<Task*, std::vector<Task*>, Task::LessThanByDelay> TasksPq;
-
         explicit Executor(std::string  name_,
-                           uint max_processors_count_ = std::thread::hardware_concurrency());
+                          std::vector<WorkGroupOption> work_groups_option = {},
+                          uint max_processors_count_ = std::thread::hardware_concurrency());
         ~Executor() override;
 
 
@@ -35,7 +44,6 @@ namespace AsyncRuntime {
 
         Executor& operator =(const Executor&) = delete;
         Executor& operator =(Executor&&) = delete;
-
 
         /**
          * @brief
@@ -50,22 +58,12 @@ namespace AsyncRuntime {
          */
         const std::vector<Processor*>& GetProcessors() const { return processors; }
     private:
-        void SchedulerLoop();
-        void Spawn();
-        void RunQueuePush(Task *task);
-
-
-        ThreadExecutor              scheduler_executor;
-        uint                        max_processors_count;
-        WorkStealQueue<Task*>       run_queue;
-        TasksPq                     delayed_task;
-        std::condition_variable     delayed_task_cv;
-        std::mutex                  delayed_task_mutex;
-        std::mutex                  run_queue_mutex;
-        std::vector<Processor*>     processors;
-        std::string                 name;
-        size_t                      notify_inc;
-        std::atomic_bool            is_continue;
+        uint                                                     max_processors_count;
+        std::vector<Processor*>                                  processors;
+        std::vector<ProcessorGroup*>                             processor_groups;
+        std::vector<WorkGroupOption>                             processor_groups_option;
+        std::string                                              name;
+        ProcessorGroup                                          *main_processor_group;
     };
 }
 

@@ -9,7 +9,7 @@ option(WITH_TRACE "Build with tracing" OFF)
 option(WITH_TESTS "Build with tests" OFF)
 option(WITH_EXAMPLES "Build with examples" ON)
 option(WITH_DOCS "Build with docs" OFF)
-option(WITH_PROFILER "Build with profiler" OFF)
+option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")

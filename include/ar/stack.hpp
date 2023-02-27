@@ -50,7 +50,7 @@ namespace AsyncRuntime {
         }
 
 
-        StackContext Allocate() {
+        virtual StackContext Allocate() {
             void * vp = std::malloc( size_);
             if ( ! vp) {
                 throw std::bad_alloc();
@@ -63,7 +63,7 @@ namespace AsyncRuntime {
         }
 
 
-        void Deallocate( StackContext & sctx) RNT_NOEXCEPT_OR_NOTHROW {
+        virtual void Deallocate( StackContext & sctx) RNT_NOEXCEPT_OR_NOTHROW {
             assert( sctx.sp);
             void * vp = static_cast< char * >( sctx.begin) - sctx.size;
             std::free( vp);
