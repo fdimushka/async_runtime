@@ -6,7 +6,6 @@
 #include "ar/task.hpp"
 #include "ar/helper.hpp"
 #include "ar/timestamp.hpp"
-#include "ar/coroutine.hpp"
 
 
 namespace AsyncRuntime {
@@ -19,11 +18,10 @@ namespace AsyncRuntime {
     class Ticker {
     public:
         template< typename Rep, typename Period >
-        explicit Ticker(const std::chrono::duration<Rep, Period>& rtime, ObjectID wg = 0):
+        explicit Ticker(const std::chrono::duration<Rep, Period>& rtime):
             delay( Timestamp::Cast<std::chrono::duration<Rep, Period>, Timestamp::Micro>(rtime.count()) )
             , last_tick_ts(TIMESTAMP_NOW_MICRO())
-            , is_continue {true}
-            { };
+            , is_continue {true} { };
         ~Ticker() = default;
 
 
@@ -38,8 +36,6 @@ namespace AsyncRuntime {
          * @return
          */
         std::shared_ptr<Result<bool >> AsyncTick();
-        std::shared_ptr<Result<bool >> AsyncTick(const ExecutorState& executor_state);
-        std::shared_ptr<Result<bool >> AsyncTick(CoroutineHandler* handler);
     private:
         Timespan                        last_tick_ts;
         Timespan                        delay;

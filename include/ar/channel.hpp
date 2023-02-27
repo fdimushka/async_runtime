@@ -163,9 +163,9 @@ namespace AsyncRuntime {
 
     template<typename T>
     std::shared_ptr<Result<T*>> Watcher<T>::AsyncReceive() {
-        std::lock_guard<std::mutex> lock(mutex);
         auto v = queue.steal();
         if(!v) {
+            std::lock_guard<std::mutex> lock(mutex);
             //@TODO check and release prev async_result_
             async_result_ = std::make_shared<Result<T*>>();
             return async_result_;

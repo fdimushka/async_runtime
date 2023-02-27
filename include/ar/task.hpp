@@ -13,11 +13,11 @@
 #include "ar/object.hpp"
 #include "ar/logger.hpp"
 #include "ar/timestamp.hpp"
-#include "ar/resource.hpp"
 
 
 namespace AsyncRuntime {
     class Task;
+    class Processor;
     class IExecutor;
 
 
@@ -26,11 +26,11 @@ namespace AsyncRuntime {
      * @brief
      */
     template<class Ret>
-    class Result {
+    class Result
+    {
         friend class runtime;
-
     public:
-        typedef std::function<void(void *)> resume_cb_t;
+        typedef std::function<void(void*)> resume_cb_t;
         typedef Ret RetType;
 
         explicit Result() : excepted(false) {
@@ -40,20 +40,17 @@ namespace AsyncRuntime {
 
 
         template<typename T>
-        explicit Result(T &&v) : excepted(false) {
+        explicit Result(T && v) : excepted(false) {
             resolved.store(true, std::memory_order_relaxed);
             future = promise.get_future();
             promise.set_value(v);
         };
 
 
-        Result(const Result &other) = delete;
-
-        Result &operator=(const Result &other) = delete;
-
-        Result(Result &&other) = delete;
-
-        Result &operator=(Result &&other) = delete;
+        Result(const Result& other) = delete;
+        Result& operator =(const Result& other) = delete;
+        Result(Result&& other) = delete;
+        Result& operator =(Result&& other) = delete;
 
 
         ~Result() = default;
@@ -63,13 +60,13 @@ namespace AsyncRuntime {
          * @brief
          * @param function
          */
-        bool Then(const resume_cb_t &cb, void *opaque = nullptr) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!resolved.load(std::memory_order_relaxed)) {
+        bool Then(const resume_cb_t& cb, void* opaque = nullptr) {
+            std::lock_guard<std::mutex>   lock(resolve_mutex);
+            if(!resolved.load(std::memory_order_relaxed)) {
                 completed_opaque = opaque;
                 completed_cb = cb;
                 return true;
-            } else {
+            }else{
                 return false;
             }
         }
@@ -78,8 +75,8 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        Result<Ret> *Wait() {
-            if (!resolved.load(std::memory_order_relaxed)) {
+        Result<Ret>* Wait() {
+            if(!resolved.load(std::memory_order_relaxed)) {
                 if (future.valid())
                     future.wait();
             }
@@ -93,9 +90,9 @@ namespace AsyncRuntime {
          * @param v
          */
         template<typename T>
-        void SetValue(T &&v) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
+        void SetValue(T && v) {
+            std::lock_guard<std::mutex>   lock(resolve_mutex);
+            if(!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value(v);
 
@@ -112,8 +109,8 @@ namespace AsyncRuntime {
          * @param v
          */
         void SetValue() {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
+            std::lock_guard<std::mutex>   lock(resolve_mutex);
+            if(!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value();
 
@@ -130,7 +127,7 @@ namespace AsyncRuntime {
          * @param __p
          */
         void SetException(std::exception_ptr e) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
+            std::lock_guard<std::mutex>   lock(resolve_mutex);
             resolved.store(true, std::memory_order_relaxed);
             promise.set_exception(e);
             excepted = true;
@@ -142,7 +139,7 @@ namespace AsyncRuntime {
          * @return
          */
         Ret Get() {
-            if (future.valid()) {
+            if(future.valid()) {
                 return future.get();
             } else {
                 throw std::runtime_error("invalid future");
@@ -165,15 +162,14 @@ namespace AsyncRuntime {
             bool res = resolved.load(std::memory_order_relaxed);
             return res;
         }
-
     protected:
-        std::future<Ret> future;
-        resume_cb_t completed_cb;
-        void *completed_opaque{};
-        std::promise<Ret> promise;
-        std::atomic_bool resolved{};
-        std::mutex resolve_mutex;
-        bool excepted;
+        std::future<Ret>                    future;
+        resume_cb_t                         completed_cb;
+        void*                               completed_opaque{};
+        std::promise<Ret>                   promise;
+        std::atomic_bool                    resolved{};
+        std::mutex                          resolve_mutex;
+        bool                                excepted;
     };
 
 
@@ -181,9 +177,9 @@ namespace AsyncRuntime {
      * @brief
      */
     struct ExecutorState {
-        IExecutor *executor = nullptr;
-        ObjectID work_group = INVALID_OBJECT_ID;
-        ObjectID processor = INVALID_OBJECT_ID;
+        IExecutor*  executor = nullptr;
+        Processor*  processor = nullptr;
+        void*       data = nullptr;
     };
 
 
@@ -191,59 +187,56 @@ namespace AsyncRuntime {
      * @class TaskImplBase
      * @brief Task interface
      */
-    class Task {
+    class Task
+    {
         friend class runtime;
-
     public:
-        struct LessThanByDelay {
-            bool operator()(const Task *lhs, const Task *rhs) const {
+        struct LessThanByDelay
+        {
+            bool operator()(const Task* lhs, const Task* rhs) const {
                 return lhs->GetDelay() > rhs->GetDelay();
             }
         };
 
         Task() : origin_id_(0), delayed(false), delay(0), start_time(TIMESTAMP_NOW_MICRO()) {};
-
         virtual ~Task() = default;
+        virtual void Execute(const ExecutorState& executor) = 0;
 
-        virtual void Execute(const ExecutorState &executor) = 0;
 
         template<typename Rep, typename T>
         void SetDelay(T time) {
-            if (time > 0) {
+            if(time > 0) {
                 delayed = true;
                 delay = Timestamp::Cast<Rep, Timestamp::Micro>(time);
                 start_time = TIMESTAMP_NOW_MICRO() + delay;
             }
         }
 
-        void SetOriginId(uintptr_t origin_id);
-
-        void SetExecutorState(const ExecutorState &executor) { executor_state = executor; }
-
-        void SetWorkGroupExecutorState(const ObjectID &group);
-
-        void SetProcessorExecutorState(const ObjectID &processor) { executor_state.processor = processor; }
-
-        void SetExecutorExecutorState(IExecutor *executor) { executor_state.executor = executor; }
-
 
         [[nodiscard]] bool Delayed() const { return delayed; }
+        [[nodiscard]] Timespan GetDelay() const {
+            if(!delayed) return 0;
+            return start_time - TIMESTAMP_NOW_MICRO();
+        }
 
-        [[nodiscard]] Timespan GetDelay() const;
 
+        void SetOriginId(uintptr_t origin_id) { origin_id_ = origin_id; }
         [[nodiscard]] uintptr_t GetOriginId() const { return origin_id_; }
 
-        [[nodiscard]] const ExecutorState &GetExecutorState() const { return executor_state; }
+
+        void SetDesirableExecutor(const ExecutorState& executor_) { desirable_executor = executor_; }
+        [[nodiscard]] const ExecutorState& GetDesirableExecutor() const { return desirable_executor; }
 
 #ifdef USE_TESTS
         Timespan delay;
 #else
-        protected:
-            Timespan delay;
+    protected:
+        Timespan delay;
 #endif
 
     protected:
-        ExecutorState executor_state;
+        ExecutorState executor;
+        ExecutorState desirable_executor;
         uintptr_t origin_id_;
         bool delayed;
         Timespan start_time;
@@ -254,26 +247,27 @@ namespace AsyncRuntime {
      * @class Task
      * @brief Task container
      */
-    template<class Callable>
-    class TaskImpl : public Task {
-        typedef typename std::result_of<Callable(const ExecutorState &)>::type return_type;
+    template < class Callable  >
+    class TaskImpl : public Task
+    {
+        typedef typename std::result_of<Callable(const ExecutorState&)>::type return_type;
     public:
-        explicit TaskImpl(Callable &&f) :
+        explicit TaskImpl(Callable&& f) :
                 Task(),
                 fn(f),
-                result(new Result<return_type>()) {};
+                result(new Result<return_type>() ){ };
 
         ~TaskImpl() override = default;
 
 
-        void Execute(const ExecutorState &executor_) override {
+        void Execute(const ExecutorState& executor_) override {
             try {
-                executor_state = executor_;
+                executor = executor_;
                 Handle(result.get(), fn);
-            } catch (...) {
+            } catch(...) {
                 try {
                     result->SetException(std::current_exception());
-                } catch (...) {}
+                } catch(...) { }
             }
         }
 
@@ -281,7 +275,6 @@ namespace AsyncRuntime {
         std::shared_ptr<Result<return_type>> GetResult() {
             return result;
         }
-
     private:
         /**
          * @brief handle non-void here
@@ -291,8 +284,9 @@ namespace AsyncRuntime {
          * @param f
          */
         template<typename F, typename R>
-        void Handle(Result<R> *r, F &&f) {
-            auto res = f(executor_state);
+        void Handle(Result<R>* r, F && f)
+        {
+            auto res = f(executor);
             r->SetValue(res);
         }
 
@@ -304,32 +298,33 @@ namespace AsyncRuntime {
          * @param f
          */
         template<typename F>
-        void Handle(Result<void> *r, F &&f) {
-            f(executor_state);
+        void Handle(Result<void>* r, F && f)
+        {
+            f(executor);
             r->SetValue();
         }
 
 
-        Callable fn;
-        std::shared_ptr<Result<return_type>> result;
+        Callable                                                        fn;
+        std::shared_ptr<Result<return_type>>                            result;
     };
 
 
-    class DummyTaskImpl : public Task {
+    class DummyTaskImpl : public Task
+    {
     public:
-        explicit DummyTaskImpl() : result(new Result<void>()) {};
-
+        explicit DummyTaskImpl() : result(new Result<void>() ){ };
         ~DummyTaskImpl() override = default;
 
 
-        void Execute(const ExecutorState &executor_) override {
+        void Execute(const ExecutorState& executor_) override {
             try {
-                executor_state = executor_;
+                executor = executor_;
                 result->SetValue();
-            } catch (...) {
+            } catch(...) {
                 try {
                     result->SetException(std::current_exception());
-                } catch (...) {}
+                } catch(...) { }
             }
         }
 
@@ -337,11 +332,10 @@ namespace AsyncRuntime {
         std::shared_ptr<Result<void>> GetResult() {
             return result;
         }
-
     private:
 
 
-        std::shared_ptr<Result<void>> result;
+        std::shared_ptr<Result<void>>                                   result;
     };
 
 
@@ -352,7 +346,7 @@ namespace AsyncRuntime {
      * @return
      */
     template<class Fn>
-    inline TaskImpl<Fn> *MakeTask(Fn &&f) {
+    inline TaskImpl<Fn>* MakeTask(Fn &&f) {
         return new TaskImpl(std::forward<Fn>(f));
     }
 
@@ -361,12 +355,12 @@ namespace AsyncRuntime {
      * @brief
      * @return
      */
-    inline DummyTaskImpl *MakeDummyTask() {
+    inline DummyTaskImpl* MakeDummyTask() {
         return new DummyTaskImpl();
     }
 
 
-    typedef std::shared_ptr<Result<void>> ResultVoidPtr;
+    typedef std::shared_ptr<Result<void>>   ResultVoidPtr;
 }
 
 

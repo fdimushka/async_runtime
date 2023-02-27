@@ -31,6 +31,7 @@ namespace AsyncRuntime {
          * @param newT
          */
         void write(const T& item);
+        void write(T&& item);
 
 
         /**
@@ -57,10 +58,9 @@ namespace AsyncRuntime {
     template <typename T>
     TripleBuffer<T>::TripleBuffer()
     {
-        T dummy = T();
-        buffer[0] = dummy;
-        buffer[1] = dummy;
-        buffer[2] = dummy;
+        buffer[0] = T();
+        buffer[1] = T();
+        buffer[2] = T();
         flags.store(0x6, std::memory_order_relaxed); // initially dirty = 0, clean = 1 and snap = 2
     }
 
@@ -90,6 +90,15 @@ namespace AsyncRuntime {
                                            std::memory_order_consume));
     }
 
+    template<typename T>
+    void TripleBuffer<T>::write(T &&item) {
+        buffer[(flags.load(std::memory_order_consume) & 0x30) >> 4] = std::move(item);
+        uint8_t flagsNow(flags.load(std::memory_order_consume));
+        while(!flags.compare_exchange_weak(flagsNow,
+                                           newWriteSwapCleanWithDirty(flagsNow),
+                                           std::memory_order_release,
+                                           std::memory_order_consume));
+    }
 
     template <typename T>
     bool TripleBuffer<T>::isUpdate() {

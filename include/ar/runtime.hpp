@@ -16,11 +16,6 @@ namespace AsyncRuntime {
     class Ticker;
 
 
-    struct RuntimeOptions {
-        std::vector<WorkGroupOption> work_groups_option = {};
-    };
-
-
     /**
      * @class Runtime
      * @brief runtime class
@@ -52,7 +47,7 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void Setup(const RuntimeOptions& options = {});
+        void Setup(/*...*/);
         void Terminate();
 
 
@@ -137,45 +132,13 @@ namespace AsyncRuntime {
         /**
          * @brief
          * @tparam Ret
-         * @param results
-         * @return
-         */
-//        template< class Ret >
-//        std::vector<Ret> Await(std::vector<std::shared_ptr<Result<Ret>>> results);
-
-
-        /**
-         * @brief
-         * @tparam Ret
          * @param awaiter
          * @param context
          * @return
          */
         template< class Ret, class Res >
         Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
-
-
-        [[nodiscard]] const Executor* GetMainExecutor() const { return main_executor; }
-        Executor* GetMainExecutor() { return main_executor; }
-
-
-        template< typename ExecutorType>
-        const ExecutorType* GetExecutor() const {
-            const std::type_info& eti = typeid(ExecutorType);
-            return ((ExecutorType*)executors.at(eti.hash_code()));
-        }
-
-
-        template< typename ExecutorType>
-        ExecutorType* GetExecutor() {
-            const std::type_info& eti = typeid(ExecutorType);
-            return ((ExecutorType*)executors.at(eti.hash_code()));
-        }
-
-
-        ObjectID GetWorkGroup(const std::string& name) const;
     private:
-        void SetupWorkGroups(const std::vector<WorkGroupOption>& work_groups_option);
         void CheckRuntime();
 
 
@@ -192,7 +155,6 @@ namespace AsyncRuntime {
         void CreateDefaultExecutors();
 
 
-        std::vector<WorkGroupOption>                work_groups_option;
         std::map<size_t , IExecutor*>               executors;
         Executor*                                   main_executor;
         IOExecutor*                                 io_executor;
@@ -286,19 +248,6 @@ namespace AsyncRuntime {
     }
 
 
-//    template< class Ret >
-//    std::vector<Ret> Runtime::Await(std::vector<std::shared_ptr<Result<Ret>>> results) {
-//        CheckRuntime();
-//        std::vector<Ret> ret;
-//        for (const auto &result : results)
-//            result->Wait();
-//
-//        for (const auto &res : ret)
-//            ret.push_back(std::move(res->Get()));
-//        return std::move(ret);
-//    }
-
-
     template<class Ret, class Res>
     Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
         CheckRuntime();
@@ -331,8 +280,8 @@ namespace AsyncRuntime {
     /**
      * @brief
      */
-    inline void SetupRuntime(const RuntimeOptions& options = {}) {
-        return Runtime::g_runtime.Setup(options);
+    inline void SetupRuntime(/*args...*/) {
+        return Runtime::g_runtime.Setup();
     }
 
 
@@ -342,7 +291,6 @@ namespace AsyncRuntime {
     inline void Terminate() {
         return Runtime::g_runtime.Terminate();
     }
-
 
     /**
      * @brief
@@ -357,15 +305,6 @@ namespace AsyncRuntime {
         return Runtime::g_runtime.CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
     }
 
-
-    /**
-     * @brief
-     * @param name
-     * @return
-     */
-    inline ObjectID GetWorkGroup(const std::string &name) {
-        return Runtime::g_runtime.GetWorkGroup(name);
-    }
 
     /**
      * @brief
@@ -558,6 +497,7 @@ namespace AsyncRuntime {
         return Runtime::g_runtime.Await(result);
     }
 
+
     /**
      * @brief await
      * @tparam Ret
@@ -569,6 +509,19 @@ namespace AsyncRuntime {
     inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
         return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, handler);
     }
+
+
+    /**
+     * @brief
+     * @tparam Ret
+     * @param result
+     * @param handler
+     * @return
+     */
+//    template< class Ret >
+//    inline Ret Await(std::shared_ptr<ChannelReceiver<Ret>> result, CoroutineHandler* handler) {
+//        return Runtime::g_runtime.Await<Ret, ChannelReceiver<Ret>>(result, handler);
+//    }
 }
 
 
