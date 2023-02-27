@@ -15,9 +15,6 @@ include_directories(${CATCH_HEADER_DIR})
 link_directories(/usr/local/lib64/)
 
 
-find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
-
 # sources:
 file(GLOB EXAMPLES_SRC_CPP *.cpp)
 set(EXAMPLES_SRC ${EXAMPLES_SRC_CPP})
