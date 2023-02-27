@@ -1,0 +1,8 @@
+#ifndef AR_CONFIG_H
+#define AR_CONFIG_H
+
+#cmakedefine USE_TRACE
+#cmakedefine USE_TESTS
+#cmakedefine USE_PROFILER
+
+#endif

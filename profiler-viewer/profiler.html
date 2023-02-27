@@ -1,0 +1,45 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+</head>
+<style>
+    table, th, td {
+        border:1px solid black;
+    }
+</style>
+<body>
+<h2 style="width: 100%; text-align: center">App runtime profiler</h2>
+<h4>Profiling info</h4>
+<p id="application-info"></p>
+<p id="system-info"></p>
+<p id="profiling-interval-info"></p>
+<h4>Work time tracking</h4>
+<div id="chart" style="height: 500px; width: 100%;"></div>
+<h4>Call statistics</h4>
+<table id="call_stat" style="width:900px">
+    <tr>
+        <th style="width:30px">#</th>
+        <th style="width:800px">Method</th>
+        <th style="width:100px">Call count</th>
+        <th style="width:100px">max (ms)</th>
+        <th style="width:100px">avg (ms)</th>
+    </tr>
+</table>
+<h4>Coroutines statistics</h4>
+<table id="coro_stat" style="width:900px">
+    <tr>
+        <td style="width:800px">Coroutines count:</td>
+        <td id="coro_stat_count"></td>
+    </tr>
+</table>
+<h4>Threads</h4>
+<table id="threads" style="width:900px">
+    <tr>
+        <th style="width:100px">Number</th>
+        <th>ID</th>
+    </tr>
+</table>
+<script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+<script type="text/javascript" src="profiler.js"></script>
+</body>
+</html>
