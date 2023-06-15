@@ -151,8 +151,8 @@ namespace AsyncRuntime {
          * @param context
          * @return
          */
-        template< class Ret, class Res >
-        Ret Await(std::shared_ptr<Res> result, CoroutineHandler* handler);
+        template< class Ret >
+        Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler);
 
 
         [[nodiscard]] const Executor* GetMainExecutor() const { return main_executor; }
@@ -299,13 +299,13 @@ namespace AsyncRuntime {
 //    }
 
 
-    template<class Ret, class Res>
-    Ret Runtime::Await(std::shared_ptr<Res> result, CoroutineHandler* handler) {
+    template<class Ret>
+    Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
         CheckRuntime();
         assert(result);
         assert(handler != nullptr);
 
-        return Awaiter::Await(result, [this](void* p) {
+        return Awaiter::Await<Ret>(result, [this](Result<Ret> *r, void *p) {
             if(p != nullptr) {
                 auto resumed_coroutine = (CoroutineHandler*)p;
                 auto task = resumed_coroutine->MakeExecTask();
@@ -567,7 +567,7 @@ namespace AsyncRuntime {
      */
     template< class Ret >
     inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
-        return Runtime::g_runtime.Await<Ret, Result<Ret>>(result, handler);
+        return Runtime::g_runtime.Await<Ret>(result, handler);
     }
 }
 

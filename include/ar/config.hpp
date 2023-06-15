@@ -2,7 +2,7 @@
 #define AR_CONFIG_H
 
 /* #undef USE_TRACE */
-/* #undef USE_TESTS */
-/* #undef USE_PROFILER */
+#define USE_TESTS
+#define USE_PROFILER
 
 #endif

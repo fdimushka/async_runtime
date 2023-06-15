@@ -30,7 +30,7 @@ namespace AsyncRuntime {
         friend class runtime;
 
     public:
-        typedef std::function<void(void *)> resume_cb_t;
+        typedef std::function<void(Result<Ret> *, void *)> completed_cb_t;
         typedef Ret RetType;
 
         explicit Result() : excepted(false) {
@@ -63,7 +63,7 @@ namespace AsyncRuntime {
          * @brief
          * @param function
          */
-        bool Then(const resume_cb_t &cb, void *opaque = nullptr) {
+        bool Then(const completed_cb_t &cb, void *opaque = nullptr) {
             std::lock_guard<std::mutex> lock(resolve_mutex);
             if (!resolved.load(std::memory_order_relaxed)) {
                 completed_opaque = opaque;
@@ -100,7 +100,47 @@ namespace AsyncRuntime {
                 promise.set_value(v);
 
                 if (completed_cb)
-                    completed_cb(completed_opaque);
+                    completed_cb(this, completed_opaque);
+
+                completed_cb = nullptr;
+            }
+        }
+
+
+        /**
+         * @brief
+         * @tparam T
+         * @param v
+         */
+        template<typename T>
+        void SetValue(T &v) {
+            std::lock_guard<std::mutex> lock(resolve_mutex);
+            if (!excepted && !Resolved()) {
+                resolved.store(true, std::memory_order_relaxed);
+                promise.set_value(v);
+
+                if (completed_cb)
+                    completed_cb(this, completed_opaque);
+
+                completed_cb = nullptr;
+            }
+        }
+
+
+        /**
+         * @brief
+         * @tparam T
+         * @param v
+         */
+        template<typename T>
+        void SetValue(const T &v) {
+            std::lock_guard<std::mutex> lock(resolve_mutex);
+            if (!excepted && !Resolved()) {
+                resolved.store(true, std::memory_order_relaxed);
+                promise.set_value(v);
+
+                if (completed_cb)
+                    completed_cb(this, completed_opaque);
 
                 completed_cb = nullptr;
             }
@@ -118,7 +158,7 @@ namespace AsyncRuntime {
                 promise.set_value();
 
                 if (completed_cb)
-                    completed_cb(completed_opaque);
+                    completed_cb(this, completed_opaque);
 
                 completed_cb = nullptr;
             }
@@ -168,7 +208,7 @@ namespace AsyncRuntime {
 
     protected:
         std::future<Ret> future;
-        resume_cb_t completed_cb;
+        completed_cb_t completed_cb;
         void *completed_opaque{};
         std::promise<Ret> promise;
         std::atomic_bool resolved{};
