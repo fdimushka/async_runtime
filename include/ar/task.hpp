@@ -188,13 +188,7 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        Ret Get() {
-            if (future.valid()) {
-                return future.get();
-            } else {
-                throw std::runtime_error("invalid future");
-            }
-        }
+        Ret Get();
 
 
         /**
@@ -229,13 +223,31 @@ namespace AsyncRuntime {
 
         std::future<Ret> future;
         std::shared_ptr<CallbackControlBlock> callback_cb;
-        //completed_cb_t completed_cb;
-        //void *completed_opaque{};
         std::promise<Ret> promise;
         std::atomic_bool resolved{};
         std::mutex resolve_mutex;
         bool excepted;
     };
+
+
+    template<class Ret>
+    inline Ret Result<Ret>::Get() {
+        if (future.valid()) {
+            return std::move(future.get());
+        } else {
+            throw std::runtime_error("invalid future");
+        }
+    }
+
+
+    template<>
+    inline void Result<void>::Get() {
+        if (future.valid()) {
+            future.get();
+        } else {
+            throw std::runtime_error("invalid future");
+        }
+    }
 
 
     /**
