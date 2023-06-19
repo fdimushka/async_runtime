@@ -33,6 +33,21 @@ namespace AsyncRuntime {
         typedef std::function<void(Result<Ret> *, void *)> completed_cb_t;
         typedef Ret RetType;
 
+        class CallbackControlBlock {
+            friend Result;
+        public:
+            CallbackControlBlock(const completed_cb_t &cb, void *o = nullptr) : callback(cb), opaque(o) { }
+
+            void operator () (Result<Ret> *result) {
+                if (callback)
+                    callback(result, opaque);
+            }
+        private:
+            bool owner = true;
+            completed_cb_t callback;
+            void *opaque = nullptr;
+        };
+
         explicit Result() : excepted(false) {
             resolved.store(false, std::memory_order_relaxed);
             future = promise.get_future();
@@ -55,7 +70,6 @@ namespace AsyncRuntime {
 
         Result &operator=(Result &&other) = delete;
 
-
         ~Result() = default;
 
 
@@ -66,8 +80,18 @@ namespace AsyncRuntime {
         bool Then(const completed_cb_t &cb, void *opaque = nullptr) {
             std::lock_guard<std::mutex> lock(resolve_mutex);
             if (!resolved.load(std::memory_order_relaxed)) {
-                completed_opaque = opaque;
-                completed_cb = cb;
+                callback_cb = std::make_shared<CallbackControlBlock>(cb, opaque);
+                callback_cb->owner = false;
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        bool Then(const std::shared_ptr<CallbackControlBlock> & cb) {
+            std::lock_guard<std::mutex> lock(resolve_mutex);
+            if (!resolved.load(std::memory_order_relaxed)) {
+                callback_cb = cb;
                 return true;
             } else {
                 return false;
@@ -83,7 +107,6 @@ namespace AsyncRuntime {
                 if (future.valid())
                     future.wait();
             }
-
             return this;
         }
 
@@ -98,11 +121,7 @@ namespace AsyncRuntime {
             if (!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value(v);
-
-                if (completed_cb)
-                    completed_cb(this, completed_opaque);
-
-                completed_cb = nullptr;
+                InvokeCallback();
             }
         }
 
@@ -118,11 +137,7 @@ namespace AsyncRuntime {
             if (!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value(v);
-
-                if (completed_cb)
-                    completed_cb(this, completed_opaque);
-
-                completed_cb = nullptr;
+                InvokeCallback();
             }
         }
 
@@ -138,11 +153,7 @@ namespace AsyncRuntime {
             if (!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value(v);
-
-                if (completed_cb)
-                    completed_cb(this, completed_opaque);
-
-                completed_cb = nullptr;
+                InvokeCallback();
             }
         }
 
@@ -156,11 +167,7 @@ namespace AsyncRuntime {
             if (!excepted && !Resolved()) {
                 resolved.store(true, std::memory_order_relaxed);
                 promise.set_value();
-
-                if (completed_cb)
-                    completed_cb(this, completed_opaque);
-
-                completed_cb = nullptr;
+                InvokeCallback();
             }
         }
 
@@ -207,9 +214,23 @@ namespace AsyncRuntime {
         }
 
     protected:
+        void InvokeCallback() {
+            if (callback_cb) {
+                if (callback_cb->owner) {
+                    if ( callback_cb.use_count() > 1) {
+                        callback_cb->operator()(this);
+                    }
+                } else {
+                    callback_cb->operator()(this);
+                }
+            }
+        }
+
+
         std::future<Ret> future;
-        completed_cb_t completed_cb;
-        void *completed_opaque{};
+        std::shared_ptr<CallbackControlBlock> callback_cb;
+        //completed_cb_t completed_cb;
+        //void *completed_opaque{};
         std::promise<Ret> promise;
         std::atomic_bool resolved{};
         std::mutex resolve_mutex;
@@ -233,7 +254,6 @@ namespace AsyncRuntime {
      */
     class Task {
         friend class runtime;
-
     public:
         struct LessThanByDelay {
             bool operator()(const Task *lhs, const Task *rhs) const {

@@ -108,7 +108,7 @@ TCPSession::~TCPSession()
 
 void TCPSession::Accept()
 {
-    if(!accepted_) {
+    if (!accepted_) {
         int fd;
         int error = uv_accept(server_, (uv_stream_t *) client_);
         RNT_ASSERT_MSG(error == 0, FSErrorMsg(error));
