@@ -9,9 +9,9 @@
 
 namespace AsyncRuntime::Awaiter {
     template<class Ret>
-    Ret Await(std::shared_ptr<AsyncRuntime::Result<Ret>> result,
-              std::function<void(AsyncRuntime::Result<Ret> *, void *)> resume_cb,
-              CoroutineHandler* handler) {
+    inline Ret Await(std::shared_ptr<AsyncRuntime::Result<Ret>> result,
+                     std::function<void(AsyncRuntime::Result<Ret> *, void *)> resume_cb,
+                     CoroutineHandler* handler) {
         if (handler != nullptr) {
             if (result->Then(resume_cb, handler)) {
                 //suspend this
@@ -25,6 +25,25 @@ namespace AsyncRuntime::Awaiter {
         }
 
         return std::move(result->Get());
+    }
+
+    template<>
+    inline void Await(std::shared_ptr<AsyncRuntime::Result<void>> result,
+                      std::function<void(AsyncRuntime::Result<void> *, void *)> resume_cb,
+                      CoroutineHandler* handler) {
+        if (handler != nullptr) {
+            if (result->Then(resume_cb, handler)) {
+                //suspend this
+                handler->Suspend();
+                //resume this
+            }else{
+                result->Wait();
+            }
+        } else {
+            result->Wait();
+        }
+
+        result->Get();
     }
 }
 
