@@ -24,7 +24,7 @@ namespace AsyncRuntime::Awaiter {
             result->Wait();
         }
 
-        return result->Get();
+        return std::move(result->Get());
     }
 }
 
