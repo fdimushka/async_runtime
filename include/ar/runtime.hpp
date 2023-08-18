@@ -45,7 +45,7 @@ namespace AsyncRuntime {
          * @param executor
          */
         template < typename ExecutorType,
-                    class... Arguments >
+                class... Arguments >
         ExecutorType* CreateExecutor(Arguments&&... args);
 
 
@@ -65,7 +65,7 @@ namespace AsyncRuntime {
          * @return
          */
         template <  class Callable,
-                    class... Arguments >
+                class... Arguments >
         auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
 
 
@@ -79,7 +79,7 @@ namespace AsyncRuntime {
          * @return
          */
         template <  class Callable,
-                    class... Arguments >
+                class... Arguments >
         auto AsyncDelayed(Callable&& f, Timespan delay_ms, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>>;
 
 
@@ -104,10 +104,21 @@ namespace AsyncRuntime {
 
         /**
          * @brief
+         * @tparam ExecutorType
+         * @tparam TaskType
+         * @param task
+         */
+        template< typename ExecutorType,
+                typename TaskType >
+        inline void AsyncPostTask(TaskType *task);
+
+
+        /**
+         * @brief
          * @return
          */
         template< typename IOTaskType,
-                  class... Arguments >
+                class... Arguments >
         std::shared_ptr<Result<IOResult>> AsyncIO(Arguments&&... args);
 
 
@@ -253,7 +264,7 @@ namespace AsyncRuntime {
 
 
     template< typename IOTaskType,
-              class... Arguments >
+            class... Arguments >
     std::shared_ptr<Result<IOResult>> Runtime::AsyncIO(Arguments&&... args) {
         static_assert(std::is_base_of<IOTask, IOTaskType>::value, "ProcessorType must derive from IProcessor");
         CheckRuntime();
@@ -275,6 +286,14 @@ namespace AsyncRuntime {
         return result;
     }
 
+    template<typename ExecutorType, typename TaskType>
+    void Runtime::AsyncPostTask(TaskType *task) {
+        static_assert(std::is_base_of<Task, TaskType>::value, "TaskType must derive from Task");
+        CheckRuntime();
+        const std::type_info& eti = typeid(ExecutorType);
+        ((ExecutorType*)executors.at(eti.hash_code()))->Post(task);
+    }
+
 
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result) {
@@ -284,20 +303,6 @@ namespace AsyncRuntime {
         result->Wait();
         return result->Get();
     }
-
-
-//    template< class Ret >
-//    std::vector<Ret> Runtime::Await(std::vector<std::shared_ptr<Result<Ret>>> results) {
-//        CheckRuntime();
-//        std::vector<Ret> ret;
-//        for (const auto &result : results)
-//            result->Wait();
-//
-//        for (const auto &res : ret)
-//            ret.push_back(std::move(res->Get()));
-//        return std::move(ret);
-//    }
-
 
     template<class Ret>
     Ret Runtime::Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
@@ -352,7 +357,7 @@ namespace AsyncRuntime {
      * @return
      */
     template < typename ExecutorType,
-               class... Arguments >
+            class... Arguments >
     inline ExecutorType* CreateExecutor(Arguments&&... args) {
         return Runtime::g_runtime.CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
     }
@@ -376,7 +381,7 @@ namespace AsyncRuntime {
      * @return
      */
     template <  class Callable,
-                class... Arguments>
+            class... Arguments>
     inline auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
         return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
     }
@@ -389,6 +394,17 @@ namespace AsyncRuntime {
     template<class CoroutineType >
     inline std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine) {
         return Runtime::g_runtime.Async(coroutine);
+    }
+
+    /**
+     * @brief
+     * @tparam ExecutorType
+     * @tparam TaskType
+     * @param task
+     */
+    template<typename ExecutorType, typename TaskType>
+    inline void AsyncPostTask(TaskType *task) {
+        return Runtime::g_runtime.AsyncPostTask<ExecutorType, TaskType>(task);
     }
 
 
