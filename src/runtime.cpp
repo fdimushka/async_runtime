@@ -27,6 +27,8 @@ Runtime::~Runtime()
 
 void Runtime::Setup(const RuntimeOptions& _options)
 {
+    coroutine_counter = MakeMetricsCounter("coroutines_count", {"coroutines"});
+
     SetupWorkGroups(_options.work_groups_option);
 
     if(is_setup)
@@ -102,6 +104,13 @@ void Runtime::CreateDefaultExecutors()
     io_executor->Run();
 }
 
+std::shared_ptr<Mon::Counter> Runtime::MakeMetricsCounter(const std::string & name, const std::vector<std::string> &tags) {
+    if (metricer) {
+        return metricer->MakeCounter(name, tags);
+    } else {
+        return {};
+    }
+}
 
 void Runtime::Post(Task *task)
 {

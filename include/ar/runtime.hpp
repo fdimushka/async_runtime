@@ -10,6 +10,7 @@
 #include "ar/executor.hpp"
 #include "ar/io_task.hpp"
 #include "ar/io_executor.hpp"
+#include "ar/metricer.hpp"
 
 
 namespace AsyncRuntime {
@@ -28,6 +29,7 @@ namespace AsyncRuntime {
     class Runtime {
         friend class Processor;
         friend class Ticker;
+        friend class CoroutineHandler;
     public:
         static Runtime g_runtime;
 
@@ -47,6 +49,13 @@ namespace AsyncRuntime {
         template < typename ExecutorType,
                 class... Arguments >
         ExecutorType* CreateExecutor(Arguments&&... args);
+
+        /**
+         * @brief
+         * @tparam MetricerT
+         */
+        template< class CounterT >
+        void CreateMetricer(const std::vector<std::string> & tags);
 
 
         /**
@@ -185,6 +194,11 @@ namespace AsyncRuntime {
 
 
         ObjectID GetWorkGroup(const std::string& name) const;
+
+
+        std::shared_ptr< Mon::Counter > MakeMetricsCounter(const std::string & name, const std::vector<std::string> &tags);
+    protected:
+        std::shared_ptr<Mon::Counter>   coroutine_counter;
     private:
         void SetupWorkGroups(const std::vector<WorkGroupOption>& work_groups_option);
         void CheckRuntime();
@@ -208,6 +222,7 @@ namespace AsyncRuntime {
         Executor*                                   main_executor;
         IOExecutor*                                 io_executor;
         bool                                        is_setup;
+        std::unique_ptr<Mon::IMetricer>             metricer;
     };
 
 
@@ -332,6 +347,10 @@ namespace AsyncRuntime {
         return executor;
     }
 
+    template<class CounterT>
+    void Runtime::CreateMetricer(const std::vector<std::string> & tags) {
+        metricer = std::make_unique<Mon::Metricer<CounterT>>(tags);
+    }
 
     /**
      * @brief
@@ -362,6 +381,13 @@ namespace AsyncRuntime {
         return Runtime::g_runtime.CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
     }
 
+    /**
+     * @brief
+     */
+    template< class CounterT >
+    inline void CreateMetricer(const std::vector<std::string> & tags) {
+        Runtime::g_runtime.CreateMetricer<CounterT>(tags);
+    }
 
     /**
      * @brief
