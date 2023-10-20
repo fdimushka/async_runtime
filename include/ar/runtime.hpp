@@ -11,6 +11,7 @@
 #include "ar/io_task.hpp"
 #include "ar/io_executor.hpp"
 #include "ar/metricer.hpp"
+#include "ar/stream.hpp"
 
 
 namespace AsyncRuntime {
@@ -55,7 +56,7 @@ namespace AsyncRuntime {
          * @tparam MetricerT
          */
         template< class CounterT >
-        void CreateMetricer(const std::vector<std::string> & tags);
+        void CreateMetricer(const std::map<std::string, std::string> &labels);
 
 
         /**
@@ -195,8 +196,11 @@ namespace AsyncRuntime {
 
         ObjectID GetWorkGroup(const std::string& name) const;
 
+        EntityTag AddEntityTag(void *ptr);
 
-        std::shared_ptr< Mon::Counter > MakeMetricsCounter(const std::string & name, const std::vector<std::string> &tags);
+        void DeleteEntityTag(EntityTag tag);
+
+        std::shared_ptr< Mon::Counter > MakeMetricsCounter(const std::string & name, const std::map<std::string, std::string> &labels);
     protected:
         std::shared_ptr<Mon::Counter>   coroutine_counter;
     private:
@@ -217,12 +221,21 @@ namespace AsyncRuntime {
         void CreateDefaultExecutors();
 
 
+        /**
+         * @brief
+         * @param tag
+         * @return
+         */
+        IExecutor *FetchExecutor(const EntityTag & tag);
+
         std::vector<WorkGroupOption>                work_groups_option;
         std::map<size_t , IExecutor*>               executors;
+        std::map<EntityTag, IExecutor*>             entities_map;
         Executor*                                   main_executor;
         IOExecutor*                                 io_executor;
         bool                                        is_setup;
         std::unique_ptr<Mon::IMetricer>             metricer;
+        std::mutex                                  entities_mutex;
     };
 
 
@@ -348,8 +361,8 @@ namespace AsyncRuntime {
     }
 
     template<class CounterT>
-    void Runtime::CreateMetricer(const std::vector<std::string> & tags) {
-        metricer = std::make_unique<Mon::Metricer<CounterT>>(tags);
+    void Runtime::CreateMetricer(const std::map<std::string, std::string> &labels) {
+        metricer = std::make_unique<Mon::Metricer<CounterT>>(labels);
     }
 
     /**
@@ -385,8 +398,8 @@ namespace AsyncRuntime {
      * @brief
      */
     template< class CounterT >
-    inline void CreateMetricer(const std::vector<std::string> & tags) {
-        Runtime::g_runtime.CreateMetricer<CounterT>(tags);
+    inline void CreateMetricer(const std::map<std::string, std::string> &labels) {
+        Runtime::g_runtime.CreateMetricer<CounterT>(labels);
     }
 
     /**

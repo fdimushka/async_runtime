@@ -3,6 +3,8 @@
 
 #include "ar/processor.hpp"
 #include "ar/processor_group.hpp"
+#include "ar/metricer.hpp"
+#include "ar/cpu_helper.hpp"
 
 #ifdef USE_TESTS
 class EXECUTOR_TEST_FRIEND;
@@ -19,10 +21,31 @@ namespace AsyncRuntime {
         int                             priority = WG_PRIORITY_MEDIUM;
     };
 
+    enum ExecutorType {
+        kCPU_EXECUTOR,
+        kIO_EXECUTOR,
+        kUSER_EXECUTOR
+    };
 
     class IExecutor: public BaseObject {
     public:
+        IExecutor() = default;
+        explicit IExecutor(const std::string & name);
+
         virtual void Post(Task* task) = 0;
+
+        void IncrementEntitiesCount();
+
+        void DecrementEntitiesCount();
+
+        int GetEntitiesCount() const { return entities_count.load(std::memory_order_relaxed); }
+
+        ExecutorType GetType() const { return type; }
+    protected:
+        ExecutorType                                             type = kUSER_EXECUTOR;
+    private:
+        std::shared_ptr<Mon::Counter>                            m_entities_count;
+        std::atomic_int                                          entities_count;
     };
 
 
@@ -32,9 +55,10 @@ namespace AsyncRuntime {
         friend EXECUTOR_TEST_FRIEND;
 #endif
     public:
-        explicit Executor(std::string  name_,
-                          std::vector<WorkGroupOption> work_groups_option = {},
-                          uint max_processors_count_ = std::thread::hardware_concurrency());
+        Executor(std::string  name_,
+                 const std::vector<AsyncRuntime::CPU> & cpus,
+                 std::vector<WorkGroupOption> work_groups_option = {});
+
         ~Executor() override;
 
 
@@ -59,6 +83,7 @@ namespace AsyncRuntime {
         const std::vector<Processor*>& GetProcessors() const { return processors; }
     private:
         uint                                                     max_processors_count;
+        std::shared_ptr<Mon::Counter>                            processors_count;
         std::vector<Processor*>                                  processors;
         std::vector<ProcessorGroup*>                             processor_groups;
         std::vector<WorkGroupOption>                             processor_groups_option;

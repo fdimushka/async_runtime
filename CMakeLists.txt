@@ -11,6 +11,7 @@ option(WITH_EXAMPLES "Build with examples" ON)
 option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
+option(WITH_NUMA "Use numa topology" ON)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
 message(STATUS "Build with tests: ${WITH_TESTS}")
@@ -18,6 +19,7 @@ message(STATUS "Build with examples: ${WITH_EXAMPLES}")
 message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Build with profiler: ${WITH_PROFILER}")
+message(STATUS "Build with numa: ${WITH_NUMA}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
@@ -34,6 +36,10 @@ endif()
 if (WITH_PROFILER)
     set(USE_PROFILER ON)
     include(cmake/flatbuffers.cmake)
+endif()
+
+if (WITH_NUMA)
+    set(USE_NUMA ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -77,6 +83,10 @@ include_directories(third_party)
 add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
 target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES} flatbuffers)
+
+if (WITH_NUMA)
+    target_link_libraries(${LIB_NAME} numa)
+endif()
 
 if (WITH_PROFILER)
     add_custom_target(

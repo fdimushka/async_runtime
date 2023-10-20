@@ -6,6 +6,7 @@
 #include "ar/work_steal_queue.hpp"
 #include "ar/task.hpp"
 #include "ar/notifier.hpp"
+#include "ar/cpu_helper.hpp"
 
 #include <map>
 #include <set>
@@ -31,7 +32,7 @@ namespace AsyncRuntime {
             WAIT            =2,
         };
 
-        explicit Processor(int id = -1);
+        explicit Processor(const CPU & cpu);
         ~Processor() override;
 
 
@@ -100,6 +101,7 @@ namespace AsyncRuntime {
         bool IsStealGlobal();
         std::optional<Task*> StealGlobal();
     private:
+        CPU                                         cpu;
         std::vector<ProcessorGroup *>               groups;
 
         ThreadExecutor                              thread_executor;

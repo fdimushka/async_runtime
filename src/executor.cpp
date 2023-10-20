@@ -1,16 +1,46 @@
 #include "ar/executor.hpp"
 #include "ar/logger.hpp"
+#include "ar/runtime.hpp"
 #include <utility>
 
 using namespace AsyncRuntime;
 
-Executor::Executor(std::string name_, std::vector<WorkGroupOption> work_groups_option, uint max_processors_count_) :
+
+IExecutor::IExecutor(const std::string & name) {
+    m_entities_count = Runtime::g_runtime.MakeMetricsCounter("entities_count", {
+            {"executor", name}
+    });
+
+    if (m_entities_count) {
+        m_entities_count->Increment(0);
+    }
+}
+
+
+void IExecutor::IncrementEntitiesCount() {
+    m_entities_count->Increment();
+    entities_count.fetch_add(1, std::memory_order_relaxed);
+}
+
+
+void IExecutor::DecrementEntitiesCount() {
+    m_entities_count->Decrement();
+    if (entities_count.fetch_sub(1, std::memory_order_relaxed) <= 0) {
+        entities_count.store(0, std::memory_order_relaxed);
+    }
+}
+
+
+Executor::Executor(std::string  name_,
+                   const std::vector<AsyncRuntime::CPU> & cpus,
+                   std::vector<WorkGroupOption> work_groups_option) :
         name(std::move(name_)),
         processor_groups_option(std::move(work_groups_option)),
-        max_processors_count(max_processors_count_)
+        max_processors_count(cpus.size())
 {
-    for (int i = 0; i < max_processors_count; ++i) {
-        auto *processor = new Processor(i);
+    type = kCPU_EXECUTOR;
+    for (const auto & cpu : cpus) {
+        auto *processor = new Processor(cpu);
         processors.push_back(processor);
     }
 
@@ -24,6 +54,14 @@ Executor::Executor(std::string name_, std::vector<WorkGroupOption> work_groups_o
 
     for (auto processor: processors) {
         processor->Run();
+    }
+
+    processors_count = Runtime::g_runtime.MakeMetricsCounter("processors_count", {
+            {"executor", name}
+    });
+
+    if (processors_count) {
+        processors_count->Increment(static_cast<double>(processors.size()));
     }
 }
 
@@ -42,7 +80,6 @@ Executor::~Executor() {
 
     processor_groups.clear();
 }
-
 
 void Executor::Post(Task *task) {
     const auto &execute_state = task->GetExecutorState();

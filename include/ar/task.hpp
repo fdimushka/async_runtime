@@ -14,6 +14,7 @@
 #include "ar/logger.hpp"
 #include "ar/timestamp.hpp"
 #include "ar/resource.hpp"
+#include "ar/stream.hpp"
 
 
 namespace AsyncRuntime {
@@ -254,6 +255,7 @@ namespace AsyncRuntime {
      * @brief
      */
     struct ExecutorState {
+        EntityTag entity_tag = INVALID_OBJECT_ID;
         IExecutor *executor = nullptr;
         ObjectID work_group = INVALID_OBJECT_ID;
         ObjectID processor = INVALID_OBJECT_ID;

@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <memory>
 
+#include "ar/cpu_helper.hpp"
+
 namespace AsyncRuntime {
 
 
@@ -42,8 +44,15 @@ namespace AsyncRuntime {
         template<class Fn, class ... Args>
         void Submit(Fn&& fn, Args&& ... args)
         {
-            threads.emplace_back(std::move(std::thread(std::forward<Fn>(fn), std::forward<Args>(args)...)));
+            thread = std::move(std::thread(std::forward<Fn>(fn), std::forward<Args>(args)...));
         }
+
+
+        /**
+         * @brief
+         * @param affinity_cpu
+         */
+        int SetAffinity(const CPU & affinity_cpu);
 
 
         /**
@@ -56,16 +65,16 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        [[nodiscard]] const std::vector<std::thread>& GetThreads() const { return threads; }
+        [[nodiscard]] const std::thread& GetThread() const { return thread; }
 
 
         /**
          * @brief
          * @return
          */
-        [[nodiscard]] std::vector<std::thread::id> GetThreadIds() const;
+        [[nodiscard]] std::thread::id GetThreadId() const { return thread.get_id(); }
     private:
-        std::vector<std::thread>     threads;
+        std::thread     thread;
     };
 
 

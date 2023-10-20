@@ -10,6 +10,7 @@
 #include "ar/work_steal_queue.hpp"
 #include "ar/thread_executor.hpp"
 #include "ar/scheduler.hpp"
+#include "ar/metricer.hpp"
 
 namespace AsyncRuntime {
 #define WG_PRIORITY_LOW                 0
@@ -41,6 +42,7 @@ namespace AsyncRuntime {
         [[nodiscard]] double GetUtil() const { return util; }
         [[nodiscard]] ObjectID GetID() const { return id; }
     private:
+        std::shared_ptr<Mon::Counter>   m_processors_count;
         std::vector<Processor*>         processors;
         std::shared_ptr<Scheduler>      scheduler;
         ObjectID                        id;

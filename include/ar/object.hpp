@@ -16,6 +16,7 @@
 
 namespace AsyncRuntime {
     typedef std::uintptr_t ObjectID;
+    typedef std::uintptr_t EntityTag;
 #define INVALID_OBJECT_ID UINT_MAX
 
 

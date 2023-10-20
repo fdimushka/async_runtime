@@ -9,6 +9,7 @@
 #include "ar/stack.hpp"
 #include "ar/context_switcher.hpp"
 #include "ar/processor_group.hpp"
+#include "ar/stream.hpp"
 //#include "ar/profiler.hpp"
 
 
@@ -285,9 +286,19 @@ namespace AsyncRuntime {
             executor_state.work_group = wg;
         }
 
+        void SetEntityTag(EntityTag tag) {
+            entity_tag = tag;
+            executor_state.entity_tag = tag;
+        }
+
 
         const ExecutorState& GetExecutorState() const override {
             return executor_state;
+        }
+
+
+        EntityTag GetEntityTag() const {
+            return entity_tag;
         }
 
 
@@ -316,6 +327,7 @@ namespace AsyncRuntime {
 
             state.store(kExecuting, std::memory_order_relaxed);
             executor_state = executor_;
+            executor_state.entity_tag = entity_tag;
             fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
         }
 
@@ -335,6 +347,7 @@ namespace AsyncRuntime {
         }
 
 
+        EntityTag                                           entity_tag = INVALID_OBJECT_ID;
         ExecutorState                                       executor_state;
         std::atomic_bool                                    is_completed;
         std::mutex                                          mutex;

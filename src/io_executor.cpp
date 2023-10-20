@@ -37,6 +37,7 @@ static void AsyncIOCb(uv_async_t* handle)
 
 IOExecutor::IOExecutor(std::string  name_) : name(std::move(name_))
 {
+    type = kIO_EXECUTOR;
     loop = uv_default_loop();
     uv_async_init(loop, &exit_handle, ExitAsyncCb);
 
@@ -83,9 +84,7 @@ void IOExecutor::Run()
 
 void IOExecutor::Loop()
 {
-    if(!loop_thread.GetThreads().empty())
-        ThreadRegistration(loop_thread.GetThreadIds().front());
-
+    ThreadRegistration(loop_thread.GetThreadId());
     uv_run(loop, UV_RUN_DEFAULT);
 }
 

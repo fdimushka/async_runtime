@@ -1,4 +1,5 @@
 #include "ar/processor_group.hpp"
+#include "ar/runtime.hpp"
 
 #include <utility>
 #include "ar/processor.hpp"
@@ -37,6 +38,14 @@ ProcessorGroup::ProcessorGroup(ObjectID _id,
         }
 
         current_prc = (current_prc + 1) % processors_count;
+    }
+
+    m_processors_count = Runtime::g_runtime.MakeMetricsCounter("processors_count", {
+            {"work_group", name}
+    });
+
+    if (m_processors_count) {
+        m_processors_count->Increment(static_cast<double>(processors.size()));
     }
 
     scheduler = std::make_shared<Scheduler>(processors);

@@ -4,5 +4,6 @@
 #cmakedefine USE_TRACE
 #cmakedefine USE_TESTS
 #cmakedefine USE_PROFILER
+#cmakedefine USE_NUMA
 
 #endif

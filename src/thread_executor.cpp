@@ -25,31 +25,17 @@ std::string ThreadHelper::GetName()
 }
 
 
-ThreadExecutor::~ThreadExecutor()
-{
+ThreadExecutor::~ThreadExecutor() {
     Join();
 }
 
 
-void ThreadExecutor::Join()
-{
-    for(auto& thread : threads)
-    {
-        if(thread.joinable())
-            thread.join();
-    }
-
-    threads.clear();
+void ThreadExecutor::Join() {
+    if(thread.joinable())
+        thread.join();
 }
 
 
-std::vector<std::thread::id> ThreadExecutor::GetThreadIds() const
-{
-    std::vector<std::thread::id> ids;
-
-    for(const auto &th : threads)
-        ids.push_back(th.get_id());
-
-    return std::move(ids);
+int ThreadExecutor::SetAffinity(const CPU & affinity_cpu) {
+    return AsyncRuntime::SetAffinity(thread, affinity_cpu);
 }
-

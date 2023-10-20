@@ -2,6 +2,7 @@
 #include "ar/io_executor.hpp"
 #include "ar/logger.hpp"
 #include "ar/profiler.hpp"
+#include "ar/cpu_helper.hpp"
 
 using namespace AsyncRuntime;
 
@@ -27,7 +28,7 @@ Runtime::~Runtime()
 
 void Runtime::Setup(const RuntimeOptions& _options)
 {
-    coroutine_counter = MakeMetricsCounter("coroutines_count", {"coroutines"});
+    coroutine_counter = MakeMetricsCounter("coroutines_count", {});
 
     SetupWorkGroups(_options.work_groups_option);
 
@@ -94,19 +95,75 @@ ObjectID Runtime::GetWorkGroup(const std::string &name) const {
 
 void Runtime::CreateDefaultExecutors()
 {
-    main_executor = CreateExecutor<Executor>(MAIN_EXECUTOR_NAME, work_groups_option);
+    auto nodes = GetNumaNodes();
+    std::vector<Executor*> cpu_executors;
+
+    for ( size_t i = 0; i < nodes.size(); ++i ) {
+        auto executor = new Executor("CPUExecutor_" + std::to_string(i), nodes[i].cpus, work_groups_option);
+        if (main_executor == nullptr) {
+            main_executor = executor;
+        }
+        executors.insert(std::make_pair(i, executor));
+        cpu_executors.push_back(executor);
+    }
+
+    if (main_executor == nullptr) {
+        throw std::runtime_error("main executor not setup");
+    }
+
     io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
 
-    for(const auto &processor : main_executor->GetProcessors()) {
-        io_executor->ThreadRegistration(processor->GetThreadId());
+    for (const auto executor : cpu_executors) {
+        for (const auto &processor: executor->GetProcessors()) {
+            io_executor->ThreadRegistration(processor->GetThreadId());
+        }
     }
 
     io_executor->Run();
 }
 
-std::shared_ptr<Mon::Counter> Runtime::MakeMetricsCounter(const std::string & name, const std::vector<std::string> &tags) {
+EntityTag Runtime::AddEntityTag(void *ptr) {
+    std::lock_guard<std::mutex> lock(entities_mutex);
+    auto tag = reinterpret_cast<std::uintptr_t>(ptr);
+    IExecutor *min_executor = nullptr;
+    int min = INT_MAX;
+
+    for (auto & executor : executors) {
+        if (executor.second->GetType() == kCPU_EXECUTOR && min > executor.second->GetEntitiesCount()) {
+            min = executor.second->GetEntitiesCount();
+            min_executor = executor.second;
+        }
+    }
+
+    if (min_executor != nullptr) {
+        entities_map.insert(std::make_pair(tag, min_executor));
+        return tag;
+    } else {
+        return INVALID_OBJECT_ID;
+    }
+}
+
+void Runtime::DeleteEntityTag(EntityTag tag) {
+    std::lock_guard<std::mutex> lock(entities_mutex);
+    auto it = entities_map.find(tag);
+    if (it != entities_map.end()) {
+        entities_map.erase(it);
+    }
+}
+
+IExecutor *Runtime::FetchExecutor(const EntityTag & tag) {
+    std::lock_guard<std::mutex> lock(entities_mutex);
+    auto it = entities_map.find(tag);
+    if (it != entities_map.end()) {
+        return it->second;
+    } else {
+        return nullptr;
+    }
+}
+
+std::shared_ptr<Mon::Counter> Runtime::MakeMetricsCounter(const std::string & name, const std::map<std::string, std::string> &labels) {
     if (metricer) {
-        return metricer->MakeCounter(name, tags);
+        return metricer->MakeCounter(name, labels);
     } else {
         return {};
     }
@@ -116,7 +173,16 @@ void Runtime::Post(Task *task)
 {
     const auto& executor_state = task->GetExecutorState();
     if(executor_state.executor == nullptr) {
-        main_executor->Post(task);
+        if (executor_state.entity_tag != INVALID_OBJECT_ID) {
+            auto executor = FetchExecutor(executor_state.entity_tag);
+            if (executor != nullptr) {
+                executor->Post(task);
+            } else {
+                main_executor->Post(task);
+            }
+        } else {
+            main_executor->Post(task);
+        }
     }else{
         executor_state.executor->Post(task);
     }

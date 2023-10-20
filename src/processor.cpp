@@ -7,22 +7,25 @@
 
 using namespace AsyncRuntime;
 
-Processor::Processor(int new_id) :
+Processor::Processor(const CPU & cpu) :
         BaseObject(),
         local_run_queue(MAX_GROUPS_COUNT),
         is_continue{true},
         notify_count{0},
         state{IDLE} {
 
-    if (new_id >= 0) {
-        id = new_id;
-    }
+    id = cpu.id;
 
     thread_executor.Submit([this] {
         PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
         Work();
         PROFILER_ADD_EVENT(1, Profiler::DELETE_THREAD);
     });
+
+    int error = thread_executor.SetAffinity(cpu);
+    if (error != 0) {
+        AR_LOG_SS(Warning, "Processor thread not affinity to cpu: " << cpu.id)
+    }
 }
 
 
@@ -55,11 +58,7 @@ Processor::State Processor::GetState()
 
 std::thread::id Processor::GetThreadId() const
 {
-    if (!thread_executor.GetThreads().empty()) {
-        return thread_executor.GetThreadIds().front();
-    } else {
-        return std::this_thread::get_id();
-    }
+    return thread_executor.GetThreadId();
 }
 
 
