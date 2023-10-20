@@ -30,7 +30,7 @@ namespace AsyncRuntime {
     class IExecutor: public BaseObject {
     public:
         IExecutor() = default;
-        explicit IExecutor(const std::string & name);
+        explicit IExecutor(const std::string & name, ExecutorType executor_type);
 
         virtual void Post(Task* task) = 0;
 

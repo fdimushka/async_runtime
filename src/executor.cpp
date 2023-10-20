@@ -6,7 +6,7 @@
 using namespace AsyncRuntime;
 
 
-IExecutor::IExecutor(const std::string & name) {
+IExecutor::IExecutor(const std::string & name, ExecutorType executor_type) : type(executor_type) {
     m_entities_count = Runtime::g_runtime.MakeMetricsCounter("entities_count", {
             {"executor", name}
     });
@@ -18,13 +18,19 @@ IExecutor::IExecutor(const std::string & name) {
 
 
 void IExecutor::IncrementEntitiesCount() {
-    m_entities_count->Increment();
+    if (m_entities_count) {
+        m_entities_count->Increment();
+    }
+
     entities_count.fetch_add(1, std::memory_order_relaxed);
 }
 
 
 void IExecutor::DecrementEntitiesCount() {
-    m_entities_count->Decrement();
+    if (m_entities_count) {
+        m_entities_count->Decrement();
+    }
+
     if (entities_count.fetch_sub(1, std::memory_order_relaxed) <= 0) {
         entities_count.store(0, std::memory_order_relaxed);
     }
@@ -34,11 +40,11 @@ void IExecutor::DecrementEntitiesCount() {
 Executor::Executor(std::string  name_,
                    const std::vector<AsyncRuntime::CPU> & cpus,
                    std::vector<WorkGroupOption> work_groups_option) :
+        IExecutor(name_, kCPU_EXECUTOR),
         name(std::move(name_)),
         processor_groups_option(std::move(work_groups_option)),
         max_processors_count(cpus.size())
 {
-    type = kCPU_EXECUTOR;
     for (const auto & cpu : cpus) {
         auto *processor = new Processor(cpu);
         processors.push_back(processor);
