@@ -20,5 +20,5 @@ jobs:
     - name: make
       run: |
         mkdir build && cd build
-        cmake ..
+        cmake -DWITH_NUMA=OFF ..
         make
