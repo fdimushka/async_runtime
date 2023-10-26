@@ -7,14 +7,14 @@
 
 using namespace AsyncRuntime;
 
-Processor::Processor(const CPU & cpu) :
+Processor::Processor(int pid, const CPU & cpu) :
         BaseObject(),
         local_run_queue(MAX_GROUPS_COUNT),
         is_continue{true},
         notify_count{0},
         state{IDLE} {
 
-    id = cpu.id;
+    id = pid;
 
     thread_executor.Submit([this] {
         PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);

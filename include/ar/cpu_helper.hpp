@@ -20,6 +20,7 @@ namespace AsyncRuntime {
 
     std::vector<CPU> GetCPUs();
     std::vector<NumaNode> GetNumaNodes();
+    std::vector<NumaNode> GetManualNumaNodes(int count);
 }
 
 #endif //AR_CPU_HELPER_HPP

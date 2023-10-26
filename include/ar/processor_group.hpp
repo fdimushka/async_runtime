@@ -30,7 +30,7 @@ namespace AsyncRuntime {
 
         ProcessorGroup(ObjectID id,
                        const std::vector<Processor*>& processor,
-                       std::string  name, double util,  double cap, int priority = 0);
+                       std::string  name, const std::string & executor_name, double util,  double cap, int priority = 0);
         ~ProcessorGroup() = default;
 
         void Post(Task *task);

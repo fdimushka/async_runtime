@@ -41,11 +41,14 @@ namespace AsyncRuntime {
         int GetEntitiesCount() const { return entities_count.load(std::memory_order_relaxed); }
 
         ExecutorType GetType() const { return type; }
+
+        const std::string & GetName() const { return name; }
     protected:
+        std::string                                              name;
         ExecutorType                                             type = kUSER_EXECUTOR;
     private:
         std::shared_ptr<Mon::Counter>                            m_entities_count;
-        std::atomic_int                                          entities_count;
+        std::atomic_int                                          entities_count = {0};
     };
 
 
@@ -55,7 +58,7 @@ namespace AsyncRuntime {
         friend EXECUTOR_TEST_FRIEND;
 #endif
     public:
-        Executor(std::string  name_,
+        Executor(const std::string & name_,
                  const std::vector<AsyncRuntime::CPU> & cpus,
                  std::vector<WorkGroupOption> work_groups_option = {});
 
@@ -87,7 +90,6 @@ namespace AsyncRuntime {
         std::vector<Processor*>                                  processors;
         std::vector<ProcessorGroup*>                             processor_groups;
         std::vector<WorkGroupOption>                             processor_groups_option;
-        std::string                                              name;
         ProcessorGroup                                          *main_processor_group;
     };
 }

@@ -9,6 +9,7 @@ using namespace AsyncRuntime;
 ProcessorGroup::ProcessorGroup(ObjectID _id,
                                const std::vector<Processor*>& all_processor,
                                std::string _name,
+                               const std::string & executor_name,
                                double _util,
                                double _cap,
                                int _priority) :
@@ -41,7 +42,7 @@ ProcessorGroup::ProcessorGroup(ObjectID _id,
     }
 
     m_processors_count = Runtime::g_runtime.MakeMetricsCounter("processors_count", {
-            {"work_group", name}
+            {"work_group", name}, {"executor", executor_name}
     });
 
     if (m_processors_count) {

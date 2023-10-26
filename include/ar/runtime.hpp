@@ -20,6 +20,7 @@ namespace AsyncRuntime {
 
     struct RuntimeOptions {
         std::vector<WorkGroupOption> work_groups_option = {};
+        int virtual_numa_nodes_count = 0; //for debug
     };
 
 
@@ -218,7 +219,7 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void CreateDefaultExecutors();
+        void CreateDefaultExecutors(int virtual_numa_nodes_count = 0);
 
 
         /**
@@ -227,6 +228,7 @@ namespace AsyncRuntime {
          * @return
          */
         IExecutor *FetchExecutor(const EntityTag & tag);
+        IExecutor *FetchFreeExecutor(ExecutorType type);
 
         std::vector<WorkGroupOption>                work_groups_option;
         std::map<size_t , IExecutor*>               executors;
@@ -409,6 +411,23 @@ namespace AsyncRuntime {
      */
     inline ObjectID GetWorkGroup(const std::string &name) {
         return Runtime::g_runtime.GetWorkGroup(name);
+    }
+
+    /**
+     * @brief
+     * @param ptr
+     * @return
+     */
+    inline EntityTag AddEntityTag(void *ptr) {
+        return Runtime::g_runtime.AddEntityTag(ptr);
+    }
+
+    /**
+     * @brief
+     * @param tag
+     */
+    inline void DeleteEntityTag(EntityTag tag) {
+        return Runtime::g_runtime.DeleteEntityTag(tag);
     }
 
     /**

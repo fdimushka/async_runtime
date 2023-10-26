@@ -2,7 +2,7 @@
 #define AR_RESOURCE_H
 
 #include <iostream>
-
+#include <cstdint>
 
 namespace AsyncRuntime {
     typedef std::uintptr_t ObjectID;

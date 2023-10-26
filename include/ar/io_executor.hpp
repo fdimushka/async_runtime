@@ -16,7 +16,7 @@ namespace AsyncRuntime {
             WorkStealQueue<IOTask *>       run_queue;
         };
 
-        explicit IOExecutor(std::string  name_);
+        explicit IOExecutor(const std::string & name_);
         ~IOExecutor() override;
 
 
@@ -58,7 +58,6 @@ namespace AsyncRuntime {
 
         std::unordered_map<std::thread::id, uv_async_t*>    async_handlers;
         ThreadExecutor                                      loop_thread;
-        std::string                                         name;
         uv_loop_t                                           *loop;
         std::thread::id                                     main_thread_id;
     };

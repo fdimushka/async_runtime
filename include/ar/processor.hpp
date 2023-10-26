@@ -32,7 +32,7 @@ namespace AsyncRuntime {
             WAIT            =2,
         };
 
-        explicit Processor(const CPU & cpu);
+        explicit Processor(int pid, const CPU & cpu);
         ~Processor() override;
 
 

@@ -35,7 +35,7 @@ void Runtime::Setup(const RuntimeOptions& _options)
     if(is_setup)
         return;
 
-    CreateDefaultExecutors();
+    CreateDefaultExecutors(_options.virtual_numa_nodes_count);
     is_setup = true;
 
     PROFILER_START();
@@ -93,9 +93,9 @@ ObjectID Runtime::GetWorkGroup(const std::string &name) const {
 }
 
 
-void Runtime::CreateDefaultExecutors()
+void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count)
 {
-    auto nodes = GetNumaNodes();
+    auto nodes = (virtual_numa_nodes_count == 0)? GetNumaNodes() : GetManualNumaNodes(virtual_numa_nodes_count);
     std::vector<Executor*> cpu_executors;
 
     for ( size_t i = 0; i < nodes.size(); ++i ) {
@@ -123,20 +123,13 @@ void Runtime::CreateDefaultExecutors()
 }
 
 EntityTag Runtime::AddEntityTag(void *ptr) {
-    std::lock_guard<std::mutex> lock(entities_mutex);
     auto tag = reinterpret_cast<std::uintptr_t>(ptr);
-    IExecutor *min_executor = nullptr;
-    int min = INT_MAX;
+    auto executor = FetchFreeExecutor(kCPU_EXECUTOR);
 
-    for (auto & executor : executors) {
-        if (executor.second->GetType() == kCPU_EXECUTOR && min > executor.second->GetEntitiesCount()) {
-            min = executor.second->GetEntitiesCount();
-            min_executor = executor.second;
-        }
-    }
-
-    if (min_executor != nullptr) {
-        entities_map.insert(std::make_pair(tag, min_executor));
+    if (executor != nullptr) {
+        std::lock_guard<std::mutex> lock(entities_mutex);
+        executor->IncrementEntitiesCount();
+        entities_map.insert(std::make_pair(tag, executor));
         return tag;
     } else {
         return INVALID_OBJECT_ID;
@@ -147,6 +140,7 @@ void Runtime::DeleteEntityTag(EntityTag tag) {
     std::lock_guard<std::mutex> lock(entities_mutex);
     auto it = entities_map.find(tag);
     if (it != entities_map.end()) {
+        it->second->DecrementEntitiesCount();
         entities_map.erase(it);
     }
 }
@@ -161,6 +155,21 @@ IExecutor *Runtime::FetchExecutor(const EntityTag & tag) {
     }
 }
 
+IExecutor *Runtime::FetchFreeExecutor(ExecutorType type) {
+    std::lock_guard<std::mutex> lock(entities_mutex);
+    IExecutor *min_executor = nullptr;
+    int min = INT_MAX;
+
+    for (auto & executor : executors) {
+        if (executor.second->GetType() == type && min > executor.second->GetEntitiesCount()) {
+            min = executor.second->GetEntitiesCount();
+            min_executor = executor.second;
+        }
+    }
+
+    return min_executor;
+}
+
 std::shared_ptr<Mon::Counter> Runtime::MakeMetricsCounter(const std::string & name, const std::map<std::string, std::string> &labels) {
     if (metricer) {
         return metricer->MakeCounter(name, labels);
@@ -173,13 +182,9 @@ void Runtime::Post(Task *task)
 {
     const auto& executor_state = task->GetExecutorState();
     if(executor_state.executor == nullptr) {
-        if (executor_state.entity_tag != INVALID_OBJECT_ID) {
-            auto executor = FetchExecutor(executor_state.entity_tag);
-            if (executor != nullptr) {
-                executor->Post(task);
-            } else {
-                main_executor->Post(task);
-            }
+        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag) : FetchFreeExecutor(kCPU_EXECUTOR);
+        if (executor != nullptr) {
+            executor->Post(task);
         } else {
             main_executor->Post(task);
         }

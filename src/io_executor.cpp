@@ -35,7 +35,7 @@ static void AsyncIOCb(uv_async_t* handle)
 }
 
 
-IOExecutor::IOExecutor(std::string  name_) : name(std::move(name_))
+IOExecutor::IOExecutor(const std::string & name_) : IExecutor(name_, kIO_EXECUTOR)
 {
     type = kIO_EXECUTOR;
     loop = uv_default_loop();

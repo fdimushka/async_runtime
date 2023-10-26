@@ -1,4 +1,6 @@
 #include "ar/cpu_helper.hpp"
+#include "ar/config.hpp"
+#include <math.h>
 
 #ifdef USE_NUMA
 #include <numa.h>
@@ -57,6 +59,20 @@ std::vector<AsyncRuntime::NumaNode> AsyncRuntime::GetNumaNodes() {
         AsyncRuntime::CPU cpu = {};
         cpu.id = i;
         cpu.numa_node_id = _numa_node_of_cpu(i);
+        nodes[cpu.numa_node_id].id = cpu.numa_node_id;
+        nodes[cpu.numa_node_id].cpus.push_back(cpu);
+    }
+    return nodes;
+}
+
+
+std::vector<AsyncRuntime::NumaNode> AsyncRuntime::GetManualNumaNodes(int count) {
+    std::vector<NumaNode> nodes(count);
+    int node_cpus_count = static_cast<int>((float)std::thread::hardware_concurrency())/(float)count;
+    for (int i = 0; i < std::thread::hardware_concurrency(); ++i) {
+        AsyncRuntime::CPU cpu = {};
+        cpu.id = i;
+        cpu.numa_node_id = floor(static_cast<float>(i)/static_cast<float>(node_cpus_count));
         nodes[cpu.numa_node_id].id = cpu.numa_node_id;
         nodes[cpu.numa_node_id].cpus.push_back(cpu);
     }
