@@ -114,8 +114,8 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count)
     io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
 
     for (const auto executor : cpu_executors) {
-        for (const auto &processor: executor->GetProcessors()) {
-            io_executor->ThreadRegistration(processor->GetThreadId());
+        for (const auto &id: executor->GetThreadIds()) {
+            io_executor->ThreadRegistration(id);
         }
     }
 
@@ -182,12 +182,13 @@ void Runtime::Post(Task *task)
 {
     const auto& executor_state = task->GetExecutorState();
     if(executor_state.executor == nullptr) {
-        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag) : FetchFreeExecutor(kCPU_EXECUTOR);
-        if (executor != nullptr) {
-            executor->Post(task);
-        } else {
-            main_executor->Post(task);
-        }
+//        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag) : FetchFreeExecutor(kCPU_EXECUTOR);
+//        if (executor != nullptr) {
+//            executor->Post(task);
+//        } else {
+//            main_executor->Post(task);
+//        }
+        main_executor->Post(task);
     }else{
         executor_state.executor->Post(task);
     }

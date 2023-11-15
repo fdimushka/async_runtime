@@ -32,6 +32,7 @@ namespace AsyncRuntime {
         friend class Processor;
         friend class Ticker;
         friend class CoroutineHandler;
+        friend class Scheduler;
     public:
         static Runtime g_runtime;
 

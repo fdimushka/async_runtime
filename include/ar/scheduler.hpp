@@ -4,6 +4,8 @@
 #include "ar/task.hpp"
 #include "ar/processor.hpp"
 
+#include <random>
+
 namespace AsyncRuntime {
 
     class Scheduler {
@@ -17,9 +19,14 @@ namespace AsyncRuntime {
 
         void Post(Task *task);
 
+        [[nodiscard]] std::thread::id GetThreadId() const;
+
         std::optional<Task *> Steal();
         [[nodiscard]] bool IsSteal() const;
     private:
+        std::random_device rd;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> distr;
         void ScheduleTask(Task *task);
         void SchedulerLoop();
 
@@ -30,6 +37,7 @@ namespace AsyncRuntime {
         TasksPq delayed_task;
         std::condition_variable delayed_task_cv;
         std::mutex delayed_task_mutex;
+        std::mutex delayed_lock_mutex;
         std::mutex run_queue_mutex;
         std::mutex processors_mutex;
         std::vector<Processor *> processors;

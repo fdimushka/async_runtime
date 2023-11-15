@@ -85,22 +85,36 @@ Executor::~Executor() {
     processor_groups.clear();
 }
 
+std::vector<std::thread::id> Executor::GetThreadIds() {
+    std::vector<std::thread::id> ids;
+    for (const auto & p : processors) {
+        ids.push_back(p->GetThreadId());
+    }
+
+    for (const auto group: processor_groups) {
+        ids.push_back(group->GetScheduler()->GetThreadId());
+    }
+
+    return ids;
+}
+
 void Executor::Post(Task *task) {
     const auto &execute_state = task->GetExecutorState();
     task->SetExecutorExecutorState(this);
 
-    if (task->GetDelay() <= 0 &&
-        execute_state.processor != INVALID_OBJECT_ID &&
-        execute_state.processor >= 0 &&
-        execute_state.processor < processors.size())
-    {
-        processors[execute_state.processor]->Post(task);
-    } else if ( execute_state.work_group != INVALID_OBJECT_ID &&
-                execute_state.work_group >= 0 &&
-                execute_state.work_group < processor_groups.size())
-    {
-        processor_groups[execute_state.work_group]->Post(task);
+    if (task->GetDelay() <= 0) {
+        if (execute_state.processor != INVALID_OBJECT_ID) {
+            processors[execute_state.processor]->Post(task);
+        } else if (execute_state.work_group != INVALID_OBJECT_ID) {
+            processor_groups[execute_state.work_group]->Post(task);
+        } else {
+            main_processor_group->Post(task);
+        }
     } else {
-        main_processor_group->Post(task);
+        if (execute_state.work_group != INVALID_OBJECT_ID) {
+            processor_groups[execute_state.work_group]->Post(task);
+        } else {
+            main_processor_group->Post(task);
+        }
     }
 }

@@ -1,4 +1,5 @@
 #include "ar/scheduler.hpp"
+#include "ar/runtime.hpp"
 
 #include <utility>
 
@@ -8,7 +9,9 @@ Scheduler::Scheduler(std::vector<Processor*>  p) :
         is_continue{true}
         , processors(std::move(p))
         , notify_inc(0)
+        , gen(rd())
 {
+    distr = std::uniform_int_distribution<>(0, processors.size()-1);
     scheduler_th.Submit([this] { SchedulerLoop(); });
 }
 
@@ -20,6 +23,9 @@ Scheduler::~Scheduler()
     scheduler_th.Join();
 }
 
+std::thread::id Scheduler::GetThreadId() const {
+    return scheduler_th.GetThreadId();
+}
 
 void Scheduler::SetProcessors(const std::vector<Processor *> &p)
 {
@@ -76,24 +82,31 @@ bool Scheduler::IsSteal() const
 
 void Scheduler::ScheduleTask(Task *task)
 {
+    ObjectID pid = task->GetExecutorState().processor;
+    if (pid == INVALID_OBJECT_ID || pid <= 0 || pid >= processors.size()) {
+        pid = distr(gen);
+        task->SetProcessorExecutorState(pid);
+    }
+
     {
         std::lock_guard<std::mutex> lock(run_queue_mutex);
         run_queue.push(task);
+        processors[pid]->Notify();
     }
-
-    std::lock_guard<std::mutex> lock(processors_mutex);
-    bool notified = false;
-    for (size_t i = 0; i < processors.size(); ++i) {
-        notify_inc = (notify_inc + 1) % processors.size();
-        auto p_state = processors[notify_inc]->GetState();
-        if (p_state != Processor::EXECUTE) {
-            notified = true;
-            processors[notify_inc]->Notify();
-            break;
-        }
-    }
-
-    if (!notified) {
-        processors[notify_inc]->Notify();
-    }
+//
+//    std::lock_guard<std::mutex> lock(processors_mutex);
+//    bool notified = false;
+//    for (size_t i = 0; i < processors.size(); ++i) {
+//        notify_inc = (notify_inc + 1) % processors.size();
+//        auto p_state = processors[notify_inc]->GetState();
+//        if (p_state != Processor::EXECUTE) {
+//            notified = true;
+//            processors[notify_inc]->Notify();
+//            break;
+//        }
+//    }
+//
+//    if (!notified) {
+//        processors[notify_inc]->Notify();
+//    }
 }

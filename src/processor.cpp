@@ -122,11 +122,11 @@ void Processor::Work() {
 
         std::optional<Task *> task = Steal();
 
-        if (!task) {
+        if (!task.has_value()) {
             task = StealGlobal();
         }
 
-        if (task) {
+        if (task.has_value()) {
             ExecuteTask(task.value(), task.value()->GetExecutorState());
         } else {
             WaitTask();
@@ -140,9 +140,15 @@ void Processor::ExecuteTask(Task *task, const ExecutorState &executor_state) {
 
     state.store(EXECUTE, std::memory_order_relaxed);
     {
+        //auto t_start = std::chrono::high_resolution_clock::now();
         PROFILER_TASK_WORK_TIME(task->GetOriginId());
         task->SetProcessorExecutorState(GetID());
         task->Execute(executor_state);
+//        auto t_end = std::chrono::high_resolution_clock::now();
+//        double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-t_start).count();
+//        if (elapsed_time_ms > 30) {
+//            std::cout << std::this_thread::get_id() << " " <<  elapsed_time_ms << std::endl;
+//        }
     }
     delete task;
 }
@@ -186,9 +192,12 @@ void Processor::WaitTask() {
 bool Processor::IsStealGlobal()
 {
     std::lock_guard<std::mutex> lock(group_mutex);
-    return std::any_of(groups.begin(),
-                       groups.end(),
-                       [](const ProcessorGroup *group) { return group->IsSteal(); });
+    for(const auto *group : groups) {
+        if (group->IsSteal()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -206,9 +215,12 @@ std::optional<Task *> Processor::StealGlobal() {
 
 bool Processor::IsSteal() const
 {
-    return std::any_of(local_run_queue.begin(),
-                       local_run_queue.end(),
-                       [](const auto &rq) { return !rq.empty(); });
+    for (int group_id : rq_by_priority) {
+        if (!local_run_queue[group_id].empty()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -222,6 +234,17 @@ std::optional<Task *> Processor::Steal()
 {
     for (int group_id : rq_by_priority) {
         auto task = local_run_queue[group_id].steal();
+        if (task)
+            return task;
+    }
+
+    return std::nullopt;
+}
+
+std::optional<Task *> Processor::Pop()
+{
+    for (int group_id : rq_by_priority) {
+        auto task = local_run_queue[group_id].pop();
         if (task)
             return task;
     }

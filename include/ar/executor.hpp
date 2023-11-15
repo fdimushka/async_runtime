@@ -83,7 +83,7 @@ namespace AsyncRuntime {
          * @brief
          * @return
          */
-        const std::vector<Processor*>& GetProcessors() const { return processors; }
+        std::vector<std::thread::id> GetThreadIds();
     private:
         uint                                                     max_processors_count;
         std::shared_ptr<Mon::Counter>                            processors_count;

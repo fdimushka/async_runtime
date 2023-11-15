@@ -41,10 +41,11 @@ namespace AsyncRuntime {
         [[nodiscard]] double GetCap() const { return cap; }
         [[nodiscard]] double GetUtil() const { return util; }
         [[nodiscard]] ObjectID GetID() const { return id; }
+        const Scheduler *GetScheduler() const { return scheduler.get(); }
     private:
         std::shared_ptr<Mon::Counter>   m_processors_count;
         std::vector<Processor*>         processors;
-        std::shared_ptr<Scheduler>      scheduler;
+        std::unique_ptr<Scheduler>      scheduler;
         ObjectID                        id;
         double                          cap;
         double                          util;

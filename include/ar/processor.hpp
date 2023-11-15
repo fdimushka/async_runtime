@@ -86,6 +86,7 @@ namespace AsyncRuntime {
         [[nodiscard]] std::thread::id GetThreadId() const;
         bool IsSteal() const;
         bool IsSteal(ObjectID group_id) const;
+        std::optional<Task*> Pop();
         std::optional<Task*> Steal();
         std::optional<Task*> Steal(ObjectID group_id);
         std::vector<ProcessorGroup *> GetGroups();

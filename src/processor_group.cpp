@@ -49,71 +49,61 @@ ProcessorGroup::ProcessorGroup(ObjectID _id,
         m_processors_count->Increment(static_cast<double>(processors.size()));
     }
 
-    scheduler = std::make_shared<Scheduler>(processors);
+    scheduler = std::make_unique<Scheduler>(processors);
 }
 
 
 void ProcessorGroup::Post(Task *task)
 {
-    if( scheduler ) {
-        task->SetWorkGroupExecutorState(GetID());
-        scheduler->Post(task);
-    }
+    task->SetWorkGroupExecutorState(GetID());
+    scheduler->Post(task);
 }
 
 
 std::optional<Task *> ProcessorGroup::Steal()
 {
-    if( scheduler ) {
-        auto task = scheduler->Steal();
-        if (!task) {
-            for (int i = 0; i < processors.size() && !task; i++) {
-                auto processor = processors[i];
-                if (processor->GetState() == Processor::EXECUTE &&
-                    processor->IsSteal(GetID())) {
-                    task = processor->Steal(GetID());
+    auto task = scheduler->Steal();
+    if (!task.has_value()) {
+        for (int i = 0; i < processors.size() && !task; i++) {
+            auto processor = processors[i];
+            if (processor->GetState() == Processor::EXECUTE) {
+                task = processor->Steal(GetID());
+                if (task.has_value()) {
+                    return task;
                 }
             }
         }
-        return task;
-    } else {
-        return std::nullopt;
     }
+    return task;
 }
 
 
 std::optional<Task *> ProcessorGroup::Steal(const ObjectID &processor_id)
 {
-    if( scheduler ) {
-        auto task = scheduler->Steal();
-        if (!task) {
-            for (int i = 0; i < processors.size() && !task; i++) {
-                auto processor = processors[i];
-                if (processor->GetID() != processor_id &&
-                    processor->GetState() == Processor::EXECUTE &&
-                    processor->IsSteal(GetID())) {
-                    task = processor->Steal(GetID());
+    auto task = scheduler->Steal();
+    if (!task.has_value()) {
+        for (int i = 0; i < processors.size() && !task; i++) {
+            auto processor = processors[i];
+            if (processor->GetID() != processor_id &&
+                processor->GetState() == Processor::EXECUTE) {
+                task = processor->Steal(GetID());
+                if (task.has_value()) {
+                    return task;
                 }
             }
         }
-        return task;
-    } else {
-        return std::nullopt;
     }
+    return task;
 }
 
 
 bool ProcessorGroup::IsSteal() const
 {
-    if( scheduler ) {
-        if (!scheduler->IsSteal()) {
-            return std::any_of(processors.begin(),
-                               processors.end(),
-                               [](const Processor *processor) { return processor->IsSteal(); });
-        } else {
-            return true;
-        }
+    if (!scheduler->IsSteal()) {
+        return std::any_of(processors.begin(),
+                           processors.end(),
+                           [](const Processor *processor) { return processor->IsSteal(); });
     } else {
-        return false;
+        return true;
     }
 }
