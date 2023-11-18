@@ -131,7 +131,7 @@ namespace AsyncRuntime {
      * @param keepalive
      * @return
      */
-    TCPConnectionPtr MakeTCPConnection(const char* hostname, int port, int keepalive = 60);
+    TCPConnectionPtr MakeTCPConnection(const char* hostname, int port, int keepalive = 10);
     TCPConnectionPtr MakeTCPConnection(int fd);
 
 

@@ -9,118 +9,140 @@
 
 using namespace AsyncRuntime;
 
-const char* AsyncRuntime::FSErrorMsg(int error)
-{
+const char *AsyncRuntime::FSErrorMsg(int error) {
     return uv_strerror(error);
 }
 
 
-const char* AsyncRuntime::FSErrorName(int error)
-{
+const char *AsyncRuntime::FSErrorName(int error) {
     return uv_err_name(error);
 }
 
-NetWriteTask::NetWriteTask(const TCPConnectionPtr& connection, const char* buffer, size_t size) : _connection(connection) {
+NetWriteTask::NetWriteTask(const TCPConnectionPtr &connection, const char *buffer, size_t size) : _connection(
+        connection) {
     std::ostream out(&_stream_buffer);
     out.write(buffer, size);
 }
 
-bool FsOpenTask::Execute(uv_loop_t *loop)
-{
+bool FsOpenTask::Execute(uv_loop_t *loop) {
     _request.data = this;
     uv_fs_open(loop, &_request, _filename, _flags, _mode, &FsOpenCb);
     return true;
 }
 
 
-bool FsReadTask::Execute(uv_loop_t *loop)
-{
+bool FsReadTask::Execute(uv_loop_t *loop) {
     _request.data = this;
     _stream->SetMode(IOStream::R);
     uv_buf_t *buf = _stream->Next();
     int error = uv_fs_read(loop, &_request, _fd, buf, 1, _seek, &FsReadCb);
-    if(error){
+    if (error) {
         Resolve(error);
         return false;
     }
     return true;
 }
 
-bool FsWriteTask::Execute(uv_loop_t *loop)
-{
+bool FsWriteTask::Execute(uv_loop_t *loop) {
     _request.data = this;
     _stream->SetMode(IOStream::W);
     uv_buf_t *buf = _stream->Next();
-    if(buf) {
+    if (buf) {
         uv_fs_write(loop, &_request, _fd, buf, 1, _seek, &FsWriteCb);
         return true;
-    }else{
+    } else {
         Resolve(EIO);
         return false;
     }
 }
 
-bool FsCloseTask::Execute(uv_loop_t *loop)
-{
+bool FsCloseTask::Execute(uv_loop_t *loop) {
     _request.data = this;
     uv_fs_close(loop, &_request, _fd, &FsCloseCb);
     return true;
 }
 
-bool NetConnectionTask::Execute(uv_loop_t *loop)
-{
+bool NetConnectionTask::Execute(uv_loop_t *loop) {
     assert(_connection);
     uv_connect_t *con = &_connection->connect;
     con->data = this;
-
     uv_tcp_init(loop, &_connection->socket);
-    uv_tcp_nodelay(&_connection->socket, 1);
-    uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
-    uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
 
-    int error = uv_tcp_connect(con, &_connection->socket, (sockaddr*)&_connection->dest_addr, &NetConnectionTask::NetConnectionCb);
-    if(error) {
-        Resolve(error);
+    if (_connection->fd == -1) {
+        int error = uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+
+        uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
+
+        error = uv_tcp_connect(con, &_connection->socket, (sockaddr *) &_connection->dest_addr,
+                               &NetConnectionTask::NetConnectionCb);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+    } else {
+        int error = uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+
+        error = uv_tcp_open(&_connection->socket, _connection->fd);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+
+        auto *stream = (uv_stream_t *) &_connection->socket;
+        stream->data = _connection.get();
+        error = uv_read_start(stream,
+                              &NetConnectionTask::NetAllocCb,
+                              &NetConnectionTask::NetReadCb);
+        if (error) {
+            Resolve(ECANCELED);
+        } else {
+            Resolve(IO_SUCCESS);
+        }
         return false;
     }
 
     return true;
 }
 
-void NetConnectionTask::NetConnectionCb(uv_connect_t* connection, int status)
-{
+void NetConnectionTask::NetConnectionCb(uv_connect_t *connection, int status) {
     assert(connection->data != nullptr);
-    auto *task = (NetConnectionTask *)connection->data;
+    auto *task = (NetConnectionTask *) connection->data;
 
     if (status >= 0) {
-        auto *stream = (uv_stream_t*)&task->_connection->socket;
+        auto *stream = (uv_stream_t *) &task->_connection->socket;
         stream->data = task->_connection.get();
         int error = uv_read_start(stream,
                                   &NetConnectionTask::NetAllocCb,
                                   &NetConnectionTask::NetReadCb);
-        if(error) {
+        if (error) {
             task->Resolve(ECANCELED);
         } else {
             task->Resolve(IO_SUCCESS);
         }
         delete task;
-    }else{
+    } else {
         task->Resolve(status);
         delete task;
     }
 }
 
-void NetConnectionTask::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
-{
+void NetConnectionTask::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     assert(handle->data != nullptr);
-    buf->base = (char*)malloc(size);
+    buf->base = (char *) malloc(size);
     buf->len = size;
 }
 
-void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
-{
+void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
     assert(stream->data != nullptr);
-    auto *connection = (TCPConnection*)stream->data;
+    auto *connection = (TCPConnection *) stream->data;
 
     if (nread > 0) {
         ProduceReadStream(connection, buf->base, nread);
@@ -134,14 +156,12 @@ void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_b
 }
 
 
-bool NetReadTask::Execute(uv_loop_t *loop)
-{
+bool NetReadTask::Execute(uv_loop_t *loop) {
     return false;
 }
 
 
-bool NetWriteTask::Execute(uv_loop_t *loop)
-{
+bool NetWriteTask::Execute(uv_loop_t *loop) {
     assert(_connection);
     auto *buf = new uv_buf_t;
     auto *write_req = (uv_write_t *) malloc(sizeof(uv_write_t));
@@ -157,31 +177,28 @@ bool NetWriteTask::Execute(uv_loop_t *loop)
 }
 
 
-bool NetCloseTask::Execute(uv_loop_t *loop)
-{
+bool NetCloseTask::Execute(uv_loop_t *loop) {
     uv_tcp_t *tcp_client = &_connection->socket;
     tcp_client->data = this;
-    uv_read_stop((uv_stream_t *)&_connection->socket);
-    uv_close((uv_handle_t*) tcp_client, &NetCloseCb);
+    uv_read_stop((uv_stream_t *) &_connection->socket);
+    uv_close((uv_handle_t *) tcp_client, &NetCloseCb);
     return true;
 }
 
 
-void NetCloseTask::NetCloseCb(uv_handle_t* handle)
-{
+void NetCloseTask::NetCloseCb(uv_handle_t *handle) {
     assert(handle->data != nullptr);
-    auto *task = (NetCloseTask *)handle->data;
+    auto *task = (NetCloseTask *) handle->data;
     task->Resolve(IO_SUCCESS);
     delete task;
 }
 
 
-bool NetAddrInfoTask::Execute(uv_loop_t *loop)
-{
+bool NetAddrInfoTask::Execute(uv_loop_t *loop) {
     assert(_info);
     _info->resolver.data = this;
     int error = uv_getaddrinfo(loop, &_info->resolver, &NetAddrInfoCb, _info->node.c_str(), NULL, &_info->hints);
-    if(error) {
+    if (error) {
         Resolve(error);
         return false;
     }
@@ -189,26 +206,24 @@ bool NetAddrInfoTask::Execute(uv_loop_t *loop)
 }
 
 
-void NetAddrInfoTask::NetAddrInfoCb(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
-{
+void NetAddrInfoTask::NetAddrInfoCb(uv_getaddrinfo_t *req, int status, struct addrinfo *res) {
     assert(req->data != nullptr);
-    auto *task = (NetAddrInfoTask *)req->data;
+    auto *task = (NetAddrInfoTask *) req->data;
 
     if (status >= 0) {
         char addr[17] = {'\0'};
-        uv_ip4_name((struct sockaddr_in*) res->ai_addr, addr, 16);
-        task->_info->hostname = std::string {addr};
+        uv_ip4_name((struct sockaddr_in *) res->ai_addr, addr, 16);
+        task->_info->hostname = std::string{addr};
         task->Resolve(IO_SUCCESS);
         delete task;
-    }else{
+    } else {
         task->Resolve(status);
         delete task;
     }
 }
 
 
-bool NetListenTask::Execute(uv_loop_t *loop)
-{
+bool NetListenTask::Execute(uv_loop_t *loop) {
     assert(_server);
 
     int error = 0;
@@ -216,10 +231,10 @@ bool NetListenTask::Execute(uv_loop_t *loop)
     socket->data = this;
     uv_tcp_init(loop, socket);
     uv_ip4_addr(_server->hostname.c_str(), _server->port, &_server->bind_addr);
-    error = uv_tcp_bind(socket, (struct sockaddr*)&_server->bind_addr, 0);
+    error = uv_tcp_bind(socket, (struct sockaddr *) &_server->bind_addr, 0);
     if (error) {
         Resolve(error);
-        if(_server->on_bind_error) {
+        if (_server->on_bind_error) {
             //@TODO reimplement to async call
             _server->on_bind_error(error);
         }
@@ -227,17 +242,17 @@ bool NetListenTask::Execute(uv_loop_t *loop)
         return false;
     }
 
-    error = uv_listen((uv_stream_t*) socket, 128 /*backlog*/, &NetListenTask::NetConnectionCb);
+    error = uv_listen((uv_stream_t *) socket, 128 /*backlog*/, &NetListenTask::NetConnectionCb);
     if (error) {
         Resolve(error);
-        if(_server->on_bind_error) {
+        if (_server->on_bind_error) {
             //@TODO reimplement to async call
             _server->on_bind_error(error);
         }
         return false;
     }
 
-    if(_server->on_bind_success) {
+    if (_server->on_bind_success) {
         //@TODO reimplement to async call
         _server->on_bind_success();
     }
@@ -245,10 +260,9 @@ bool NetListenTask::Execute(uv_loop_t *loop)
 }
 
 
-void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
-{
+void NetListenTask::NetConnectionCb(uv_stream_t *server, int status) {
     assert(server->data != nullptr);
-    auto task = (NetListenTask* )server->data;
+    auto task = (NetListenTask *) server->data;
 
     TCPSessionPtr session = std::make_shared<TCPSession>(server, task->_callback);
     session->Accept();
@@ -256,26 +270,25 @@ void NetListenTask::NetConnectionCb(uv_stream_t *server, int status)
 }
 
 
-bool NetUDPBindTask::Execute(uv_loop_t *loop)
-{
+bool NetUDPBindTask::Execute(uv_loop_t *loop) {
     assert(_udp);
     uv_udp_init(loop, &_udp->socket);
     uv_ip4_addr(_udp->hostname.c_str(), _udp->port, &_udp->sock_addr);
-    int error = uv_udp_bind(&_udp->socket, (struct sockaddr*)&_udp->sock_addr, _flags);
+    int error = uv_udp_bind(&_udp->socket, (struct sockaddr *) &_udp->sock_addr, _flags);
 
-    if(_broadcast)
+    if (_broadcast)
         uv_udp_set_broadcast(&_udp->socket, 1);
 
     if (!error) {
         Resolve(IO_SUCCESS);
-    }else{
+    } else {
         Resolve(error);
     }
 
     auto *socket = &_udp->socket;
     socket->data = _udp.get();
     error = uv_udp_recv_start(socket, &NetRecvTask::NetAllocCb, &NetRecvTask::NetRecvCb);
-    if(error) {
+    if (error) {
         Resolve(ECANCELED);
     }
 
@@ -283,22 +296,21 @@ bool NetUDPBindTask::Execute(uv_loop_t *loop)
 }
 
 
-bool NetSendTask::Execute(uv_loop_t *loop)
-{
+bool NetSendTask::Execute(uv_loop_t *loop) {
     assert(_udp);
-    auto* req = (uv_udp_send_t*)malloc(sizeof(uv_udp_send_t));
+    auto *req = (uv_udp_send_t *) malloc(sizeof(uv_udp_send_t));
     req->data = this;
 
     _stream->SetMode(IOStream::W);
     uv_buf_t *buf = _stream->Next();
-    if(buf) {
+    if (buf) {
         uv_ip4_addr(_addr.ip.c_str(), _addr.port, &_send_addr);
         int error = uv_udp_send(req, &_udp->socket, buf, 1, (struct sockaddr *) &_send_addr, NetSendTask::NetSendCb);
         if (error) {
             Resolve(error);
             return false;
         }
-    }else{
+    } else {
         Resolve(EIO);
         return false;
     }
@@ -307,13 +319,12 @@ bool NetSendTask::Execute(uv_loop_t *loop)
 }
 
 
-void NetSendTask::NetSendCb(uv_udp_send_t *req, int status)
-{
+void NetSendTask::NetSendCb(uv_udp_send_t *req, int status) {
     assert(req->data != nullptr);
-    auto task = (NetSendTask* )req->data;
+    auto task = (NetSendTask *) req->data;
     if (status < 0) {
         task->Resolve(status);
-    }else{
+    } else {
         task->Resolve(IO_SUCCESS);
     }
 
@@ -322,12 +333,11 @@ void NetSendTask::NetSendCb(uv_udp_send_t *req, int status)
 }
 
 
-bool NetRecvTask::Execute(uv_loop_t *loop)
-{
+bool NetRecvTask::Execute(uv_loop_t *loop) {
     assert(_udp);
     _stream->SetMode(IOStream::R);
 
-    if(!_udp->all_recv_data.empty()) {
+    if (!_udp->all_recv_data.empty()) {
         Resolve(IO_SUCCESS);
         return false;
     }
@@ -341,23 +351,21 @@ bool NetRecvTask::Execute(uv_loop_t *loop)
 }
 
 
-void NetRecvTask::NetAllocCb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf)
-{
-    buf->base = (char*)malloc(suggested_size);
+void NetRecvTask::NetAllocCb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+    buf->base = (char *) malloc(suggested_size);
     buf->len = suggested_size;
 }
 
 
-void NetRecvTask::NetRecvCb(uv_udp_t* handle,
+void NetRecvTask::NetRecvCb(uv_udp_t *handle,
                             ssize_t nread,
-                            const uv_buf_t* buf,
-                            const struct sockaddr* addr,
-                            unsigned flags)
-{
+                            const uv_buf_t *buf,
+                            const struct sockaddr *addr,
+                            unsigned flags) {
     assert(handle->data != nullptr);
-    auto *udp = (UDP*)handle->data;
+    auto *udp = (UDP *) handle->data;
 
-    if(nread > 0) {
+    if (nread > 0) {
         UDPReceivedData data = {};
         data.buf = (char *) malloc(nread);
         data.size = nread;
@@ -367,16 +375,16 @@ void NetRecvTask::NetRecvCb(uv_udp_t* handle,
         udp->all_recv_data.push_back(data);
     }
 
-    if(udp->recv_task != nullptr) {
+    if (udp->recv_task != nullptr) {
         if (nread >= 0) {
             udp->recv_task->Resolve(IO_SUCCESS);
-        }else {
+        } else {
             udp->recv_task->Resolve(nread);
         }
 
         delete udp->recv_task;
         udp->recv_task = nullptr;
-    }else{
+    } else {
         uv_udp_recv_stop(&udp->socket);
     }
 
@@ -384,9 +392,8 @@ void NetRecvTask::NetRecvCb(uv_udp_t* handle,
 }
 
 
-void FsOpenTask::FsOpenCb(uv_fs_s* req)
-{
-    auto *task = (FsOpenTask*)req->data;
+void FsOpenTask::FsOpenCb(uv_fs_s *req) {
+    auto *task = (FsOpenTask *) req->data;
     assert(req == &task->_request);
     assert(req->fs_type == UV_FS_OPEN);
 
@@ -398,9 +405,8 @@ void FsOpenTask::FsOpenCb(uv_fs_s* req)
 }
 
 
-void FsCloseTask::FsCloseCb(uv_fs_s* req)
-{
-    auto task = (FsCloseTask *)(req->data);
+void FsCloseTask::FsCloseCb(uv_fs_s *req) {
+    auto task = (FsCloseTask *) (req->data);
     assert(req == &task->_request);
     assert(req->fs_type == UV_FS_CLOSE);
     task->Resolve(IO_SUCCESS);
@@ -408,10 +414,9 @@ void FsCloseTask::FsCloseCb(uv_fs_s* req)
 }
 
 
-void FsReadTask::FsReadCb(uv_fs_s* req)
-{
-    auto *task = (FsReadTask*)req->data;
-    const auto& stream = task->_stream;
+void FsReadTask::FsReadCb(uv_fs_s *req) {
+    auto *task = (FsReadTask *) req->data;
+    const auto &stream = task->_stream;
     assert(req == &task->_request);
     assert(req->fs_type == UV_FS_READ);
 
@@ -431,7 +436,7 @@ void FsReadTask::FsReadCb(uv_fs_s* req)
 
         int offset = -1;
         int seek = task->_seek;
-        if(seek >= 0) {
+        if (seek >= 0) {
             offset = seek + stream->GetBufferSize();
         }
 
@@ -440,10 +445,9 @@ void FsReadTask::FsReadCb(uv_fs_s* req)
 }
 
 
-void FsWriteTask::FsWriteCb(uv_fs_s *req)
-{
-    auto *task = (FsWriteTask*)req->data;
-    const auto& stream = task->_stream;
+void FsWriteTask::FsWriteCb(uv_fs_s *req) {
+    auto *task = (FsWriteTask *) req->data;
+    const auto &stream = task->_stream;
     assert(req == &task->_request);
     assert(req->fs_type == UV_FS_WRITE);
 
@@ -460,9 +464,9 @@ void FsWriteTask::FsWriteCb(uv_fs_s *req)
     } else {
         uv_buf_t *buf = stream->Next();
 
-        if(buf) {
+        if (buf) {
             uv_fs_write(req->loop, &task->_request, task->_fd, buf, 1, -1, FsWriteCb);
-        }else{
+        } else {
             stream->Begin();
             task->Resolve(IO_SUCCESS);
             delete task;
@@ -472,16 +476,15 @@ void FsWriteTask::FsWriteCb(uv_fs_s *req)
 }
 
 
-void NetWriteTask::NetWriteCb(uv_write_t* req, int status)
-{
-    auto *task = (NetWriteTask* )req->data;
+void NetWriteTask::NetWriteCb(uv_write_t *req, int status) {
+    auto *task = (NetWriteTask *) req->data;
     assert(req->type == UV_WRITE);
 
     if (status >= 0) {
         task->Resolve(IO_SUCCESS);
         delete task;
         free(req);
-    }else{
+    } else {
         task->Resolve(status);
         delete task;
         free(req);
