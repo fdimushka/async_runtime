@@ -41,12 +41,10 @@ int main() {
                       "User-Agent: ar example tcp server\r\n"
                       "Accept: */*\r\n\r\n";
 
-    {
-        std::string host = "93.184.216.34";
-        auto coro = MakeCoroutine<std::string>(&async_tcp, host, 80, req);
-        std::string result = Await(Async(coro));
-        std::cout << result << std::endl;
-    }
+    std::string host = "93.184.216.34";
+    auto coro = MakeCoroutine<std::string>(&async_tcp, host, 80, req);
+    std::string result = Await(Async(coro));
+    std::cout << result << std::endl;
     Terminate();
     return 0;
 }

@@ -50,7 +50,6 @@ int AsyncRuntime::ConsumeReadStream(TCPConnection *conn, char* buffer, size_t bu
     if (size > 0) {
         std::istream in(&conn->read_stream);
         in.read(buffer, size);
-        conn->read_stream.consume(size);
     }
     return size;
 }
