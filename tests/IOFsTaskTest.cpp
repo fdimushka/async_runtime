@@ -47,7 +47,7 @@ TEST_CASE( "io fs task create file test", "[fs task]" ) {
 
 TEST_CASE( "io fs task read test", "[fs task]" ) {
     SetupRuntime();
-    auto stream = MakeStream();
+    auto stream = std::make_shared<IOStream>();
     int ret = AsyncFsOpen("../../examples/io.cpp", O_RDWR , S_IRWXU)->Wait()->Get();
     REQUIRE(ret > 0);
 
@@ -64,7 +64,7 @@ TEST_CASE( "io fs task read test", "[fs task]" ) {
 TEST_CASE( "io fs task write test", "[fs task]" ) {
     SetupRuntime();
     std::string str = "hello \n world!";
-    auto stream = MakeStream(str.c_str(), str.size());
+    auto stream = std::make_shared<IOStream>(str.c_str(), str.size());
     int ret = AsyncFsOpen("tmp")->Wait()->Get();
     REQUIRE(ret >= 0);
 

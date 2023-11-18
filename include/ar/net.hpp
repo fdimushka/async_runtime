@@ -4,6 +4,7 @@
 
 #include "ar/task.hpp"
 #include "ar/coroutine.hpp"
+#include "ar/stream_buffer.hpp"
 #include "stream.hpp"
 #include "uv.h"
 
@@ -40,14 +41,19 @@ namespace AsyncRuntime {
         struct sockaddr_in              dest_addr;
         uv_tcp_t                        socket;
         uv_connect_t                    connect;
-        IOStream                        read_stream;
-        bool                            is_reading;
-        NetReadTask                     *read_task;
+        std::atomic_int                 read_error = {0};
+        StreamBuffer<>                  read_stream;
+        std::shared_ptr<AsyncRuntime::Result<int>>  read_result;
+        std::mutex mutex;
     };
-
 
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
 
+    void CloseReadStream(TCPConnection *conn, int error);
+    void ProduceReadStream(TCPConnection *conn, char* buffer, size_t size);
+    int ConsumeReadStream(TCPConnection *conn, char* buffer, size_t size);
+    int ConsumeReadStream(const std::shared_ptr<TCPConnection> & conn, char* buffer, size_t size);
+    std::shared_ptr<AsyncRuntime::Result<int>> AsyncWaitReadStream(const std::shared_ptr<TCPConnection> & conn, size_t size);
 
     struct UDPReceivedData {
         const struct sockaddr*          addr;

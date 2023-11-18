@@ -5,6 +5,7 @@
 #include "ar/task.hpp"
 #include "ar/stream.hpp"
 #include "ar/net.hpp"
+#include "ar/stream_buffer.hpp"
 
 #include "uv.h"
 
@@ -114,8 +115,8 @@ namespace AsyncRuntime {
         NetConnectionTask(const TCPConnectionPtr& connection) : _connection(connection) { }
         bool Execute(uv_loop_t *loop) override;
         static void NetConnectionCb(uv_connect_t* connection, int status);
-        static void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
         static void NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf);
+        static void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
     private:
         TCPConnectionPtr     _connection;
     };
@@ -127,12 +128,11 @@ namespace AsyncRuntime {
      */
     class NetReadTask : public IOTask {
     public:
-        NetReadTask(const TCPConnectionPtr& connection, const IOStreamPtr& stream): _connection(connection), _stream(stream) {}
+        NetReadTask(const TCPConnectionPtr& connection, const std::shared_ptr<StreamBuffer<>>& stream_buffer): _connection(connection), _stream_buffer(stream_buffer) {}
         bool Execute(uv_loop_t *loop) override;
-        friend void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
     private:
-        TCPConnectionPtr     _connection;
-        IOStreamPtr          _stream;
+        TCPConnectionPtr                      _connection;
+        std::shared_ptr<StreamBuffer<>>       _stream_buffer;
     };
 
 
@@ -142,12 +142,12 @@ namespace AsyncRuntime {
      */
     class NetWriteTask : public IOTask {
     public:
-        NetWriteTask(const TCPConnectionPtr& connection, const IOStreamPtr& stream): _connection(connection), _stream(stream) {}
+        NetWriteTask(const TCPConnectionPtr& connection, const char* buffer, size_t size);
         bool Execute(uv_loop_t *loop) override;
         static void NetWriteCb(uv_write_t* req, int status);
     private:
         TCPConnectionPtr     _connection;
-        IOStreamPtr          _stream;
+        StreamBuffer<>       _stream_buffer;
     };
 
 

@@ -79,16 +79,6 @@ namespace AsyncRuntime {
     };
 
     typedef std::shared_ptr<IOStream>     IOStreamPtr;
-
-
-    inline IOStreamPtr MakeStream() {
-        return std::make_shared<IOStream>();
-    }
-
-
-    inline IOStreamPtr MakeStream(const char *buffer, size_t length) {
-        return std::make_shared<IOStream>(buffer, length);
-    }
 }
 
 #endif //AR_STREAM_HPP

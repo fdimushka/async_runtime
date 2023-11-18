@@ -3,11 +3,11 @@
 #include "uv.h"
 
 #include <cstring>
+#include <ostream>
+#include <istream>
 
 
 using namespace AsyncRuntime;
-#define MAX_READING_SIZE    1024*1024*10
-
 
 const char* AsyncRuntime::FSErrorMsg(int error)
 {
@@ -20,6 +20,10 @@ const char* AsyncRuntime::FSErrorName(int error)
     return uv_err_name(error);
 }
 
+NetWriteTask::NetWriteTask(const TCPConnectionPtr& connection, const char* buffer, size_t size) : _connection(connection) {
+    std::ostream out(&_stream_buffer);
+    out.write(buffer, size);
+}
 
 bool FsOpenTask::Execute(uv_loop_t *loop)
 {
@@ -63,47 +67,25 @@ bool FsCloseTask::Execute(uv_loop_t *loop)
     return true;
 }
 
-
 bool NetConnectionTask::Execute(uv_loop_t *loop)
 {
     assert(_connection);
     uv_connect_t *con = &_connection->connect;
     con->data = this;
+
     uv_tcp_init(loop, &_connection->socket);
+    uv_tcp_nodelay(&_connection->socket, 1);
+    uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
+    uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
 
-    if(_connection->fd == -1) {
-        uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
-        uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
-
-        int error = uv_tcp_connect(con, &_connection->socket, (sockaddr*)&_connection->dest_addr, &NetConnectionTask::NetConnectionCb);
-        if(error) {
-            Resolve(error);
-            return false;
-        }
-    }else{
-        int error = uv_tcp_open(&_connection->socket, _connection->fd);
-        if(error) {
-            Resolve(error);
-            return false;
-        }
-
-        auto *stream = (uv_stream_t*)&_connection->socket;
-        stream->data = _connection.get();
-        _connection->is_reading = true;
-        error = uv_read_start(stream, &NetAllocCb, &NetReadCb);
-
-        if(error) {
-            Resolve(error);
-            return false;
-        }
-
-        Resolve(IO_SUCCESS);
+    int error = uv_tcp_connect(con, &_connection->socket, (sockaddr*)&_connection->dest_addr, &NetConnectionTask::NetConnectionCb);
+    if(error) {
+        Resolve(error);
         return false;
     }
 
     return true;
 }
-
 
 void NetConnectionTask::NetConnectionCb(uv_connect_t* connection, int status)
 {
@@ -113,117 +95,65 @@ void NetConnectionTask::NetConnectionCb(uv_connect_t* connection, int status)
     if (status >= 0) {
         auto *stream = (uv_stream_t*)&task->_connection->socket;
         stream->data = task->_connection.get();
-        task->_connection->is_reading = true;
-        int error = uv_read_start(stream, &NetAllocCb, &NetReadCb);
-        if(!error) {
+        int error = uv_read_start(stream,
+                                  &NetConnectionTask::NetAllocCb,
+                                  &NetConnectionTask::NetReadCb);
+        if(error) {
+            task->Resolve(ECANCELED);
+        } else {
             task->Resolve(IO_SUCCESS);
-            delete task;
-        }else{
-            task->Resolve(error);
-            delete task;
         }
+        delete task;
     }else{
         task->Resolve(status);
         delete task;
     }
 }
 
-
 void NetConnectionTask::NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf)
 {
     assert(handle->data != nullptr);
-    auto *connection = (TCPConnection*)handle->data;
-    if(connection) {
-        connection->read_stream.Next(buf, size);
-    }
+    buf->base = (char*)malloc(size);
+    buf->len = size;
 }
-
 
 void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     assert(stream->data != nullptr);
     auto *connection = (TCPConnection*)stream->data;
-    if(connection) {
-        if(nread >= 0) {
-            connection->read_stream.SetLength(connection->read_stream.GetLength() + nread);
-        }
 
-        if (connection->read_task != nullptr) {
-            if (nread >= 0) {
-                *(connection->read_task->_stream) = connection->read_stream;
-                connection->read_task->Resolve(IO_SUCCESS);
-            }else {
-                connection->read_task->Resolve(nread);
-            }
+    if (nread > 0) {
+        ProduceReadStream(connection, buf->base, nread);
+    } else {
+        CloseReadStream(connection, EOF);
+    }
 
-            delete connection->read_task;
-            connection->read_task = nullptr;
-            connection->read_stream.Flush();
-        }else{
-            if(connection->is_reading && connection->read_stream.GetLength() > MAX_READING_SIZE) {
-                connection->is_reading = false;
-                uv_read_stop((uv_stream_t *)&connection->socket);
-            }
-        }
+    if (buf->base != nullptr) {
+        free(buf->base);
     }
 }
 
 
 bool NetReadTask::Execute(uv_loop_t *loop)
 {
-    assert(_connection);
-    assert(_stream);
-    _stream->SetMode(IOStream::R);
-
-    if(!_connection->is_reading) {
-        _connection->is_reading = true;
-
-        auto *stream = (uv_stream_t*)&_connection->socket;
-        stream->data = _connection.get();
-        int error = uv_read_start(stream, &NetConnectionTask::NetAllocCb, &NetConnectionTask::NetReadCb);
-        if(error) {
-            Resolve(ECANCELED);
-            return false;
-        }
-    }
-
-    if(_connection->read_stream.GetBufferSize() > 0) {
-        *_stream = _connection->read_stream;
-        _connection->read_stream.Flush();
-        Resolve(IO_SUCCESS);
-        return false;
-    }else{
-        if(_connection->read_task == nullptr) {
-            _connection->read_task = this;
-        }else{
-            Resolve(ECANCELED);
-            return false;
-        }
-    }
-
-    return true;
+    return false;
 }
 
 
 bool NetWriteTask::Execute(uv_loop_t *loop)
 {
     assert(_connection);
-    assert(_stream);
-    _stream->SetMode(IOStream::W);
-    uv_buf_t *buf = _stream->Next(_stream->GetLength());
-    if(buf) {
-        auto *write_req = (uv_write_t*)malloc(sizeof(uv_write_t));
-        write_req->data = this;
-        int error = uv_write(write_req, (uv_stream_t *)&_connection->socket, buf, 1, &NetWriteCb);
-        if(error) {
-            Resolve(error);
-            return false;
-        }
-        return true;
-    }else{
-        Resolve(EIO);
+    auto *buf = new uv_buf_t;
+    auto *write_req = (uv_write_t *) malloc(sizeof(uv_write_t));
+    write_req->data = this;
+    buf->base = _stream_buffer.data();
+    buf->len = _stream_buffer.size();
+    int error = uv_write(write_req, (uv_stream_t *) &_connection->socket, buf, 1, &NetWriteCb);
+    if (error) {
+        Resolve(error);
         return false;
     }
+    return true;
 }
 
 
@@ -548,22 +478,9 @@ void NetWriteTask::NetWriteCb(uv_write_t* req, int status)
     assert(req->type == UV_WRITE);
 
     if (status >= 0) {
-        const auto& stream = task->_stream;
-        uv_buf_t *buf = stream->Next();
-
-        if(buf) {
-            int error = uv_write(req, (uv_stream_t *)&task->_connection->socket, buf, 1, &NetWriteCb);
-            if(error) {
-                task->Resolve(error);
-                delete task;
-                free(req);
-            }
-        }else{
-            stream->Begin();
-            task->Resolve(IO_SUCCESS);
-            delete task;
-            free(req);
-        }
+        task->Resolve(IO_SUCCESS);
+        delete task;
+        free(req);
     }else{
         task->Resolve(status);
         delete task;

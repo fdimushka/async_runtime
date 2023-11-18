@@ -1,5 +1,6 @@
 #include "ar/net.hpp"
 
+#include <istream>
 #include <utility>
 #include "ar/runtime.hpp"
 
@@ -12,24 +13,59 @@ TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port,
     connection->fd = -1;
     connection->hostname = std::string{hostname};
     connection->port = port;
-    connection->read_task = nullptr;
     connection->keepalive = keepalive;
-    connection->is_reading = false;
-    connection->read_stream.SetMode(IOStream::Mode::R);
     return connection;
 }
-
 
 TCPConnectionPtr AsyncRuntime::MakeTCPConnection(int fd)
 {
     TCPConnectionPtr connection = std::make_shared<TCPConnection>();
     connection->fd = fd;
-    connection->read_task = nullptr;
-    connection->is_reading = false;
-    connection->read_stream.SetMode(IOStream::Mode::R);
     return connection;
 }
 
+void AsyncRuntime::CloseReadStream(TCPConnection *conn, int error) {
+    conn->read_error.store(error, std::memory_order_relaxed);
+    if (conn->read_result && !conn->read_result->Resolved()) {
+        conn->read_result->SetValue(error);
+    }
+}
+
+void AsyncRuntime::ProduceReadStream(TCPConnection *conn, char* buffer, size_t size) {
+    std::lock_guard<std::mutex> lock(conn->mutex);
+    std::ostream out(&conn->read_stream);
+    out.write(buffer, size);
+    if (conn->read_result && !conn->read_result->Resolved()) {
+        conn->read_result->SetValue(conn->read_stream.size());
+    }
+}
+
+int AsyncRuntime::ConsumeReadStream(const std::shared_ptr<TCPConnection> & conn, char* buffer, size_t size) {
+    return ConsumeReadStream(conn.get(), buffer, size);
+}
+
+int AsyncRuntime::ConsumeReadStream(TCPConnection *conn, char* buffer, size_t buf_size) {
+    std::lock_guard<std::mutex> lock(conn->mutex);
+    size_t size = std::min(conn->read_stream.size(), buf_size);
+    if (size > 0) {
+        std::istream in(&conn->read_stream);
+        in.read(buffer, size);
+        conn->read_stream.consume(size);
+    }
+    return size;
+}
+
+std::shared_ptr<AsyncRuntime::Result<int>>
+AsyncRuntime::AsyncWaitReadStream(const std::shared_ptr<TCPConnection> & conn, size_t buf_size) {
+    std::lock_guard<std::mutex> lock(conn->mutex);
+    if(conn->read_stream.size() <= 0) {
+        conn->read_result = std::make_shared<AsyncRuntime::Result<int>>();
+        return conn->read_result;
+    } else {
+        size_t size = std::min(conn->read_stream.size(), buf_size);
+        return std::make_shared<AsyncRuntime::Result<int>>(size);
+    }
+}
 
 TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
 {
@@ -38,7 +74,6 @@ TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
     server->port = port;
     return server;
 }
-
 
 TCPServerPtr
 AsyncRuntime::MakeTCPServer(const char *hostname,
@@ -144,3 +179,4 @@ void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, std::shared
         yield();
         session->Invoke(handler);
 }
+

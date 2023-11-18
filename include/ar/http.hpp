@@ -7,6 +7,7 @@
 #include "ar/helper.hpp"
 #include "ar/timestamp.hpp"
 #include "ar/net.hpp"
+#include "ar/stream_buffer.hpp"
 
 
 namespace AsyncRuntime {
@@ -590,7 +591,7 @@ static  const std::string default_content_type = "text/html; charset=UTF-8";
         TCPConnectionPtr    tcp_connection;
         CoroutineHandler    *coroutine_handler;
         bool                valid;
-        IOStreamPtr         in_stream;
+        std::shared_ptr<StreamBuffer<>>         in_stream;
     };
     typedef std::shared_ptr<HTTPConnection> HTTPConnectionPtr;
 
