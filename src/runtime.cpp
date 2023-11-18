@@ -16,7 +16,6 @@ Runtime Runtime::g_runtime;
 
 Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
-    Logger::s_logger.SetStd();
 }
 
 
@@ -28,6 +27,7 @@ Runtime::~Runtime()
 
 void Runtime::Setup(const RuntimeOptions& _options)
 {
+    Logger::s_logger.SetStd();
     coroutine_counter = MakeMetricsCounter("coroutines_count", {});
 
     SetupWorkGroups(_options.work_groups_option);

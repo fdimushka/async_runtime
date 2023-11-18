@@ -11,20 +11,20 @@ void async_tcp(CoroutineHandler* handler, Yield<std::string>& yield, const std::
 
     int ret = Await(AsyncConnect(connection), handler);
     if(ret == IO_SUCCESS) {
-        auto req_stream = MakeStream(req.c_str(), req.size());
-        auto res_stream = MakeStream();
-        ret = Await(AsyncWrite(connection, req_stream), handler);
+        ret = Await(AsyncWrite(connection, req.c_str(), req.size()), handler);
         if(ret != IO_SUCCESS){
             std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
         }
 
-        ret = Await(AsyncRead(connection, res_stream), handler);
-        if(ret != IO_SUCCESS){
-            std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
-            yield( {} );
+        std::vector<char> buffer(65536);
+        int res_size = Await(AsyncRead(handler, connection, buffer.data(), buffer.size()), handler);
+        if(res_size > 0) {
+            Await(AsyncClose(connection), handler);
+            yield( { std::string(buffer.data(), res_size) } );
         }else{
             Await(AsyncClose(connection), handler);
-            yield( { res_stream->GetBuffer() } );
+            std::cerr << "read error"<< std::endl;
+            yield( {} );
         }
     }else{
         std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
@@ -37,6 +37,7 @@ int main() {
     SetupRuntime();
     std::string req = "GET / HTTP/1.1\r\n"
                       "Host: example.com\r\n"
+                      "Connection: close\r\n"
                       "User-Agent: ar example tcp server\r\n"
                       "Accept: */*\r\n\r\n";
 

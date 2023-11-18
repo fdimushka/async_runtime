@@ -163,7 +163,8 @@ static int HttpOnHeaderValueComplete(llhttp_t* http_t)
 
 void HTTPConnection::Init()
 {
-    int ret = Await(AsyncRead(tcp_connection, in_stream), coroutine_handler);
+    std::vector<char> buffer(65536);
+    int ret = Await(AsyncRead(coroutine_handler, tcp_connection, buffer.data(), buffer.size()), coroutine_handler);
     if(ret == IO_SUCCESS) {
         llhttp_t parser;
         llhttp_settings_t settings;
@@ -179,7 +180,7 @@ void HTTPConnection::Init()
         llhttp_init(&parser, HTTP_REQUEST, &settings);
 
         parser.data = &http_request;
-        enum llhttp_errno err = llhttp_execute(&parser, in_stream->GetBuffer(), in_stream->GetBufferSize());
+        enum llhttp_errno err = llhttp_execute(&parser, buffer.data(), buffer.size());
         if (err == HPE_OK) {
             valid = true;
         }
@@ -202,8 +203,7 @@ HTTPConnection::AsyncResponse(HTTPResponse &response)
     std::stringstream ss;
     ss << response;
     std::string str = std::move(ss.str());
-    auto stream = MakeStream(str.c_str(), str.size());
-    return AsyncWrite(tcp_connection, stream);
+    return AsyncWrite(tcp_connection, str.c_str(), str.size());
 }
 
 

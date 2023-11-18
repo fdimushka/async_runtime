@@ -6,7 +6,7 @@ using namespace AsyncRuntime;
 
 void async_io(CoroutineHandler* handler, YieldVoid & yield) {
     //make input stream
-    auto in_stream = MakeStream();
+    auto in_stream = std::make_shared<IOStream>();
     int res = 0;
     int fd = 0;
 
@@ -31,7 +31,7 @@ void async_io(CoroutineHandler* handler, YieldVoid & yield) {
     Await(AsyncFsClose(fd), handler);
 
     //make output stream with data from input stream
-    auto out_stream = MakeStream(in_stream->GetBuffer(), in_stream->GetBufferSize());
+    auto out_stream = std::make_shared<IOStream>(in_stream->GetBuffer(), in_stream->GetBufferSize());
 
     //async open file
     if( (res = Await(AsyncFsOpen("tmp"), handler)) < 0 ) {

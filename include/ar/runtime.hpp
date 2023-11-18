@@ -456,6 +456,30 @@ namespace AsyncRuntime {
     }
 
     /**
+     * @brief await
+     * @tparam Ret
+     * @param awaiter
+     * @param context
+     * @return
+     */
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<Result<Ret>> result) {
+        return Runtime::g_runtime.Await(result);
+    }
+
+    /**
+     * @brief await
+     * @tparam Ret
+     * @param awaiter
+     * @param context
+     * @return
+     */
+    template< class Ret >
+    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
+        return Runtime::g_runtime.Await<Ret>(result, handler);
+    }
+
+    /**
      * @brief
      * @tparam ExecutorType
      * @tparam TaskType
@@ -551,8 +575,14 @@ namespace AsyncRuntime {
      * @param stream
      * @return
      */
-    inline IOResultPtr AsyncRead(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
-        return Runtime::g_runtime.AsyncIO<NetReadTask>(connection, stream);
+    inline IOResultPtr AsyncRead(CoroutineHandler *handler, const TCPConnectionPtr & connection, char *buffer, size_t size) {
+        while (1) {
+            if (connection->read_error.load(std::memory_order_relaxed) < 0) { break; }
+            int res = Await(AsyncWaitReadStream(connection, size), handler);
+            if (res >= size) { break;}
+        }
+        int res_size = ConsumeReadStream(connection, buffer, size);
+        return std::make_shared<AsyncRuntime::Result<int>>(res_size);
     }
 
 
@@ -562,8 +592,8 @@ namespace AsyncRuntime {
      * @param stream
      * @return
      */
-    inline IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const IOStreamPtr & stream) {
-        return Runtime::g_runtime.AsyncIO<NetWriteTask>(connection, stream);
+    inline IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const char* buffer, size_t size) {
+        return Runtime::g_runtime.AsyncIO<NetWriteTask>(connection, buffer, size);
     }
 
 
@@ -618,31 +648,6 @@ namespace AsyncRuntime {
      */
     inline IOResultPtr AsyncRecv(const UDPPtr & udp, const IOStreamPtr & stream) {
         return Runtime::g_runtime.AsyncIO<NetRecvTask>(udp, stream);
-    }
-
-
-    /**
-     * @brief await
-     * @tparam Ret
-     * @param awaiter
-     * @param context
-     * @return
-     */
-    template< class Ret >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result) {
-        return Runtime::g_runtime.Await(result);
-    }
-
-    /**
-     * @brief await
-     * @tparam Ret
-     * @param awaiter
-     * @param context
-     * @return
-     */
-    template< class Ret >
-    inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
-        return Runtime::g_runtime.Await<Ret>(result, handler);
     }
 }
 
