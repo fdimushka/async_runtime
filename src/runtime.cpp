@@ -182,13 +182,13 @@ void Runtime::Post(Task *task)
 {
     const auto& executor_state = task->GetExecutorState();
     if(executor_state.executor == nullptr) {
-//        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag) : FetchFreeExecutor(kCPU_EXECUTOR);
-//        if (executor != nullptr) {
-//            executor->Post(task);
-//        } else {
-//            main_executor->Post(task);
-//        }
-        main_executor->Post(task);
+       auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag) : FetchFreeExecutor(kCPU_EXECUTOR);
+       if (executor != nullptr) {
+           executor->Post(task);
+       } else {
+           main_executor->Post(task);
+       }
+        //main_executor->Post(task);
     }else{
         executor_state.executor->Post(task);
     }
