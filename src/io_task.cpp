@@ -9,6 +9,11 @@
 
 using namespace AsyncRuntime;
 
+static int64_t now_ts() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 const char *AsyncRuntime::FSErrorMsg(int error) {
     return uv_strerror(error);
 }
@@ -68,6 +73,8 @@ bool NetConnectionTask::Execute(uv_loop_t *loop) {
     con->data = this;
     uv_tcp_init(loop, &_connection->socket);
 
+    _connection->last_read_ts = now_ts();
+
     if (_connection->fd == -1) {
         int error = uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
         if (error) {
@@ -77,11 +84,16 @@ bool NetConnectionTask::Execute(uv_loop_t *loop) {
 
         uv_ip4_addr(_connection->hostname.c_str(), _connection->port, &_connection->dest_addr);
 
-        error = uv_tcp_connect(con, &_connection->socket, (sockaddr *) &_connection->dest_addr,
-                               &NetConnectionTask::NetConnectionCb);
+        error = uv_tcp_connect(con, &_connection->socket, (sockaddr *) &_connection->dest_addr, &NetConnectionTask::NetConnectionCb);
         if (error) {
             Resolve(error);
             return false;
+        }
+
+        if (_connection->read_timeout > 0) {
+            uv_timer_init(loop, &_connection->read_timer);
+            _connection->read_timer.data = _connection.get();
+            uv_timer_start(&_connection->read_timer, &NetConnectionTask::NetReadTimerTick, 1000, 100);
         }
     } else {
         int error = uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
@@ -94,6 +106,12 @@ bool NetConnectionTask::Execute(uv_loop_t *loop) {
         if (error) {
             Resolve(error);
             return false;
+        }
+
+        if (_connection->read_timeout > 0) {
+            uv_timer_init(loop, &_connection->read_timer);
+            _connection->read_timer.data = _connection.get();
+            uv_timer_start(&_connection->read_timer, &NetConnectionTask::NetReadTimerTick, 1000, 1000);
         }
 
         auto *stream = (uv_stream_t *) &_connection->socket;
@@ -144,6 +162,8 @@ void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_b
     assert(stream->data != nullptr);
     auto *connection = (TCPConnection *) stream->data;
 
+    connection->last_read_ts = now_ts();
+
     if (nread > 0) {
         ProduceReadStream(connection, buf->base, nread);
     } else {
@@ -152,6 +172,16 @@ void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_b
 
     if (buf->base != nullptr) {
         free(buf->base);
+    }
+}
+
+void NetConnectionTask::NetReadTimerTick(uv_timer_t *handle) {
+    assert(handle->data != nullptr);
+    auto *connection = (TCPConnection *) handle->data;
+
+    if (connection->read_timeout > 0 && now_ts() > connection->read_timeout + connection->last_read_ts) {
+        uv_timer_stop(&connection->read_timer);
+        CloseReadStream(connection, EOF);
     }
 }
 
@@ -180,6 +210,9 @@ bool NetWriteTask::Execute(uv_loop_t *loop) {
 bool NetCloseTask::Execute(uv_loop_t *loop) {
     uv_tcp_t *tcp_client = &_connection->socket;
     tcp_client->data = this;
+    if (_connection->read_timeout > 0) {
+        uv_timer_stop(&_connection->read_timer);
+    }
     uv_read_stop((uv_stream_t *) &_connection->socket);
     uv_close((uv_handle_t *) tcp_client, &NetCloseCb);
     return true;

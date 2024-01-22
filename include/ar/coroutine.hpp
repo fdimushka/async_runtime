@@ -20,6 +20,7 @@ namespace AsyncRuntime {
 
     class CoroutineHandler : public BaseObject {
     public:
+        virtual ~CoroutineHandler() = default;
         virtual void MakeResult() = 0;
         virtual Task* MakeExecTask() = 0;
         virtual void Suspend() = 0;
@@ -236,7 +237,7 @@ namespace AsyncRuntime {
         BaseCoroutine(const BaseCoroutine& other) = delete;
         BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
 
-        ~BaseCoroutine() override {
+        virtual ~BaseCoroutine() {
             End();
         };
 

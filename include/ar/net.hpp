@@ -41,6 +41,9 @@ namespace AsyncRuntime {
         struct sockaddr_in              dest_addr;
         uv_tcp_t                        socket;
         uv_connect_t                    connect;
+        uv_timer_t                      read_timer;
+        int64_t                         read_timeout = 0;
+        int64_t                         last_read_ts = 0;
         std::atomic_int                 read_error = {0};
         StreamBuffer<>                  read_stream;
         std::shared_ptr<AsyncRuntime::Result<int>>  read_result;

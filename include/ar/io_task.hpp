@@ -117,6 +117,7 @@ namespace AsyncRuntime {
         static void NetConnectionCb(uv_connect_t* connection, int status);
         static void NetAllocCb(uv_handle_t *handle, size_t size, uv_buf_t *buf);
         static void NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+        static void NetReadTimerTick(uv_timer_t *handle);
     private:
         TCPConnectionPtr     _connection;
     };
