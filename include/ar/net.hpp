@@ -41,6 +41,7 @@ namespace AsyncRuntime {
         struct sockaddr_in              dest_addr;
         uv_tcp_t                        socket;
         uv_connect_t                    connect;
+        bool                            is_connected = false;
         uv_timer_t                      read_timer;
         int64_t                         read_timeout = 0;
         int64_t                         last_read_ts = 0;
@@ -48,6 +49,8 @@ namespace AsyncRuntime {
         StreamBuffer<>                  read_stream;
         std::shared_ptr<AsyncRuntime::Result<int>>  read_result;
         std::mutex mutex;
+
+        ~TCPConnection();
     };
 
     typedef std::shared_ptr<TCPConnection>  TCPConnectionPtr;
@@ -111,7 +114,7 @@ namespace AsyncRuntime {
 
         void Invoke(CoroutineHandler *handler);
     private:
-        static void Session(CoroutineHandler *handler, YieldVoid yield, std::shared_ptr<TCPSession> session);
+        static void Session(CoroutineHandler *handler, YieldVoid & yield, std::shared_ptr<TCPSession> session);
 
 
         uv_loop_t                                           *loop_;

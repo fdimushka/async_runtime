@@ -202,7 +202,7 @@ namespace AsyncRuntime {
     };
 
     template< class StackAlloc,
-              class Ret >
+            class Ret >
     class BaseCoroutine: public CoroutineHandler {
         typedef BaseCoroutine<StackAlloc, Ret>                                      BaseCoroutineType;
         typedef ContextRecord< StackAlloc, BaseCoroutineType >                      Record;
@@ -218,7 +218,7 @@ namespace AsyncRuntime {
                           state{kExecuting} { }
 
         template< class Function,
-                  class ...Arguments>
+                class ...Arguments>
         explicit BaseCoroutine(Function &&fn, Arguments &&... args) :
                 is_completed{false},
                 yield(this),
@@ -420,7 +420,7 @@ namespace AsyncRuntime {
         using base = BaseCoroutine<FixedSizeStack, Ret> ;
     public:
         template<   class Fn,
-                    class ...Arguments>
+                class ...Arguments>
         explicit Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) { };
         Coroutine() = default;
         virtual ~Coroutine() = default;

@@ -95,6 +95,8 @@ bool NetConnectionTask::Execute(uv_loop_t *loop) {
             _connection->read_timer.data = _connection.get();
             uv_timer_start(&_connection->read_timer, &NetConnectionTask::NetReadTimerTick, 1000, 100);
         }
+
+        _connection->is_connected = true;
     } else {
         int error = uv_tcp_keepalive(&_connection->socket, 1, _connection->keepalive);
         if (error) {
@@ -113,6 +115,8 @@ bool NetConnectionTask::Execute(uv_loop_t *loop) {
             _connection->read_timer.data = _connection.get();
             uv_timer_start(&_connection->read_timer, &NetConnectionTask::NetReadTimerTick, 1000, 1000);
         }
+
+        _connection->is_connected = true;
 
         auto *stream = (uv_stream_t *) &_connection->socket;
         stream->data = _connection.get();
@@ -163,7 +167,8 @@ void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_b
     auto *connection = (TCPConnection *) stream->data;
 
     connection->last_read_ts = now_ts();
-
+//
+//    std::cout << buf->base << std::endl;
     if (nread > 0) {
         ProduceReadStream(connection, buf->base, nread);
     } else {
@@ -180,7 +185,6 @@ void NetConnectionTask::NetReadTimerTick(uv_timer_t *handle) {
     auto *connection = (TCPConnection *) handle->data;
 
     if (connection->read_timeout > 0 && now_ts() > connection->read_timeout + connection->last_read_ts) {
-        uv_timer_stop(&connection->read_timer);
         CloseReadStream(connection, EOF);
     }
 }
@@ -210,9 +214,6 @@ bool NetWriteTask::Execute(uv_loop_t *loop) {
 bool NetCloseTask::Execute(uv_loop_t *loop) {
     uv_tcp_t *tcp_client = &_connection->socket;
     tcp_client->data = this;
-    if (_connection->read_timeout > 0) {
-        uv_timer_stop(&_connection->read_timer);
-    }
     uv_read_stop((uv_stream_t *) &_connection->socket);
     uv_close((uv_handle_t *) tcp_client, &NetCloseCb);
     return true;

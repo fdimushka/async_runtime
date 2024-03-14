@@ -6,6 +6,12 @@
 
 using namespace AsyncRuntime;
 
+TCPConnection::~TCPConnection() {
+    if (is_connected && read_timeout > 0) {
+        uv_timer_stop(&read_timer);
+    }
+    is_connected = false;
+}
 
 TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive)
 {
@@ -173,7 +179,7 @@ void TCPSession::Invoke(CoroutineHandler *handler)
 }
 
 
-void TCPSession::Session(CoroutineHandler *handler, YieldVoid yield, std::shared_ptr<TCPSession> session) {
+void TCPSession::Session(CoroutineHandler *handler, YieldVoid & yield, std::shared_ptr<TCPSession> session) {
         //accept
         yield();
         session->Invoke(handler);

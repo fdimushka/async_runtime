@@ -49,7 +49,7 @@ rlimit stacksize_limit() RNT_NOEXCEPT_OR_NOTHROW {
 
 std::size_t StackTraits::DefaultSize() RNT_NOEXCEPT_OR_NOTHROW
 {
-    return 128 * 1024;
+    return 1024 * 1024 * 4;
 }
 
 

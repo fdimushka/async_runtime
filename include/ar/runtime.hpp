@@ -114,6 +114,11 @@ namespace AsyncRuntime {
         inline std::shared_ptr<Result<typename TaskType::return_type>> AsyncTask(Arguments&&... args);
 
 
+        template< class CoroutineType,
+                  class... Arguments >
+        std::shared_ptr<Result<std::shared_ptr<CoroutineType>>> AsyncMakeCoroutine(Arguments&&... args);
+
+
         /**
          * @brief
          * @tparam ExecutorType
@@ -490,6 +495,11 @@ namespace AsyncRuntime {
         return Runtime::g_runtime.AsyncPostTask<ExecutorType, TaskType>(task);
     }
 
+    template< class CoroutineType,
+            class... Arguments >
+    inline std::shared_ptr<Result<std::shared_ptr<CoroutineType>>> AsyncMakeCoroutine(Arguments&&... args) {
+        return Runtime::g_runtime.AsyncMakeCoroutine<CoroutineType, Arguments...>(std::forward<Arguments>(args)...);
+    }
 
     /**
      * @brief async sleep
