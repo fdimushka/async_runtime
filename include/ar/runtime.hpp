@@ -34,7 +34,7 @@ namespace AsyncRuntime {
         friend class CoroutineHandler;
         friend class Scheduler;
     public:
-        static Runtime g_runtime;
+        static Runtime* g_runtime;
 
         Runtime();
         ~Runtime();
@@ -65,6 +65,7 @@ namespace AsyncRuntime {
          * @brief
          */
         void Setup(const RuntimeOptions& options = {});
+        void Setup(Runtime *other);
         void Terminate();
 
 
@@ -208,6 +209,8 @@ namespace AsyncRuntime {
         void DeleteEntityTag(EntityTag tag);
 
         std::shared_ptr< Mon::Counter > MakeMetricsCounter(const std::string & name, const std::map<std::string, std::string> &labels);
+
+        static const Runtime* Current() { return g_runtime; }
     protected:
         std::shared_ptr<Mon::Counter>   coroutine_counter;
     private:
@@ -377,7 +380,15 @@ namespace AsyncRuntime {
      * @brief
      */
     inline void SetupRuntime(const RuntimeOptions& options = {}) {
-        return Runtime::g_runtime.Setup(options);
+        Runtime::g_runtime = new Runtime;
+        Runtime::g_runtime->Setup(options);
+    }
+
+    /**
+     * @brief
+     */
+    inline void SetupRuntime(Runtime* other) {
+        Runtime::g_runtime->Setup(other);
     }
 
 
@@ -385,7 +396,10 @@ namespace AsyncRuntime {
      * @brief
      */
     inline void Terminate() {
-        return Runtime::g_runtime.Terminate();
+        if (Runtime::g_runtime != nullptr) {
+            Runtime::g_runtime->Terminate();
+            delete Runtime::g_runtime;
+        }
     }
 
 
@@ -399,7 +413,7 @@ namespace AsyncRuntime {
     template < typename ExecutorType,
             class... Arguments >
     inline ExecutorType* CreateExecutor(Arguments&&... args) {
-        return Runtime::g_runtime.CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
+        return Runtime::g_runtime->CreateExecutor<ExecutorType>(std::forward<Arguments>(args)...);
     }
 
     /**
@@ -407,7 +421,7 @@ namespace AsyncRuntime {
      */
     template< class CounterT >
     inline void CreateMetricer(const std::map<std::string, std::string> &labels) {
-        Runtime::g_runtime.CreateMetricer<CounterT>(labels);
+        Runtime::g_runtime->CreateMetricer<CounterT>(labels);
     }
 
     /**
@@ -416,7 +430,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline ObjectID GetWorkGroup(const std::string &name) {
-        return Runtime::g_runtime.GetWorkGroup(name);
+        return Runtime::g_runtime->GetWorkGroup(name);
     }
 
     /**
@@ -425,7 +439,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline EntityTag AddEntityTag(void *ptr) {
-        return Runtime::g_runtime.AddEntityTag(ptr);
+        return Runtime::g_runtime->AddEntityTag(ptr);
     }
 
     /**
@@ -433,7 +447,7 @@ namespace AsyncRuntime {
      * @param tag
      */
     inline void DeleteEntityTag(EntityTag tag) {
-        return Runtime::g_runtime.DeleteEntityTag(tag);
+        return Runtime::g_runtime->DeleteEntityTag(tag);
     }
 
     /**
@@ -447,7 +461,7 @@ namespace AsyncRuntime {
     template <  class Callable,
             class... Arguments>
     inline auto Async(Callable&& f, Arguments&&... args) -> std::shared_ptr<Result<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))>> {
-        return Runtime::g_runtime.Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
+        return Runtime::g_runtime->Async(std::forward<Callable>(f), std::forward<Arguments>(args)...);
     }
 
 
@@ -457,7 +471,7 @@ namespace AsyncRuntime {
      */
     template<class CoroutineType >
     inline std::shared_ptr<Result<typename CoroutineType::RetType>> Async(CoroutineType & coroutine) {
-        return Runtime::g_runtime.Async(coroutine);
+        return Runtime::g_runtime->Async(coroutine);
     }
 
     /**
@@ -469,7 +483,7 @@ namespace AsyncRuntime {
      */
     template< class Ret >
     inline Ret Await(std::shared_ptr<Result<Ret>> result) {
-        return Runtime::g_runtime.Await(result);
+        return Runtime::g_runtime->Await(result);
     }
 
     /**
@@ -481,7 +495,7 @@ namespace AsyncRuntime {
      */
     template< class Ret >
     inline Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler* handler) {
-        return Runtime::g_runtime.Await<Ret>(result, handler);
+        return Runtime::g_runtime->Await<Ret>(result, handler);
     }
 
     /**
@@ -492,13 +506,13 @@ namespace AsyncRuntime {
      */
     template<typename ExecutorType, typename TaskType>
     inline void AsyncPostTask(TaskType *task) {
-        return Runtime::g_runtime.AsyncPostTask<ExecutorType, TaskType>(task);
+        return Runtime::g_runtime->AsyncPostTask<ExecutorType, TaskType>(task);
     }
 
     template< class CoroutineType,
             class... Arguments >
     inline std::shared_ptr<Result<std::shared_ptr<CoroutineType>>> AsyncMakeCoroutine(Arguments&&... args) {
-        return Runtime::g_runtime.AsyncMakeCoroutine<CoroutineType, Arguments...>(std::forward<Arguments>(args)...);
+        return Runtime::g_runtime->AsyncMakeCoroutine<CoroutineType, Arguments...>(std::forward<Arguments>(args)...);
     }
 
     /**
@@ -509,7 +523,7 @@ namespace AsyncRuntime {
      */
     template< typename Rep, typename Period >
     inline ResultVoidPtr AsyncSleep(const std::chrono::duration<Rep, Period>& rtime) {
-        return Runtime::g_runtime.AsyncSleep<Rep, Period>(rtime);
+        return Runtime::g_runtime->AsyncSleep<Rep, Period>(rtime);
     }
 
 
@@ -522,7 +536,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncFsOpen(const char* filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
-        return Runtime::g_runtime.AsyncIO<FsOpenTask>(filename, flags, mode);
+        return Runtime::g_runtime->AsyncIO<FsOpenTask>(filename, flags, mode);
     }
 
 
@@ -532,7 +546,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncFsClose(int fd) {
-        return Runtime::g_runtime.AsyncIO<FsCloseTask>(fd);
+        return Runtime::g_runtime->AsyncIO<FsCloseTask>(fd);
     }
 
 
@@ -543,7 +557,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncFsRead(int fd, const IOStreamPtr& stream, int64_t seek = -1, int64_t size = -1) {
-        return Runtime::g_runtime.AsyncIO<FsReadTask>(fd, stream, seek);
+        return Runtime::g_runtime->AsyncIO<FsReadTask>(fd, stream, seek);
     }
 
 
@@ -554,7 +568,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncFsWrite(int fd, const IOStreamPtr& stream, int64_t seek = -1) {
-        return Runtime::g_runtime.AsyncIO<FsWriteTask>(fd, stream, seek);
+        return Runtime::g_runtime->AsyncIO<FsWriteTask>(fd, stream, seek);
     }
 
 
@@ -564,7 +578,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncConnect(const TCPConnectionPtr& connection) {
-        return Runtime::g_runtime.AsyncIO<NetConnectionTask>(connection);
+        return Runtime::g_runtime->AsyncIO<NetConnectionTask>(connection);
     }
 
 
@@ -575,7 +589,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncListen(const TCPServerPtr& server, const TCPSession::CallbackType& callback) {
-        return Runtime::g_runtime.AsyncIO<NetListenTask>(server, callback);
+        return Runtime::g_runtime->AsyncIO<NetListenTask>(server, callback);
     }
 
 
@@ -603,7 +617,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncWrite(const TCPConnectionPtr & connection, const char* buffer, size_t size) {
-        return Runtime::g_runtime.AsyncIO<NetWriteTask>(connection, buffer, size);
+        return Runtime::g_runtime->AsyncIO<NetWriteTask>(connection, buffer, size);
     }
 
 
@@ -613,7 +627,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncClose(const TCPConnectionPtr & connection) {
-        return Runtime::g_runtime.AsyncIO<NetCloseTask>(connection);
+        return Runtime::g_runtime->AsyncIO<NetCloseTask>(connection);
     }
 
 
@@ -623,7 +637,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncNetAddrInfo(const NetAddrInfoPtr & info) {
-        return Runtime::g_runtime.AsyncIO<NetAddrInfoTask>(info);
+        return Runtime::g_runtime->AsyncIO<NetAddrInfoTask>(info);
     }
 
 
@@ -634,7 +648,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncUDPBind(const UDPPtr & udp, int flags = 0, bool broadcast = false) {
-        return Runtime::g_runtime.AsyncIO<NetUDPBindTask>(udp, flags, broadcast);
+        return Runtime::g_runtime->AsyncIO<NetUDPBindTask>(udp, flags, broadcast);
     }
 
 
@@ -646,7 +660,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncSend(const UDPPtr & udp, const IOStreamPtr & stream, const IPv4Addr &send_addr) {
-        return Runtime::g_runtime.AsyncIO<NetSendTask>(udp, stream, send_addr);
+        return Runtime::g_runtime->AsyncIO<NetSendTask>(udp, stream, send_addr);
     }
 
 
@@ -657,7 +671,7 @@ namespace AsyncRuntime {
      * @return
      */
     inline IOResultPtr AsyncRecv(const UDPPtr & udp, const IOStreamPtr & stream) {
-        return Runtime::g_runtime.AsyncIO<NetRecvTask>(udp, stream);
+        return Runtime::g_runtime->AsyncIO<NetRecvTask>(udp, stream);
     }
 }
 

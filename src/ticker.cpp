@@ -53,12 +53,12 @@ std::shared_ptr<Result<bool >> Ticker::AsyncTick(const ExecutorState& executor_s
     Timespan curr_tick_delay = TIMESTAMP_NOW_MICRO() - last_tick_ts;
 
     if(curr_tick_delay < delay) {
-        Runtime::g_runtime.CheckRuntime();
+        Runtime::g_runtime->CheckRuntime();
         curr_tick_delay = delay - curr_tick_delay;
         auto task = new TickerTaskImpl(last_tick_ts, executor_state);
         task->template SetDelay< Timestamp::Micro >(curr_tick_delay);
         tick_result = task->GetResult();
-        Runtime::g_runtime.Post(task);
+        Runtime::g_runtime->Post(task);
         return tick_result;
     } else {
         last_tick_ts = TIMESTAMP_NOW_MICRO();

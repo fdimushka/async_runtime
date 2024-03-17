@@ -41,7 +41,7 @@ ProcessorGroup::ProcessorGroup(ObjectID _id,
         current_prc = (current_prc + 1) % processors_count;
     }
 
-    m_processors_count = Runtime::g_runtime.MakeMetricsCounter("processors_count", {
+    m_processors_count = Runtime::g_runtime->MakeMetricsCounter("processors_count", {
             {"work_group", name}, {"executor", executor_name}
     });
 

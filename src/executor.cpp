@@ -6,7 +6,7 @@
 using namespace AsyncRuntime;
 
 IExecutor::IExecutor(const std::string & ex_name, ExecutorType executor_type) : name(ex_name), type(executor_type) {
-    m_entities_count = Runtime::g_runtime.MakeMetricsCounter("entities_count", {
+    m_entities_count = Runtime::g_runtime->MakeMetricsCounter("entities_count", {
             {"executor", name}
     });
 
@@ -60,7 +60,7 @@ Executor::Executor(const std::string & name_,
         processor->Run();
     }
 
-    processors_count = Runtime::g_runtime.MakeMetricsCounter("processors_count", {
+    processors_count = Runtime::g_runtime->MakeMetricsCounter("processors_count", {
             {"executor", name}
     });
 

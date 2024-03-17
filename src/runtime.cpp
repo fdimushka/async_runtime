@@ -11,19 +11,16 @@ using namespace AsyncRuntime;
 #define MAIN_EXECUTOR_NAME "main"
 #define IO_EXECUTOR_NAME "io"
 
-Runtime Runtime::g_runtime;
-
+Runtime* Runtime::g_runtime;
 
 Runtime::Runtime() : main_executor{nullptr}, io_executor{nullptr}, is_setup(false)
 {
 }
 
-
 Runtime::~Runtime()
 {
     Terminate();
 }
-
 
 void Runtime::Setup(const RuntimeOptions& _options)
 {
@@ -39,6 +36,12 @@ void Runtime::Setup(const RuntimeOptions& _options)
     is_setup = true;
 
     PROFILER_START();
+}
+
+
+void Runtime::Setup(Runtime *other)
+{
+    g_runtime = other;
 }
 
 

@@ -8,8 +8,8 @@ using namespace AsyncRuntime;
 
 void CoroutineHandler::Begin()
 {
-    if (Runtime::g_runtime.coroutine_counter) {
-        Runtime::g_runtime.coroutine_counter->Increment();
+    if (Runtime::g_runtime->coroutine_counter) {
+        Runtime::g_runtime->coroutine_counter->Increment();
     }
 
     PROFILER_ADD_EVENT(GetID(), Profiler::NEW_COROUTINE);
@@ -18,8 +18,8 @@ void CoroutineHandler::Begin()
 
 void CoroutineHandler::End()
 {
-    if (Runtime::g_runtime.coroutine_counter) {
-        Runtime::g_runtime.coroutine_counter->Decrement();
+    if (Runtime::g_runtime->coroutine_counter) {
+        Runtime::g_runtime->coroutine_counter->Decrement();
     }
 
     PROFILER_ADD_EVENT(GetID(), Profiler::DELETE_COROUTINE);
