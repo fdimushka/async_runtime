@@ -32,7 +32,6 @@ Processor::Processor(int pid, const CPU & cpu) :
 Processor::~Processor()
 {
     is_continue.store(false, std::memory_order_relaxed);
-    thread_executor.Join();
 }
 
 
@@ -47,6 +46,7 @@ void Processor::Terminate()
 {
     is_continue.store(false, std::memory_order_relaxed);
     cv.notify_one();
+    thread_executor.Join();
 }
 
 
@@ -140,15 +140,9 @@ void Processor::ExecuteTask(Task *task, const ExecutorState &executor_state) {
 
     state.store(EXECUTE, std::memory_order_relaxed);
     {
-        //auto t_start = std::chrono::high_resolution_clock::now();
         PROFILER_TASK_WORK_TIME(task->GetOriginId());
         task->SetProcessorExecutorState(GetID());
         task->Execute(executor_state);
-//        auto t_end = std::chrono::high_resolution_clock::now();
-//        double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-t_start).count();
-//        if (elapsed_time_ms > 30) {
-//            std::cout << std::this_thread::get_id() << " " <<  elapsed_time_ms << std::endl;
-//        }
     }
     delete task;
 }

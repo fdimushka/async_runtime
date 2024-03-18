@@ -14,7 +14,8 @@ static uv_async_t   exit_handle;
 
 static void ExitAsyncCb(uv_async_t* handle)
 {
-    uv_close((uv_handle_t*) &exit_handle, nullptr);
+    //uv_close((uv_handle_t*) &exit_handle, nullptr);
+    uv_stop((uv_loop_t*)handle->data);
 }
 
 
@@ -48,8 +49,8 @@ IOExecutor::IOExecutor(const std::string & name_) : IExecutor(name_, kIO_EXECUTO
 
 IOExecutor::~IOExecutor()
 {
+    exit_handle.data = loop;
     uv_async_send(&exit_handle);
-    uv_stop(loop);
     loop_thread.Join();
 
     for(const auto & async : async_handlers) {

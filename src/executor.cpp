@@ -73,13 +73,16 @@ Executor::Executor(const std::string & name_,
 Executor::~Executor() {
     for (auto processor: processors) {
         processor->Terminate();
-        delete processor;
     }
 
     processors.clear();
 
     for (auto group: processor_groups) {
         delete group;
+    }
+
+    for (auto processor: processors) {
+        delete processor;
     }
 
     processor_groups.clear();

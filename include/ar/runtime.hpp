@@ -210,7 +210,7 @@ namespace AsyncRuntime {
 
         std::shared_ptr< Mon::Counter > MakeMetricsCounter(const std::string & name, const std::map<std::string, std::string> &labels);
 
-        static const Runtime* Current() { return g_runtime; }
+        static Runtime* Current() { return g_runtime; }
     protected:
         std::shared_ptr<Mon::Counter>   coroutine_counter;
     private:
@@ -399,6 +399,7 @@ namespace AsyncRuntime {
         if (Runtime::g_runtime != nullptr) {
             Runtime::g_runtime->Terminate();
             delete Runtime::g_runtime;
+            Runtime::g_runtime = nullptr;
         }
     }
 

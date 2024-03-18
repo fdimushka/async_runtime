@@ -8,7 +8,7 @@ using namespace AsyncRuntime;
 
 void CoroutineHandler::Begin()
 {
-    if (Runtime::g_runtime->coroutine_counter) {
+    if (Runtime::g_runtime != nullptr && Runtime::g_runtime->coroutine_counter) {
         Runtime::g_runtime->coroutine_counter->Increment();
     }
 
@@ -18,7 +18,7 @@ void CoroutineHandler::Begin()
 
 void CoroutineHandler::End()
 {
-    if (Runtime::g_runtime->coroutine_counter) {
+    if (Runtime::g_runtime != nullptr && Runtime::g_runtime->coroutine_counter) {
         Runtime::g_runtime->coroutine_counter->Decrement();
     }
 
