@@ -5,5 +5,7 @@
 #cmakedefine USE_TESTS
 #cmakedefine USE_PROFILER
 #cmakedefine USE_NUMA
+#cmakedefine USE_OPENCV
+#cmakedefine USE_OPENCV_CUDA
 
 #endif

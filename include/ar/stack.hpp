@@ -96,7 +96,7 @@ namespace AsyncRuntime {
                 throw std::bad_alloc();
             }
 
-            std::memset(vp, 0, size_);
+            //std::memset(vp, 0, size_);
 
             StackContext sctx;
             sctx.size = size_;

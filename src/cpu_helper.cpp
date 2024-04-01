@@ -1,5 +1,5 @@
 #include "ar/cpu_helper.hpp"
-#include "ar/config.hpp"
+#include "config.hpp"
 #include <math.h>
 
 #ifdef USE_NUMA

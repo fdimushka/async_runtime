@@ -17,7 +17,6 @@
 #include <unordered_map>
 
 #include "ar/macros.hpp"
-#include "ar/config.hpp"
 
 
 namespace AsyncRuntime {

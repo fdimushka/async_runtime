@@ -225,7 +225,7 @@ namespace AsyncRuntime {
         std::future<Ret> future;
         std::shared_ptr<CallbackControlBlock> callback_cb;
         std::promise<Ret> promise;
-        std::atomic_bool resolved{};
+        std::atomic_bool resolved = {false};
         std::mutex resolve_mutex;
         bool excepted;
     };
@@ -387,7 +387,6 @@ namespace AsyncRuntime {
         Callable fn;
         std::shared_ptr<Result<return_type>> result;
     };
-
 
     class DummyTaskImpl : public Task {
     public:

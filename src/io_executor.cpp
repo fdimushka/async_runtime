@@ -9,25 +9,23 @@
 using namespace AsyncRuntime;
 
 
-static uv_async_t   exit_handle;
+static uv_async_t exit_handle;
 
 
-static void ExitAsyncCb(uv_async_t* handle)
-{
+static void ExitAsyncCb(uv_async_t *handle) {
     //uv_close((uv_handle_t*) &exit_handle, nullptr);
-    uv_stop((uv_loop_t*)handle->data);
+    uv_stop((uv_loop_t *) handle->data);
 }
 
 
-static void AsyncIOCb(uv_async_t* handle)
-{
-    if(handle->data != nullptr) {
-        auto* ctx = (IOExecutor::AsyncHandlerCtx*)handle->data;
-        while(!ctx->run_queue.empty()) {
+static void AsyncIOCb(uv_async_t *handle) {
+    if (handle->data != nullptr) {
+        auto *ctx = (IOExecutor::AsyncHandlerCtx *) handle->data;
+        while (!ctx->run_queue.empty()) {
             auto v = ctx->run_queue.steal();
-            if(v) {
+            if (v) {
                 auto *task = (IOTask *) v.value();
-                if(!task->Execute(handle->loop)) {
+                if (!task->Execute(handle->loop)) {
                     delete task;
                 }
             }
@@ -36,8 +34,7 @@ static void AsyncIOCb(uv_async_t* handle)
 }
 
 
-IOExecutor::IOExecutor(const std::string & name_) : IExecutor(name_, kIO_EXECUTOR)
-{
+IOExecutor::IOExecutor(const std::string &name_) : IExecutor(name_, kIO_EXECUTOR) {
     type = kIO_EXECUTOR;
     loop = uv_default_loop();
     uv_async_init(loop, &exit_handle, ExitAsyncCb);
@@ -47,14 +44,13 @@ IOExecutor::IOExecutor(const std::string & name_) : IExecutor(name_, kIO_EXECUTO
 }
 
 
-IOExecutor::~IOExecutor()
-{
+IOExecutor::~IOExecutor() {
     exit_handle.data = loop;
     uv_async_send(&exit_handle);
     loop_thread.Join();
 
-    for(const auto & async : async_handlers) {
-        delete (AsyncHandlerCtx *)async.second->data;
+    for (const auto &async: async_handlers) {
+        delete (AsyncHandlerCtx *) async.second->data;
         delete async.second;
     }
 
@@ -62,8 +58,7 @@ IOExecutor::~IOExecutor()
 }
 
 
-void IOExecutor::ThreadRegistration(std::thread::id thread_id)
-{
+void IOExecutor::ThreadRegistration(std::thread::id thread_id) {
     auto *async = new uv_async_t;
     async->data = new AsyncHandlerCtx;
     async_handlers.insert(std::make_pair(thread_id, async));
@@ -71,8 +66,7 @@ void IOExecutor::ThreadRegistration(std::thread::id thread_id)
 }
 
 
-void IOExecutor::Run()
-{
+void IOExecutor::Run() {
     loop_thread.Submit([this] {
         //std::string th_name = ThreadHelper::GetName() + "/io";
         //ThreadHelper::SetName(th_name.c_str());
@@ -83,30 +77,27 @@ void IOExecutor::Run()
 }
 
 
-void IOExecutor::Loop()
-{
+void IOExecutor::Loop() {
     ThreadRegistration(loop_thread.GetThreadId());
     uv_run(loop, UV_RUN_DEFAULT);
 }
 
 
-void IOExecutor::Post(Task *task)
-{
+void IOExecutor::Post(Task *task) {
     Post(reinterpret_cast<IOTask *>(task));
 }
 
 
-void IOExecutor::Post(IOTask *io_task)
-{
+void IOExecutor::Post(IOTask *io_task) {
     uv_async_t *handler;
 
-    if(async_handlers.find(std::this_thread::get_id()) != async_handlers.end()) {
+    if (async_handlers.find(std::this_thread::get_id()) != async_handlers.end()) {
         handler = async_handlers.at(std::this_thread::get_id());
-    }else{
+    } else {
         handler = async_handlers.at(main_thread_id);
     }
 
-    auto* ctx = (AsyncHandlerCtx*)handler->data;
+    auto *ctx = (AsyncHandlerCtx *) handler->data;
     ctx->run_queue.push(io_task);
     uv_async_send(handler);
 }

@@ -17,6 +17,81 @@ namespace AsyncRuntime {
     class Task;
     class Runtime;
 
+    template <typename Ret>
+    class Coroutine;
+
+    /**
+     * @class CoroutineTaskImpl
+     * @brief CoroutineTaskImpl container
+     */
+    template<class CoroutineType, class Callable>
+    class CoroutineTaskImpl : public Task {
+      typedef typename std::result_of<Callable(const ExecutorState &)>::type return_type;
+     public:
+      CoroutineTaskImpl(Callable &&f, CoroutineType * coroutine) :
+          Task(),
+          fn(f),
+          coroutine_(coroutine),
+          result(new Result<return_type>()) {};
+
+      ~CoroutineTaskImpl() override = default;
+
+
+      void Execute(const ExecutorState &executor_) override {
+        try {
+          executor_state = executor_;
+          Handle(result.get(), fn);
+          if (coroutine_->IsCompleted()) {
+            auto y_result = coroutine_->GetResult();
+            coroutine_->Complete();
+          }
+        } catch (...) {
+          result->SetException(std::current_exception());
+          if (coroutine_->IsCompleted()) {
+            auto y_result = coroutine_->GetResult();
+            coroutine_->Complete();
+          }
+        }
+      }
+
+
+      std::shared_ptr<Result<return_type>> GetResult() {
+        return result;
+      }
+
+     private:
+      /**
+       * @brief handle non-void here
+       * @tparam F
+       * @tparam R
+       * @param p
+       * @param f
+       */
+      template<typename F, typename R>
+      void Handle(Result<R> *r, F &&f) {
+        auto res = f(executor_state);
+        r->SetValue(res);
+      }
+
+
+      /**
+       * @class handle void here
+       * @tparam F
+       * @param p
+       * @param f
+       */
+      template<typename F>
+      void Handle(Result<void> *r, F &&f) {
+        f(executor_state);
+        r->SetValue();
+      }
+
+
+      Callable fn;
+      CoroutineType * coroutine_;
+      std::shared_ptr<Result<return_type>> result;
+    };
+
 
     class CoroutineHandler : public BaseObject {
     public:
@@ -162,13 +237,14 @@ namespace AsyncRuntime {
             // invoke context-function
             try {
                 fn_(static_cast<CoroutineHandler*>(coroutine_), yield);
-                coroutine_->Complete();
+                coroutine_->is_completed.store(true, std::memory_order_relaxed);
+                //coroutine_->Complete();
             }catch (...) {
                 try {
                     yield.SetException(std::current_exception());
                 } catch(...) { }
 
-                coroutine_->Complete();
+                coroutine_->is_completed.store(true, std::memory_order_relaxed);
             }
 
             return coroutine_->yield_fctx;
@@ -310,7 +386,7 @@ namespace AsyncRuntime {
 
         Task* MakeExecTask() override {
             if(!is_completed.load(std::memory_order_relaxed)) {
-                auto task = MakeTask(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
+                auto task = new CoroutineTaskImpl(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1), this);
                 task->SetExecutorState(executor_state);
                 task->SetOriginId(GetID());
                 return task;
@@ -318,6 +394,10 @@ namespace AsyncRuntime {
                 return nullptr;
             }
         }
+
+        bool IsCompleted() { return is_completed.load(std::memory_order_relaxed); }
+
+        void Complete() { yield.Complete(); }
     private:
         void Execute(const ExecutorState& executor_ = ExecutorState()) {
             std::lock_guard<std::mutex> lock(mutex);
@@ -340,12 +420,6 @@ namespace AsyncRuntime {
             yield_fctx = ctx;
             return yield;
         };
-
-
-        void Complete() {
-            is_completed.store(true, std::memory_order_relaxed);
-            yield.Complete();
-        }
 
 
         EntityTag                                           entity_tag = INVALID_OBJECT_ID;
@@ -425,6 +499,7 @@ namespace AsyncRuntime {
         Coroutine() = default;
         virtual ~Coroutine() = default;
     };
+
 
 
     template< typename Ret = void, typename Fn, typename ...Arguments>

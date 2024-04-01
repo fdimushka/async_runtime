@@ -12,6 +12,7 @@ option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 option(WITH_NUMA "Use numa topology" ON)
+option(WITH_OPENCV "Use opencv" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
 message(STATUS "Build with tests: ${WITH_TESTS}")
@@ -20,10 +21,12 @@ message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Build with profiler: ${WITH_PROFILER}")
 message(STATUS "Build with numa: ${WITH_NUMA}")
+message(STATUS "Build with opencv: ${WITH_OPENCV}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
 set(USE_PROFILER OFF)
+set(USE_OPENCV OFF)
 
 if (WITH_TESTS)
     set(USE_TESTS ON)
@@ -42,6 +45,10 @@ if (WITH_NUMA)
     set(USE_NUMA ON)
 endif()
 
+if (WITH_OPENCV)
+    set(USE_OPENCV ON)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -50,6 +57,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -68,7 +78,11 @@ if (WITH_DOCS)
     include(cmake/doxygen.cmake)
 endif()
 
-configure_file(config.in ${CMAKE_CURRENT_SOURCE_DIR}/include/ar/config.hpp)
+if (WITH_OPENCV)
+    include(cmake/opencv.cmake)
+endif()
+
+configure_file(config.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
 file(GLOB SOURCES src/*.cpp src/http/*.cpp)
 file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
@@ -86,6 +100,10 @@ target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES}
 
 if (WITH_NUMA)
     target_link_libraries(${LIB_NAME} numa)
+endif()
+
+if (WITH_OPENCV)
+    target_link_libraries(${LIB_NAME} ${OpenCV_LIBS})
 endif()
 
 if (WITH_PROFILER)
