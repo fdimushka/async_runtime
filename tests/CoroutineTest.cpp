@@ -125,16 +125,19 @@ TEST_CASE( "Coroutine yield string value test", "[coroutine]" ) {
 
 TEST_CASE( "Generator test", "[coroutine]" ) {
     auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
+        yield(0);
         for(int i = 0; i < 5; ++i) {
             yield(i);
         }
-        yield(0);
     });
 
     int i = 0;
 
     while (coro.Valid()) {
         coro();
+        if (!coro.Valid()) {
+          break;
+        }
         i += coro.GetResult()->Get();
     }
 

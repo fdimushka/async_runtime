@@ -141,8 +141,9 @@ namespace AsyncRuntime {
 
 
         void SetException(std::exception_ptr e) {
-            if(result)
-                result->SetException(e);
+            if(result) {
+              result->SetException(e);
+            }
         }
 
 
@@ -240,10 +241,7 @@ namespace AsyncRuntime {
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
                 //coroutine_->Complete();
             }catch (...) {
-                try {
-                    yield.SetException(std::current_exception());
-                } catch(...) { }
-
+                yield.SetException(std::current_exception());
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
             }
 
@@ -320,13 +318,11 @@ namespace AsyncRuntime {
 
         void operator() (const ExecutorState& executor_ = ExecutorState()) {
             std::lock_guard<std::mutex> lock(mutex);
-
             if(is_completed.load(std::memory_order_relaxed)) {
                 throw std::runtime_error("coroutine is completed");
             }
 
             state.store(kExecuting, std::memory_order_relaxed);
-
             yield.ResetResult();
 
             executor_state = executor_;
@@ -335,8 +331,7 @@ namespace AsyncRuntime {
 
 
         bool Valid() const {
-            bool completed = is_completed.load(std::memory_order_relaxed);
-            return !completed;
+            return !is_completed.load(std::memory_order_relaxed);
         }
 
 
