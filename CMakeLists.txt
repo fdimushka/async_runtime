@@ -120,7 +120,7 @@ if (WITH_OPENCV)
 endif()
 
 if (WITH_TBB)
-    target_link_libraries(${LIB_NAME} TBB::tbb)
+    target_link_libraries(${LIB_NAME} tbb)
 endif()
 
 if (WITH_PROFILER)
