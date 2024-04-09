@@ -167,8 +167,7 @@ void NetConnectionTask::NetReadCb(uv_stream_t *stream, ssize_t nread, const uv_b
     auto *connection = (TCPConnection *) stream->data;
 
     connection->last_read_ts = now_ts();
-//
-//    std::cout << buf->base << std::endl;
+
     if (nread > 0) {
         ProduceReadStream(connection, buf->base, nread);
     } else {
@@ -189,11 +188,9 @@ void NetConnectionTask::NetReadTimerTick(uv_timer_t *handle) {
     }
 }
 
-
 bool NetReadTask::Execute(uv_loop_t *loop) {
     return false;
 }
-
 
 bool NetWriteTask::Execute(uv_loop_t *loop) {
     assert(_connection);
@@ -202,27 +199,38 @@ bool NetWriteTask::Execute(uv_loop_t *loop) {
     write_req->data = this;
     buf->base = _stream_buffer.data();
     buf->len = _stream_buffer.size();
-    int error = uv_write(write_req, (uv_stream_t *) &_connection->socket, buf, 1, &NetWriteCb);
-    if (error) {
-        Resolve(error);
+    if (_connection->read_error.load(std::memory_order_relaxed) >= 0) {
+        int error = uv_write(write_req, (uv_stream_t *) &_connection->socket, buf, 1, &NetWriteCb);
+        if (error) {
+            Resolve(error);
+            return false;
+        }
+    } else {
+        Resolve(-1);
         return false;
     }
     return true;
 }
 
-
 bool NetCloseTask::Execute(uv_loop_t *loop) {
-    uv_tcp_t *tcp_client = &_connection->socket;
-    tcp_client->data = this;
-    uv_read_stop((uv_stream_t *) &_connection->socket);
-    uv_close((uv_handle_t *) tcp_client, &NetCloseCb);
+    if (_connection) {
+        uv_tcp_t *tcp_client = &_connection->socket;
+        tcp_client->data = this;
+        uv_read_stop((uv_stream_t *) &_connection->socket);
+        uv_close((uv_handle_t *) tcp_client, &NetCloseCb);
+        CloseReadStream(_connection.get(), EOF);
+    }
     return true;
 }
-
 
 void NetCloseTask::NetCloseCb(uv_handle_t *handle) {
     assert(handle->data != nullptr);
     auto *task = (NetCloseTask *) handle->data;
+
+    if (task->_connection && task->_connection->is_connected && task->_connection->read_timeout > 0) {
+        uv_timer_stop(&task->_connection->read_timer);
+    }
+
     task->Resolve(IO_SUCCESS);
     delete task;
 }
