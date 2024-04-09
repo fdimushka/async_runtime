@@ -177,9 +177,9 @@ namespace AsyncRuntime {
         Ret Await(std::shared_ptr<Result<Ret>> result, CoroutineHandler *handler);
 
 
-        [[nodiscard]] const Executor *GetMainExecutor() const { return main_executor; }
+        [[nodiscard]] const IExecutor *GetMainExecutor() const { return main_executor; }
 
-        Executor *GetMainExecutor() { return main_executor; }
+        IExecutor *GetMainExecutor() { return main_executor; }
 
 
         template<typename ExecutorType>
@@ -227,24 +227,28 @@ namespace AsyncRuntime {
          */
         void CreateDefaultExecutors(int virtual_numa_nodes_count = 0);
 
+        /**
+         * @brief
+         * @param virtual_numa_nodes_count
+         */
+        void CreateTbbExecutors();
+
 
         /**
          * @brief
          * @param tag
          * @return
          */
-        IExecutor *FetchExecutor(const EntityTag &tag);
+        IExecutor *FetchExecutor(ExecutorType type, const EntityTag &tag);
 
         IExecutor *FetchFreeExecutor(ExecutorType type);
 
         std::vector<WorkGroupOption> work_groups_option;
         std::map<size_t, IExecutor *> executors;
-        std::map<EntityTag, IExecutor *> entities_map;
-        Executor *main_executor;
+        IExecutor *main_executor;
         IOExecutor *io_executor;
         bool is_setup;
         std::unique_ptr<Mon::IMetricer> metricer;
-        std::mutex entities_mutex;
     };
 
 
@@ -442,6 +446,15 @@ namespace AsyncRuntime {
      * @return
      */
     inline EntityTag AddEntityTag(void *ptr) {
+        return Runtime::g_runtime->AddEntityTag(ptr);
+    }
+
+    /**
+     * @brief
+     * @param ptr
+     * @return
+     */
+    inline EntityTag AddEntityTag(CoroutineHandler* handler, void *ptr) {
         return Runtime::g_runtime->AddEntityTag(ptr);
     }
 

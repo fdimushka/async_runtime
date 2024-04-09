@@ -15,17 +15,18 @@ IExecutor::IExecutor(const std::string & ex_name, ExecutorType executor_type) : 
     }
 }
 
-
-void IExecutor::IncrementEntitiesCount() {
+uint16_t IExecutor::AddEntity(void *ptr) {
     if (m_entities_count) {
         m_entities_count->Increment();
     }
 
     entities_count.fetch_add(1, std::memory_order_relaxed);
+    
+    return 0;
 }
 
 
-void IExecutor::DecrementEntitiesCount() {
+void IExecutor::DeleteEntity(uint16_t id) {
     if (m_entities_count) {
         m_entities_count->Decrement();
     }

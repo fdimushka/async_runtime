@@ -40,7 +40,7 @@ set( TARGETS_ALL ${TARGETS_SINGLE_FILE})
 
 foreach( name ${TARGETS_SINGLE_FILE} )
     message( STATUS "Unit tests: ${name}" )
-    add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp )
+    add_executable( ${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp)
 endforeach()
 
 include(CTest)

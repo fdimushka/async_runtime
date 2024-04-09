@@ -3,6 +3,7 @@
 #include "ar/logger.hpp"
 #include "ar/profiler.hpp"
 #include "ar/cpu_helper.hpp"
+#include "numbers.h"
 #include "config.hpp"
 
 using namespace AsyncRuntime;
@@ -13,6 +14,12 @@ using namespace AsyncRuntime;
 
 #ifdef USE_OPENCV
 #include "ar/opencv_executor.h"
+#endif
+
+#ifdef USE_TBB
+
+#include "ar/tbb_executor.hpp"
+
 #endif
 
 Runtime *Runtime::g_runtime;
@@ -33,7 +40,26 @@ void Runtime::Setup(const RuntimeOptions &_options) {
     if (is_setup)
         return;
 
+#ifdef USE_TBB
+    CreateTbbExecutors();
+#else
     CreateDefaultExecutors(_options.virtual_numa_nodes_count);
+#endif
+
+    io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
+
+    //    for (const auto executor: cpu_executors) {
+    //        for (const auto &id: executor->GetThreadIds()) {
+    //            io_executor->ThreadRegistration(id);
+    //        }
+    //    }
+
+    io_executor->Run();
+
+#ifdef USE_OPENCV
+    AsyncRuntime::CreateExecutor<OpenCVExecutor>("OpenCVExecutor");
+#endif
+
     is_setup = true;
 
     PROFILER_START();
@@ -99,6 +125,7 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
 
     for (size_t i = 0; i < nodes.size(); ++i) {
         auto executor = new Executor("CPUExecutor_" + std::to_string(i), nodes[i].cpus, work_groups_option);
+        executor->SetIndex(i);
         if (main_executor == nullptr) {
             main_executor = executor;
         }
@@ -109,57 +136,60 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     if (main_executor == nullptr) {
         throw std::runtime_error("main executor not setup");
     }
+}
 
-    io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
-
-    for (const auto executor: cpu_executors) {
-        for (const auto &id: executor->GetThreadIds()) {
-            io_executor->ThreadRegistration(id);
+void Runtime::CreateTbbExecutors() {
+    std::vector<TBBExecutor *> tbb_executors;
+    auto nodes = GetNumaNodes();
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, nodes[i].cpus, work_groups_option);
+        executor->SetIndex(i);
+        if (main_executor == nullptr) {
+            main_executor = executor;
         }
+        executors.insert(std::make_pair(i, executor));
     }
 
-    io_executor->Run();
-
-#ifdef USE_OPENCV
-    AsyncRuntime::CreateExecutor<OpenCVExecutor>("OpenCVExecutor");
-#endif
+    if (main_executor == nullptr) {
+        throw std::runtime_error("main executor not setup");
+    }
 }
 
 EntityTag Runtime::AddEntityTag(void *ptr) {
-    auto tag = reinterpret_cast<std::uintptr_t>(ptr);
     auto executor = FetchFreeExecutor(kCPU_EXECUTOR);
 
     if (executor != nullptr) {
-        std::lock_guard<std::mutex> lock(entities_mutex);
-        executor->IncrementEntitiesCount();
-        entities_map.insert(std::make_pair(tag, executor));
-        return tag;
+        int16_t entity_id = executor->AddEntity(ptr);
+        int16_t executor_id = executor->GetIndex();
+        return Numbers::Pack(executor_id, entity_id);
     } else {
         return INVALID_OBJECT_ID;
     }
 }
 
 void Runtime::DeleteEntityTag(EntityTag tag) {
-    std::lock_guard<std::mutex> lock(entities_mutex);
-    auto it = entities_map.find(tag);
-    if (it != entities_map.end()) {
-        it->second->DecrementEntitiesCount();
-        entities_map.erase(it);
+    uint16_t executor_id, entity_id;
+    Numbers::Unpack(tag, executor_id, entity_id);
+    for (const auto &executor: executors) {
+        if (executor.second->GetType() == kCPU_EXECUTOR && executor.second->GetIndex() == executor_id) {
+            executor.second->DeleteEntity(entity_id);
+            break;
+        }
     }
 }
 
-IExecutor *Runtime::FetchExecutor(const EntityTag &tag) {
-    std::lock_guard<std::mutex> lock(entities_mutex);
-    auto it = entities_map.find(tag);
-    if (it != entities_map.end()) {
-        return it->second;
-    } else {
-        return nullptr;
+IExecutor *Runtime::FetchExecutor(ExecutorType type, const EntityTag &tag) {
+    uint16_t id, e;
+    Numbers::Unpack(tag, id, e);
+    for (const auto &executor: executors) {
+        if (executor.second->GetType() == type && executor.second->GetIndex() == id) {
+            return executor.second;
+        }
     }
+    return nullptr;
 }
 
 IExecutor *Runtime::FetchFreeExecutor(ExecutorType type) {
-    std::lock_guard<std::mutex> lock(entities_mutex);
     IExecutor *min_executor = nullptr;
     int min = INT_MAX;
 
@@ -185,7 +215,7 @@ Runtime::MakeMetricsCounter(const std::string &name, const std::map<std::string,
 void Runtime::Post(Task *task) {
     const auto &executor_state = task->GetExecutorState();
     if (executor_state.executor == nullptr) {
-        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(executor_state.entity_tag)
+        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.entity_tag)
                                                                          : FetchFreeExecutor(kCPU_EXECUTOR);
         if (executor != nullptr) {
             executor->Post(task);

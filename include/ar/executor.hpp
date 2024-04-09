@@ -27,28 +27,38 @@ namespace AsyncRuntime {
         kUSER_EXECUTOR
     };
 
+#define MAX_ENTITIES 2
+
     class IExecutor: public BaseObject {
     public:
         IExecutor() = default;
         explicit IExecutor(const std::string & name, ExecutorType executor_type);
+        ~IExecutor() override = default;
 
         virtual void Post(Task* task) = 0;
 
-        void IncrementEntitiesCount();
+        virtual uint16_t AddEntity(void *ptr);
 
-        void DecrementEntitiesCount();
+        virtual void DeleteEntity(uint16_t id);
+
+        virtual void SetIndex(int i ) { index = i; }
 
         int GetEntitiesCount() const { return entities_count.load(std::memory_order_relaxed); }
 
+        int GetMaxEntitiesCount() const { return MAX_ENTITIES; };
+
         ExecutorType GetType() const { return type; }
+
+        int GetIndex() const { return index; }
 
         const std::string & GetName() const { return name; }
     protected:
         std::string                                              name;
         ExecutorType                                             type = kUSER_EXECUTOR;
-    private:
         std::shared_ptr<Mon::Counter>                            m_entities_count;
         std::atomic_int                                          entities_count = {0};
+    private:
+        int                                                      index = 0;
     };
 
 

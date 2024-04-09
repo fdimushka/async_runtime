@@ -1,30 +1,45 @@
 #include <iostream>
 #include "ar/ar.hpp"
+#include "ar/tbb_executor.hpp"
+#include "ar/timestamp.hpp"
 
-static void async_fun(AsyncRuntime::CoroutineHandler* handler, AsyncRuntime::YieldVoid & yield) {
-  yield();
-  //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  char* buff = (char* )std::malloc(256);
-  buff[0] = '0';
-  std::free(buff);
+using namespace AsyncRuntime;
+using namespace std::chrono_literals;
+
+struct ctx {
+
+};
+
+static void async_loop(CoroutineHandler *handler, YieldVoid & yield) {
+
+    Ticker ticker(100ms);
+    yield();
+
+    int i = 0;
+    while (Await(ticker.AsyncTick(handler), handler)) {
+        AR_LOG_SS(Info, "async_loop " << std::this_thread::get_id());
+        i++;
+        if (i > 10) {
+            break;
+        }
+    }
+    ticker.Stop();
 }
 
 int main() {
+
+    AsyncRuntime::Logger::s_logger.SetStd();
     AsyncRuntime::SetupRuntime();
-    //std::shared_ptr<AsyncRuntime::Result<void>> res;
-    int i = 0;
-    for(;;) {
-      std::cout << i << std::endl;
-      AsyncRuntime::Coroutine<void> coroutine(&async_fun);
-      auto res = AsyncRuntime::Async(coroutine);
-      if (res) {
-        res->Wait();
-      }
-      i++;
+
+    {
+        ctx c;
+        auto tag = AddEntityTag(&c);
+        auto coro = AsyncRuntime::MakeCoroutine(async_loop);
+        coro.SetEntityTag(tag);
+        Await(Async(coro));
+        DeleteEntityTag(tag);
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-    AsyncRuntime::Terminate();
-    return 0;
+  return 0;
 }
 

@@ -43,7 +43,7 @@ namespace AsyncRuntime {
     private:
         Timespan                        last_tick_ts;
         Timespan                        delay;
-        std::shared_ptr<Result<bool>>   tick_result;
+        //std::shared_ptr<Result<bool>>   tick_result;
         std::atomic_bool                is_continue;
     };
 }

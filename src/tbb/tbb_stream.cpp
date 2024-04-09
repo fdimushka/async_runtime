@@ -22,9 +22,8 @@ void TBBStream::Reset() {
 }
 
 void TBBStream::Post(AsyncRuntime::Task *task) {
-    std::cout << "push work to " << index << " " << tag << std::endl;
     rq.push(task);
-    tg.run(std::bind(&TBBStream::ExecuteTask, this));
+    tg.run([this] { ExecuteTask(); });
 }
 
 void TBBStream::SetTag(int64_t t) {

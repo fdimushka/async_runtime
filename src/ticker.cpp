@@ -37,8 +37,8 @@ private:
 void Ticker::Stop()
 {
     is_continue.store(false, std::memory_order_relaxed);
-    if(tick_result)
-        tick_result->SetValue(false);
+    //if(tick_result)
+    //    tick_result->SetValue(false);
 }
 
 
@@ -57,7 +57,7 @@ std::shared_ptr<Result<bool >> Ticker::AsyncTick(const ExecutorState& executor_s
         curr_tick_delay = delay - curr_tick_delay;
         auto task = new TickerTaskImpl(last_tick_ts, executor_state);
         task->template SetDelay< Timestamp::Micro >(curr_tick_delay);
-        tick_result = task->GetResult();
+        auto tick_result = task->GetResult();
         Runtime::g_runtime->Post(task);
         return tick_result;
     } else {

@@ -4,6 +4,6 @@
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
 	url = https://github.com/google/flatbuffers.git
-[submodule "third_party/--force"]
-	path = third_party/--force
+[submodule "third_party/oneTBB"]
+	path = third_party/oneTBB
 	url = https://github.com/oneapi-src/oneTBB.git
