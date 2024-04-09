@@ -15,109 +15,111 @@
 
 namespace AsyncRuntime {
     class Task;
-    class Runtime;
 
-    template <typename Ret>
-    class Coroutine;
+    class Runtime;
 
     /**
      * @class CoroutineTaskImpl
      * @brief CoroutineTaskImpl container
      */
-    template<class CoroutineType, class Callable>
+    template< typename CoroutineType, typename Ret >
     class CoroutineTaskImpl : public Task {
-      typedef typename std::result_of<Callable(const ExecutorState &)>::type return_type;
-     public:
-      CoroutineTaskImpl(Callable &&f, CoroutineType * coroutine) :
-          Task(),
-          fn(f),
-          coroutine_(coroutine),
-          result(new Result<return_type>()) {};
+    public:
+        CoroutineTaskImpl(CoroutineType *coroutine, std::function<void(const ExecutorState &executor)> &&f) :
+                Task(),
+                fn(f),
+                coroutine_(coroutine),
+                result(new Result<Ret>()) {};
 
-      ~CoroutineTaskImpl() override = default;
+        ~CoroutineTaskImpl() override = default;
 
-
-      void Execute(const ExecutorState &executor_) override {
-        try {
-          executor_state = executor_;
-          Handle(result.get(), fn);
-          if (coroutine_->IsCompleted()) {
-            auto y_result = coroutine_->GetResult();
-            coroutine_->Complete();
-          }
-        } catch (...) {
-          result->SetException(std::current_exception());
-          if (coroutine_->IsCompleted()) {
-            auto y_result = coroutine_->GetResult();
-            coroutine_->Complete();
-          }
+        void Execute(const ExecutorState &executor_) override {
+            try {
+                executor_state = executor_;
+                Handle(result.get(), fn);
+                if (coroutine_->IsCompleted()) {
+                    auto y_result = coroutine_->GetResult();
+                    coroutine_->Complete();
+                }
+            } catch (...) {
+                result->SetException(std::current_exception());
+                if (coroutine_->IsCompleted()) {
+                    auto y_result = coroutine_->GetResult();
+                    coroutine_->Complete();
+                }
+            }
         }
-      }
+
+        std::shared_ptr<Result<Ret>> GetResult() {
+            return result;
+        }
+
+    private:
+        /**
+         * @brief handle non-void here
+         * @tparam F
+         * @tparam R
+         * @param p
+         * @param f
+         */
+        template<typename F, typename R>
+        void Handle(Result<R> *r, F &&f) {
+            auto res = f(executor_state);
+            r->SetValue(res);
+        }
 
 
-      std::shared_ptr<Result<return_type>> GetResult() {
-        return result;
-      }
-
-     private:
-      /**
-       * @brief handle non-void here
-       * @tparam F
-       * @tparam R
-       * @param p
-       * @param f
-       */
-      template<typename F, typename R>
-      void Handle(Result<R> *r, F &&f) {
-        auto res = f(executor_state);
-        r->SetValue(res);
-      }
+        /**
+         * @class handle void here
+         * @tparam F
+         * @param p
+         * @param f
+         */
+        template<typename F>
+        void Handle(Result<void> *r, F &&f) {
+            f(executor_state);
+            r->SetValue();
+        }
 
 
-      /**
-       * @class handle void here
-       * @tparam F
-       * @param p
-       * @param f
-       */
-      template<typename F>
-      void Handle(Result<void> *r, F &&f) {
-        f(executor_state);
-        r->SetValue();
-      }
-
-
-      Callable fn;
-      CoroutineType * coroutine_;
-      std::shared_ptr<Result<return_type>> result;
+        std::function<void(const ExecutorState &executor)> fn;
+        CoroutineType *coroutine_;
+        std::shared_ptr<Result<Ret>> result;
     };
 
 
     class CoroutineHandler : public BaseObject {
     public:
         virtual ~CoroutineHandler() = default;
-        virtual void MakeResult() = 0;
-        virtual Task* MakeExecTask() = 0;
-        virtual void Suspend() = 0;
-        virtual const ExecutorState& GetExecutorState() const = 0;
 
+        virtual void MakeResult() = 0;
+
+        virtual Task *MakeExecTask() = 0;
+
+        virtual void Suspend() = 0;
+
+        virtual const ExecutorState &GetExecutorState() const = 0;
+
+        int flag = 0;
     protected:
         void Begin();
+
         void End();
     };
 
 
-    template< typename T >
+    template<typename T>
     class BaseYield {
         friend Runtime;
     public:
         typedef Result<T> ResultType;
 
 
-        BaseYield(CoroutineHandler*  handler) : coroutine_handler(handler) { };
-        virtual ~BaseYield() =default;
+        BaseYield(CoroutineHandler *handler) : coroutine_handler(handler) {};
 
-        BaseYield& operator =(const BaseYield& other) {
+        virtual ~BaseYield() = default;
+
+        BaseYield &operator=(const BaseYield &other) {
             //coroutine_handler = other.coroutine_handler;
             result = other.result;
             return *this;
@@ -127,45 +129,41 @@ namespace AsyncRuntime {
             coroutine_handler->Suspend();
         }
 
-
         void ResetResult() {
-            if(!result || result->Resolved()) {
+            if (!result || result->Resolved()) {
                 result.reset(new ResultType());
             }
         }
-
 
         [[nodiscard]] std::shared_ptr<ResultType> GetResult() const {
             return result;
         }
 
-
         void SetException(std::exception_ptr e) {
-            if(result) {
-              result->SetException(e);
-            }
+            if (result)
+                result->SetException(e);
         }
-
 
         virtual void Complete() = 0;
 
-        CoroutineHandler*               coroutine_handler;
+        CoroutineHandler *coroutine_handler;
     protected:
-        std::shared_ptr<ResultType>     result;
+        std::shared_ptr<ResultType> result;
     };
 
 
-    template< typename T >
+    template<typename T>
     class Yield : public BaseYield<T> {
         typedef BaseYield<T> base;
     public:
-        Yield(CoroutineHandler*  handler) : base(handler) {};
-        virtual ~Yield() =default;
+        Yield(CoroutineHandler *handler) : base(handler) {};
 
-        void operator() (T  v) {
+        virtual ~Yield() = default;
+
+        void operator()(T v) {
             value = v;
 
-            if(base::result) {
+            if (base::result) {
                 base::result->SetValue(value);
             }
 
@@ -174,12 +172,13 @@ namespace AsyncRuntime {
 
 
         void Complete() override {
-            if(base::result) {
+            if (base::result) {
                 base::result->SetValue(value);
             }
         }
+
     private:
-        T                               value;
+        T value;
     };
 
 
@@ -187,11 +186,12 @@ namespace AsyncRuntime {
     class Yield<void> : public BaseYield<void> {
         typedef BaseYield<void> base;
     public:
-        Yield(CoroutineHandler*  handler) : base(handler) { };
-        virtual ~Yield() =default;
+        Yield(CoroutineHandler *handler) : base(handler) {};
 
-        void operator() () {
-            if(base::result) {
+        virtual ~Yield() = default;
+
+        void operator()() {
+            if (base::result) {
                 base::result->SetValue();
             }
 
@@ -200,7 +200,7 @@ namespace AsyncRuntime {
 
 
         void Complete() override {
-            if(base::result) {
+            if (base::result) {
                 base::result->SetValue();
             }
         }
@@ -214,12 +214,12 @@ namespace AsyncRuntime {
      * @class ContextRecord< StackAlloc >
      * @tparam StackAlloc
      */
-    template< typename StackAlloc, class CoroutineType >
+    template<typename StackAlloc, class CoroutineType>
     class ContextRecord {
-        typedef typename CoroutineType::YieldType                       YieldType;
-        typedef std::function<void(CoroutineHandler*, YieldType&)>       Callable;
+        typedef typename CoroutineType::YieldType YieldType;
+        typedef std::function<void(CoroutineHandler *, YieldType &)> Callable;
     public:
-        ContextRecord(StackContext sctx, StackAlloc && salloc, Callable && fn, CoroutineType *coroutine) :
+        ContextRecord(StackContext sctx, StackAlloc &&salloc, Callable &&fn, CoroutineType *coroutine) :
                 salloc_(salloc),
                 sctx_(sctx),
                 fn_(fn),
@@ -227,21 +227,27 @@ namespace AsyncRuntime {
         };
 
 
-        ContextRecord(const ContextRecord& other) = delete;
-        ContextRecord& operator =(const ContextRecord& other) = delete;
-        ContextRecord(ContextRecord&& other) = delete;
-        ContextRecord& operator =(ContextRecord&& other) = delete;
+        ContextRecord(const ContextRecord &other) = delete;
+
+        ContextRecord &operator=(const ContextRecord &other) = delete;
+
+        ContextRecord(ContextRecord &&other) = delete;
+
+        ContextRecord &operator=(ContextRecord &&other) = delete;
 
 
         fcontext_t Run(transfer_t t) {
-            YieldType& yield = coroutine_->BindYieldContext(t.fctx);
+            YieldType &yield = coroutine_->BindYieldContext(t.fctx);
             // invoke context-function
             try {
-                fn_(static_cast<CoroutineHandler*>(coroutine_), yield);
+                fn_(static_cast<CoroutineHandler *>(coroutine_), yield);
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
                 //coroutine_->Complete();
-            }catch (...) {
-                yield.SetException(std::current_exception());
+            } catch (...) {
+                try {
+                    yield.SetException(std::current_exception());
+                } catch (...) {}
+
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
             }
 
@@ -250,23 +256,24 @@ namespace AsyncRuntime {
 
 
         void Deallocate() noexcept {
-            Destroy( this);
+            Destroy(this);
         }
+
     private:
-        static void Destroy( ContextRecord * r) noexcept {
-            typename std::decay< StackAlloc >::type salloc = std::move( r->salloc_);
+        static void Destroy(ContextRecord *r) noexcept {
+            typename std::decay<StackAlloc>::type salloc = std::move(r->salloc_);
             StackContext sctx = r->sctx_;
             // deallocate record
             r->~ContextRecord();
             // destroy stack with stack allocator
-            salloc.Deallocate( sctx);
+            salloc.Deallocate(sctx);
         }
 
 
-        CoroutineType                                       *coroutine_;
-        typename std::decay< StackAlloc >::type             salloc_;
-        StackContext                                        sctx_;
-        Callable                                            fn_;
+        CoroutineType *coroutine_;
+        typename std::decay<StackAlloc>::type salloc_;
+        StackContext sctx_;
+        Callable fn_;
     };
 
 
@@ -275,23 +282,23 @@ namespace AsyncRuntime {
         kWaiting,
     };
 
-    template< class StackAlloc,
-            class Ret >
-    class BaseCoroutine: public CoroutineHandler {
-        typedef BaseCoroutine<StackAlloc, Ret>                                      BaseCoroutineType;
-        typedef ContextRecord< StackAlloc, BaseCoroutineType >                      Record;
+    template<class StackAlloc,
+            class Ret>
+    class BaseCoroutine : public CoroutineHandler {
+        typedef BaseCoroutine<StackAlloc, Ret> BaseCoroutineType;
+        typedef ContextRecord<StackAlloc, BaseCoroutineType> Record;
 
         friend Record;
     public:
-        typedef Yield<Ret>                                                          YieldType;
-        typedef Ret                                                                 RetType;
-        typedef std::function<void(CoroutineHandler*, YieldType&)>                  Callable;
+        typedef Yield<Ret> YieldType;
+        typedef Ret RetType;
+        typedef std::function<void(CoroutineHandler *, YieldType &)> Callable;
 
         BaseCoroutine() : is_completed{false},
                           yield(this),
-                          state{kExecuting} { }
+                          state{kExecuting} {}
 
-        template< class Function,
+        template<class Function,
                 class ...Arguments>
         explicit BaseCoroutine(Function &&fn, Arguments &&... args) :
                 is_completed{false},
@@ -299,49 +306,54 @@ namespace AsyncRuntime {
                 state{kExecuting} {
             yield.ResetResult();
 
-            CreateRecord(std::bind( std::forward<Function>(fn),
-                                    std::placeholders::_1,
-                                    std::placeholders::_2,
-                                    std::forward<Arguments>(args)...) );
+            CreateRecord(std::bind(std::forward<Function>(fn),
+                                   std::placeholders::_1,
+                                   std::placeholders::_2,
+                                   std::forward<Arguments>(args)...));
 
             Begin();
-            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+            fctx = Context::Jump(fctx, static_cast<void *>(record)).fctx;
         }
 
-        BaseCoroutine(const BaseCoroutine& other) = delete;
-        BaseCoroutine& operator =(const BaseCoroutine& other) = delete;
+        BaseCoroutine(const BaseCoroutine &other) = delete;
+
+        BaseCoroutine &operator=(const BaseCoroutine &other) = delete;
 
         virtual ~BaseCoroutine() {
             End();
         };
 
 
-        void operator() (const ExecutorState& executor_ = ExecutorState()) {
-            std::lock_guard<std::mutex> lock(mutex);
-            if(is_completed.load(std::memory_order_relaxed)) {
+        void operator()(const ExecutorState &executor_ = ExecutorState()) {
+            //std::lock_guard<std::mutex> lock(mutex);
+
+            if (is_completed.load(std::memory_order_relaxed)) {
                 throw std::runtime_error("coroutine is completed");
             }
 
             state.store(kExecuting, std::memory_order_relaxed);
+
             yield.ResetResult();
 
             executor_state = executor_;
-            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+            //std::cout << this << std::endl;
+            fctx = Context::Jump(fctx, static_cast<void *>(record)).fctx;
         }
 
 
         bool Valid() const {
-            return !is_completed.load(std::memory_order_relaxed);
+            bool completed = is_completed.load(std::memory_order_relaxed);
+            return !completed;
         }
 
 
         void Suspend() override {
             state.store(kWaiting, std::memory_order_relaxed);
-            yield_fctx = Context::Jump( yield_fctx, nullptr).fctx;
+            yield_fctx = Context::Jump(yield_fctx, nullptr).fctx;
         }
 
 
-        std::shared_ptr<Result<Ret>> GetResult()  {
+        std::shared_ptr<Result<Ret>> GetResult() {
             return yield.GetResult();
         }
 
@@ -364,7 +376,7 @@ namespace AsyncRuntime {
         }
 
 
-        const ExecutorState& GetExecutorState() const override {
+        const ExecutorState &GetExecutorState() const override {
             return executor_state;
         }
 
@@ -379,13 +391,13 @@ namespace AsyncRuntime {
         }
 
 
-        Task* MakeExecTask() override {
-            if(!is_completed.load(std::memory_order_relaxed)) {
-                auto task = new CoroutineTaskImpl(std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1), this);
+        Task *MakeExecTask() override {
+            if (!is_completed.load(std::memory_order_relaxed)) {
+                auto task = new CoroutineTaskImpl<BaseCoroutineType, Ret>(this, std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
                 task->SetExecutorState(executor_state);
                 task->SetOriginId(GetID());
                 return task;
-            }else{
+            } else {
                 return nullptr;
             }
         }
@@ -393,70 +405,70 @@ namespace AsyncRuntime {
         bool IsCompleted() { return is_completed.load(std::memory_order_relaxed); }
 
         void Complete() { yield.Complete(); }
+
     private:
-        void Execute(const ExecutorState& executor_ = ExecutorState()) {
+        void Execute(const ExecutorState &executor_ = ExecutorState()) {
             std::lock_guard<std::mutex> lock(mutex);
 
-            if(is_completed.load(std::memory_order_relaxed)) {
+            if (is_completed.load(std::memory_order_relaxed)) {
                 throw std::runtime_error("coroutine is completed");
             }
 
             state.store(kExecuting, std::memory_order_relaxed);
             executor_state = executor_;
             executor_state.entity_tag = entity_tag;
-            fctx = Context::Jump( fctx, static_cast<void*>(record)).fctx;
+            fctx = Context::Jump(fctx, static_cast<void *>(record)).fctx;
         }
 
 
-        void CreateRecord(Callable && fn);
+        void CreateRecord(Callable &&fn);
 
 
-        Yield<Ret>& BindYieldContext( fcontext_t ctx ) {
+        Yield<Ret> &BindYieldContext(fcontext_t ctx) {
             yield_fctx = ctx;
             return yield;
         };
 
 
-        EntityTag                                           entity_tag = INVALID_OBJECT_ID;
-        ExecutorState                                       executor_state;
-        std::atomic_bool                                    is_completed;
-        std::mutex                                          mutex;
-        std::atomic<CoroutineState>                         state;
-        std::shared_future<void>                            future;
-        Record*                                             record;
-        fcontext_t                                          fctx{ nullptr };
-        fcontext_t                                          yield_fctx{ nullptr };
-        Yield<Ret>                                          yield;
+        EntityTag entity_tag = INVALID_OBJECT_ID;
+        ExecutorState executor_state;
+        std::atomic_bool is_completed;
+        std::mutex mutex;
+        std::atomic<CoroutineState> state;
+        Record *record;
+        fcontext_t fctx{nullptr};
+        fcontext_t yield_fctx{nullptr};
+        Yield<Ret> yield;
     };
 
 
-    template< typename Rec >
-    transfer_t RecordExit( transfer_t t) noexcept {
-        Rec * rec = static_cast< Rec * >( t.data);
+    template<typename Rec>
+    transfer_t RecordExit(transfer_t t) noexcept {
+        Rec *rec = static_cast< Rec * >( t.data);
         // destroy context stack
         rec->Deallocate();
-        return { nullptr, nullptr };
+        return {nullptr, nullptr};
     }
 
 
-    template< typename Rec >
-    void RecordEntry( transfer_t t) noexcept {
+    template<typename Rec>
+    void RecordEntry(transfer_t t) noexcept {
         // transfer control structure to the context-stack
-        Rec * rec = static_cast< Rec * >( t.data);
-        RNT_ASSERT( nullptr != t.fctx);
-        RNT_ASSERT( nullptr != rec);
+        Rec *rec = static_cast< Rec * >( t.data);
+        RNT_ASSERT(nullptr != t.fctx);
+        RNT_ASSERT(nullptr != rec);
         try {
-            t = Context::Jump( t.fctx, nullptr);
+            t = Context::Jump(t.fctx, nullptr);
             // start executing
-            t.fctx = rec->Run( t);
-        }catch ( ... ) {
+            t.fctx = rec->Run(t);
+        } catch (...) {
             std::cerr << "Coroutine exception" << std::endl;
         }
-        RNT_ASSERT( nullptr !=  t.fctx);
+        RNT_ASSERT(nullptr != t.fctx);
 
         // destroy context-stack of `this`context on next context
-        Context::OnTop(  t.fctx, rec, RecordExit< Rec >);
-        RNT_ASSERT_MSG( false, "context already terminated");
+        Context::OnTop(t.fctx, rec, RecordExit<Rec>);
+        RNT_ASSERT_MSG(false, "context already terminated");
     }
 
 
@@ -465,45 +477,48 @@ namespace AsyncRuntime {
         StackAlloc salloc;
         auto sctx = salloc.Allocate();
         // reserve space for control structure
-        void * storage = reinterpret_cast< void * >(
-                ( reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sizeof( Record) ) )
-                & ~static_cast< uintptr_t >( 0xff) );
+        void *storage = reinterpret_cast< void * >(
+                (reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sizeof(Record)))
+                & ~static_cast< uintptr_t >( 0xff));
         // placment new for control structure on context stack
-        record = new ( storage) Record( sctx, std::forward< StackAlloc >( salloc), std::forward<Callable>( fn), this);
+        record = new(storage) Record(sctx, std::forward<StackAlloc>(salloc), std::forward<Callable>(fn), this);
         // 64byte gab between control structure and stack top
         // should be 16byte aligned
-        void * stack_top = reinterpret_cast< void * >(
-                reinterpret_cast< uintptr_t >( storage) - static_cast< uintptr_t >( 64) );
-        void * stack_bottom = reinterpret_cast< void * >(
-                reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sctx.size) );
+        void *stack_top = reinterpret_cast< void * >(
+                reinterpret_cast< uintptr_t >( storage) - static_cast< uintptr_t >( 64));
+        void *stack_bottom = reinterpret_cast< void * >(
+                reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sctx.size));
         // create fast-context 131072
-        const std::size_t size = reinterpret_cast< uintptr_t >( stack_top) - reinterpret_cast< uintptr_t >( stack_bottom);
-        fcontext_t ctx = Context::Make( stack_top, size, & RecordEntry< Record >);
-        fctx = Context::Jump( ctx, record).fctx;
-        RNT_ASSERT( nullptr != fctx);
+        const std::size_t size =
+                reinterpret_cast< uintptr_t >( stack_top) - reinterpret_cast< uintptr_t >( stack_bottom);
+        fcontext_t ctx = Context::Make(stack_top, size, &RecordEntry<Record>);
+        fctx = Context::Jump(ctx, record).fctx;
+        RNT_ASSERT(nullptr != fctx);
     }
 
 
-    template< typename Ret = void >
+    template<typename Ret = void>
     class Coroutine : public BaseCoroutine<FixedSizeStack, Ret> {
-        using base = BaseCoroutine<FixedSizeStack, Ret> ;
+        using base = BaseCoroutine<FixedSizeStack, Ret>;
     public:
-        template<   class Fn,
+        template<class Fn,
                 class ...Arguments>
-        explicit Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) { };
+        explicit
+        Coroutine(Fn &&fn, Arguments &&... args) : base(std::forward<Fn>(fn), std::forward<Arguments>(args)...) {};
+
         Coroutine() = default;
+
         virtual ~Coroutine() = default;
     };
 
 
-
-    template< typename Ret = void, typename Fn, typename ...Arguments>
-    inline Coroutine< Ret > MakeCoroutine(Fn &&fn, Arguments &&... args) {
-        return Coroutine< Ret >(std::forward<Fn>(fn), std::forward<Arguments>(args)...);
+    template<typename Ret = void, typename Fn, typename ...Arguments>
+    inline Coroutine<Ret> MakeCoroutine(Fn &&fn, Arguments &&... args) {
+        return Coroutine<Ret>(std::forward<Fn>(fn), std::forward<Arguments>(args)...);
     }
 
 
-    template< typename Ret = void, class StackAllocator, typename Fn, typename ...Arguments>
+    template<typename Ret = void, class StackAllocator, typename Fn, typename ...Arguments>
     inline BaseCoroutine<StackAllocator, Ret> MakeCoroutine(Fn &&fn, Arguments &&... args) {
         return BaseCoroutine<StackAllocator, Ret>(std::forward<Fn>(fn), std::forward<Arguments>(args)...);
     }
