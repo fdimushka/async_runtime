@@ -22,14 +22,14 @@ namespace AsyncRuntime {
      * @class CoroutineTaskImpl
      * @brief CoroutineTaskImpl container
      */
-    template< typename CoroutineType, typename Ret >
+    template< typename CoroutineType >
     class CoroutineTaskImpl : public Task {
     public:
         CoroutineTaskImpl(CoroutineType *coroutine, std::function<void(const ExecutorState &executor)> &&f) :
                 Task(),
                 fn(f),
                 coroutine_(coroutine),
-                result(new Result<Ret>()) {};
+                result(new Result<void>()) {};
 
         ~CoroutineTaskImpl() override = default;
 
@@ -50,23 +50,11 @@ namespace AsyncRuntime {
             }
         }
 
-        std::shared_ptr<Result<Ret>> GetResult() {
+        std::shared_ptr<Result<void>> GetResult() {
             return result;
         }
 
     private:
-        /**
-         * @brief handle non-void here
-         * @tparam F
-         * @tparam R
-         * @param p
-         * @param f
-         */
-        template<typename F, typename R>
-        void Handle(Result<R> *r, F &&f) {
-            auto res = f(executor_state);
-            r->SetValue(res);
-        }
 
 
         /**
@@ -84,7 +72,7 @@ namespace AsyncRuntime {
 
         std::function<void(const ExecutorState &executor)> fn;
         CoroutineType *coroutine_;
-        std::shared_ptr<Result<Ret>> result;
+        std::shared_ptr<Result<void>> result;
     };
 
 
@@ -393,7 +381,7 @@ namespace AsyncRuntime {
 
         Task *MakeExecTask() override {
             if (!is_completed.load(std::memory_order_relaxed)) {
-                auto task = new CoroutineTaskImpl<BaseCoroutineType, Ret>(this, std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
+                auto task = new CoroutineTaskImpl<BaseCoroutineType>(this, std::bind(&BaseCoroutineType::Execute, this, std::placeholders::_1));
                 task->SetExecutorState(executor_state);
                 task->SetOriginId(GetID());
                 return task;
