@@ -1,7 +1,7 @@
 #set(BUILD_SHARED_LIBS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__TBB_DYNAMIC_LOAD_ENABLED=0")
 set(TBB_TEST OFF)
-set(TBB_WARNING_LEVEL ${TBB_WARNING_LEVEL} -Wno-error=stringop-overflow)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=stringop-overflow")
 add_subdirectory(third_party/oneTBB)
 
 list(APPEND SOURCES src/tbb/tbb_executor.cpp)
