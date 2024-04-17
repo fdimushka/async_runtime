@@ -3,7 +3,6 @@
 
 #include <iterator>
 #include <type_traits>
-#include <boost/exception/diagnostic_information.hpp>
 
 #include "ar/object.hpp"
 #include "ar/task.hpp"
@@ -44,7 +43,7 @@ namespace AsyncRuntime {
                 }
             } catch (const std::exception& ex) {
                 //std::stacktrace trace = std::stacktrace::from_current_exception();
-                std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
+                //std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
                 result->SetException(std::current_exception());
                 if (coroutine_->IsCompleted()) {
                     auto y_result = coroutine_->GetResult();
@@ -239,7 +238,7 @@ namespace AsyncRuntime {
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
                 //coroutine_->Complete();
             } catch (const std::exception& ex) {
-                std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
+                //std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
                 yield.SetException(std::current_exception());
 
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
