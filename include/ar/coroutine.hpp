@@ -3,6 +3,7 @@
 
 #include <iterator>
 #include <type_traits>
+#include <boost/exception/diagnostic_information.hpp>
 
 #include "ar/object.hpp"
 #include "ar/task.hpp"
@@ -41,7 +42,9 @@ namespace AsyncRuntime {
                     auto y_result = coroutine_->GetResult();
                     coroutine_->Complete();
                 }
-            } catch (...) {
+            } catch (const std::exception& ex) {
+                //std::stacktrace trace = std::stacktrace::from_current_exception();
+                std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
                 result->SetException(std::current_exception());
                 if (coroutine_->IsCompleted()) {
                     auto y_result = coroutine_->GetResult();
@@ -65,7 +68,9 @@ namespace AsyncRuntime {
          */
         template<typename F>
         void Handle(Result<void> *r, F &&f) {
-            f(executor_state);
+            if (f) {
+                f(executor_state);
+            }
             r->SetValue();
         }
 
@@ -213,7 +218,7 @@ namespace AsyncRuntime {
                 fn_(fn),
                 coroutine_(coroutine) {
         };
-
+//5376
 
         ContextRecord(const ContextRecord &other) = delete;
 
@@ -228,13 +233,14 @@ namespace AsyncRuntime {
             YieldType &yield = coroutine_->BindYieldContext(t.fctx);
             // invoke context-function
             try {
-                fn_(static_cast<CoroutineHandler *>(coroutine_), yield);
+                if (fn_) {
+                    fn_(static_cast<CoroutineHandler *>(coroutine_), yield);
+                }
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
                 //coroutine_->Complete();
-            } catch (...) {
-                try {
-                    yield.SetException(std::current_exception());
-                } catch (...) {}
+            } catch (const std::exception& ex) {
+                std::cerr << ex.what() << ", " << boost::diagnostic_information(ex) << std::endl;
+                yield.SetException(std::current_exception());
 
                 coroutine_->is_completed.store(true, std::memory_order_relaxed);
             }

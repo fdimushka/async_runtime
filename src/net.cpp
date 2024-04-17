@@ -10,8 +10,7 @@ TCPConnection::~TCPConnection() {
     is_connected = false;
 }
 
-TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive)
-{
+TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port, int keepalive) {
     TCPConnectionPtr connection = std::make_shared<TCPConnection>();
     connection->fd = -1;
     connection->hostname = std::string{hostname};
@@ -20,8 +19,7 @@ TCPConnectionPtr AsyncRuntime::MakeTCPConnection(const char *hostname, int port,
     return connection;
 }
 
-TCPConnectionPtr AsyncRuntime::MakeTCPConnection(int fd)
-{
+TCPConnectionPtr AsyncRuntime::MakeTCPConnection(int fd) {
     TCPConnectionPtr connection = std::make_shared<TCPConnection>();
     connection->fd = fd;
     return connection;
@@ -34,7 +32,7 @@ void AsyncRuntime::CloseReadStream(TCPConnection *conn, int error) {
     }
 }
 
-void AsyncRuntime::ProduceReadStream(TCPConnection *conn, char* buffer, size_t size) {
+void AsyncRuntime::ProduceReadStream(TCPConnection *conn, char *buffer, size_t size) {
     std::lock_guard<std::mutex> lock(conn->mutex);
     std::ostream out(&conn->read_stream);
     out.write(buffer, size);
@@ -43,11 +41,11 @@ void AsyncRuntime::ProduceReadStream(TCPConnection *conn, char* buffer, size_t s
     }
 }
 
-int AsyncRuntime::ConsumeReadStream(const std::shared_ptr<TCPConnection> & conn, char* buffer, size_t size) {
+int AsyncRuntime::ConsumeReadStream(const std::shared_ptr<TCPConnection> &conn, char *buffer, size_t size) {
     return ConsumeReadStream(conn.get(), buffer, size);
 }
 
-int AsyncRuntime::ConsumeReadStream(TCPConnection *conn, char* buffer, size_t buf_size) {
+int AsyncRuntime::ConsumeReadStream(TCPConnection *conn, char *buffer, size_t buf_size) {
     std::lock_guard<std::mutex> lock(conn->mutex);
     size_t size = std::min(conn->read_stream.size(), buf_size);
     if (size > 0) {
@@ -58,9 +56,9 @@ int AsyncRuntime::ConsumeReadStream(TCPConnection *conn, char* buffer, size_t bu
 }
 
 std::shared_ptr<AsyncRuntime::Result<int>>
-AsyncRuntime::AsyncWaitReadStream(const std::shared_ptr<TCPConnection> & conn, size_t buf_size) {
+AsyncRuntime::AsyncWaitReadStream(const std::shared_ptr<TCPConnection> &conn, size_t buf_size) {
     std::lock_guard<std::mutex> lock(conn->mutex);
-    if(conn->read_stream.size() <= 0) {
+    if (conn->read_stream.size() <= 0) {
         conn->read_result = std::make_shared<AsyncRuntime::Result<int>>();
         return conn->read_result;
     } else {
@@ -69,8 +67,7 @@ AsyncRuntime::AsyncWaitReadStream(const std::shared_ptr<TCPConnection> & conn, s
     }
 }
 
-TCPServerPtr AsyncRuntime::MakeTCPServer(const char* hostname, int port)
-{
+TCPServerPtr AsyncRuntime::MakeTCPServer(const char *hostname, int port) {
     TCPServerPtr server = std::make_shared<TCPServer>();
     server->hostname = std::string{hostname};
     server->port = port;
@@ -81,8 +78,7 @@ TCPServerPtr
 AsyncRuntime::MakeTCPServer(const char *hostname,
                             int port,
                             const std::function<void(void)> &on_bind_success,
-                            const std::function<void(int)> &on_bind_error)
-{
+                            const std::function<void(int)> &on_bind_error) {
     TCPServerPtr server = std::make_shared<TCPServer>();
     server->hostname = std::string{hostname};
     server->port = port;
@@ -92,8 +88,7 @@ AsyncRuntime::MakeTCPServer(const char *hostname,
 }
 
 
-UDPPtr AsyncRuntime::MakeUDP(const char* hostname, int port)
-{
+UDPPtr AsyncRuntime::MakeUDP(const char *hostname, int port) {
     UDPPtr udp = std::make_shared<UDP>();
     udp->hostname = std::string{hostname};
     udp->port = port;
@@ -101,8 +96,7 @@ UDPPtr AsyncRuntime::MakeUDP(const char* hostname, int port)
 }
 
 
-NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
-{
+NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char *node) {
     NetAddrInfoPtr info = std::make_shared<NetAddrInfo>();
     info->node = std::string{node};
     info->hints.ai_family = PF_INET;
@@ -112,11 +106,9 @@ NetAddrInfoPtr AsyncRuntime::MakeNetAddrInfo(const char* node)
     return info;
 }
 
-
-void AsyncRuntime::FlushUDPReceivedData(std::vector<UDPReceivedData> &all_recv_data)
-{
-    for(auto  &item : all_recv_data) {
-        if(item.buf) {
+void AsyncRuntime::FlushUDPReceivedData(std::vector<UDPReceivedData> &all_recv_data) {
+    for (auto &item: all_recv_data) {
+        if (item.buf) {
             free(item.buf);
         }
     }
@@ -125,32 +117,30 @@ void AsyncRuntime::FlushUDPReceivedData(std::vector<UDPReceivedData> &all_recv_d
 }
 
 
-TCPSession::TCPSession(uv_stream_t *server, CallbackType  callback) :
+TCPSession::TCPSession(uv_stream_t *server, CallbackType callback) :
         fn(std::move(callback)),
         loop_(server->loop),
         server_(server),
         client_(nullptr),
         accepted_(false) {
-    client_ = (uv_tcp_t*) malloc(sizeof(uv_tcp_t));
+    client_ = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop_, client_);
 }
 
 
-TCPSession::~TCPSession()
-{
-    if(client_ != nullptr)
+TCPSession::~TCPSession() {
+    if (client_ != nullptr)
         free(client_);
 }
 
 
-void TCPSession::Accept()
-{
+void TCPSession::Accept() {
     if (!accepted_) {
         int fd;
         int error = uv_accept(server_, (uv_stream_t *) client_);
         RNT_ASSERT_MSG(error == 0, FSErrorMsg(error));
 
-        uv_fileno((uv_handle_t *)client_, &fd);
+        uv_fileno((uv_handle_t *) client_, &fd);
         connection_ = MakeTCPConnection(fd);
         accepted_ = true;
     }
@@ -163,12 +153,11 @@ void TCPSession::Run() {
 }
 
 
-void TCPSession::Invoke(CoroutineHandler *handler)
-{
+void TCPSession::Invoke(CoroutineHandler *handler) {
     assert(connection_);
 
     int ret = Await(AsyncConnect(connection_), handler);
-    if(ret == IO_SUCCESS && fn) {
+    if (ret == IO_SUCCESS && fn) {
         fn(handler, connection_);
     }
 
@@ -176,7 +165,7 @@ void TCPSession::Invoke(CoroutineHandler *handler)
 }
 
 
-void TCPSession::Session(CoroutineHandler *handler, YieldVoid & yield, std::shared_ptr<TCPSession> session) {
+void TCPSession::Session(CoroutineHandler *handler, YieldVoid &yield, std::shared_ptr<TCPSession> session) {
     //accept
     yield();
     session->Invoke(handler);

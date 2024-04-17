@@ -151,6 +151,16 @@ namespace AsyncRuntime {
         StreamBuffer<>       _stream_buffer;
     };
 
+    class NetTCPSendTask : public IOTask {
+    public:
+        NetTCPSendTask(const TCPConnectionPtr& connection, const char* buffer, size_t size);
+        bool Execute(uv_loop_t *loop) override;
+        //static void NetWriteCb(uv_write_t* req, int status);
+    private:
+        TCPConnectionPtr     _connection;
+        StreamBuffer<>       _stream_buffer;
+    };
+
 
     /**
      * @brief close the socket task

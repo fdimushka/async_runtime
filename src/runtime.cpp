@@ -18,8 +18,8 @@ using namespace AsyncRuntime;
 
 #ifdef USE_TBB
 
-#include "ar/tbb_executor.hpp"
-
+#include "tbb_executor.h"
+#include "tbb/tbb_io_executor.h"
 #endif
 
 Runtime *Runtime::g_runtime;
@@ -42,17 +42,20 @@ void Runtime::Setup(const RuntimeOptions &_options) {
 
 #ifdef USE_TBB
     CreateTbbExecutors();
+    io_executor = CreateExecutor<TBBIOExecutor>(IO_EXECUTOR_NAME);
 #else
     CreateDefaultExecutors(_options.virtual_numa_nodes_count);
-#endif
 
     io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
 
-    //    for (const auto executor: cpu_executors) {
-    //        for (const auto &id: executor->GetThreadIds()) {
-    //            io_executor->ThreadRegistration(id);
-    //        }
-    //    }
+//    for (const auto executor: cpu_executors) {
+//        for (const auto &id: executor->GetThreadIds()) {
+//            io_executor->ThreadRegistration(id);
+//        }
+//    }
+#endif
+
+
 
     io_executor->Run();
 

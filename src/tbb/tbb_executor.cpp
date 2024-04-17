@@ -1,4 +1,4 @@
-#include "ar/tbb_executor.hpp"
+#include "tbb_executor.h"
 #include "ar/logger.hpp"
 #include "ar/runtime.hpp"
 #include "numbers.h"
@@ -14,7 +14,22 @@ TBBExecutor::TBBExecutor(const std::string &name_,
     std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
     int numa_node_index = numa_node;
     if (numa_node_index > numa_indexes.size() - 1) { numa_node_index = 0; }
-    task_arena.initialize(tbb::task_arena::constraints(numa_indexes[numa_node_index], cpus.size()));
+
+    for (int i = 0; i < work_groups_option.size(); ++i) {
+        int total_cpu_count = cpus.size();
+        int cpu_count = (int) ((double) total_cpu_count * (1.0 / (work_groups_option[i].cap / work_groups_option[i].util)));
+        cpu_count = std::min(std::max(1, cpu_count), total_cpu_count);
+        tbb::task_arena::priority priority = tbb::task_arena::priority::normal;
+
+        switch (work_groups_option[i].priority) {
+            case WG_PRIORITY_LOW: priority = tbb::task_arena::priority::low; break;
+            case WG_PRIORITY_MEDIUM: priority = tbb::task_arena::priority::normal; break;
+            case WG_PRIORITY_HIGH: priority = tbb::task_arena::priority::high; break;
+            case WG_PRIORITY_VERY_HIGH: priority = tbb::task_arena::priority::high; break;
+        }
+
+        task_arenas[i].initialize(tbb::task_arena::constraints(numa_indexes[numa_node_index], cpu_count), 1, priority);
+    }
 
     for (int i = 0; i < MAX_ENTITIES; ++i) {
         streams[i].SetIndex(i);
@@ -36,11 +51,13 @@ TBBExecutor::TBBExecutor(const std::string &name_,
 
 TBBExecutor::~TBBExecutor() noexcept {
     main_delayed_scheduler.Terminate();
-    for (const auto &scheduler : delayed_schedulers) {
+    for (const auto &scheduler: delayed_schedulers) {
         scheduler->Terminate();
     }
     main_stream.Terminate();
-    task_arena.terminate();
+    for (int i = 0; i < MAX_ARENA_COUNT; ++i) {
+        task_arenas[i].terminate();
+    }
 }
 
 std::vector<std::thread::id> TBBExecutor::GetThreadIds() {
@@ -74,12 +91,21 @@ void TBBExecutor::SetIndex(int i) {
 }
 
 void TBBExecutor::Post(Task *task) {
+    const auto &execute_state = task->GetExecutorState();
     task->SetExecutorExecutorState(this);
+    tbb::task_arena* arena;
+    if (execute_state.work_group != INVALID_OBJECT_ID &&
+        execute_state.work_group >= 0 &&
+        execute_state.work_group <= MAX_ARENA_COUNT) {
+        arena = &task_arenas[execute_state.work_group];
+    } else {
+        arena = &task_arenas[0];
+    }
 
-    task_arena.enqueue([this, task]() {
+    arena->enqueue([this, task]() {
         const auto &execute_state = task->GetExecutorState();
         if (task->GetDelay() <= 0) {
-            PostToStream(task, execute_state.entity_tag);
+            Enqueue(task, execute_state.entity_tag);
         } else {
             if (execute_state.work_group != INVALID_OBJECT_ID) {
                 delayed_schedulers[execute_state.work_group]->Post(task);
@@ -103,4 +129,14 @@ void TBBExecutor::PostToStream(Task *task, EntityTag tag) {
     } else {
         main_stream.Post(task);
     }
+}
+
+void TBBExecutor::Enqueue(Task *task, EntityTag tag) {
+    assert(task);
+    ExecutorState executor_state;
+    executor_state.entity_tag = tag;
+    executor_state.executor = task->GetExecutorState().executor;
+    executor_state.work_group = task->GetExecutorState().work_group;
+    task->Execute(executor_state);
+    delete task;
 }

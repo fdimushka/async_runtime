@@ -61,12 +61,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fno-omit-frame-pointer")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
-    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fno-omit-frame-pointer")
+#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fstack-protector-strong")
+#    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fstack-protector-strong")
+#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+#    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+#    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -87,8 +91,8 @@ endif()
 
 configure_file(config.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
-file(GLOB SOURCES src/*.cpp src/http/*.cpp)
-file(GLOB HEADERS include/${LIB_NAME}/*.hpp)
+file(GLOB SOURCES src/*.cpp src/http/*.cpp src/dataflow/*.cpp)
+file(GLOB HEADERS include/${LIB_NAME}/*.hpp include/${LIB_NAME}/dataflow/*.hpp src/dataflow/shared_buffer.hpp)
 
 if (WITH_OPENCV)
     include(cmake/opencv.cmake)
@@ -122,6 +126,10 @@ endif()
 if (WITH_TBB)
     target_link_libraries(${LIB_NAME} tbb)
 endif()
+
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#    target_link_libraries(${LIB_NAME} asan)
+#endif()
 
 if (WITH_PROFILER)
     add_custom_target(

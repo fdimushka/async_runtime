@@ -344,10 +344,9 @@ namespace AsyncRuntime {
             try {
                 executor_state = executor_;
                 Handle(result.get(), fn);
-            } catch (...) {
-                try {
+            } catch (const std::exception& ex) {
+                std::cerr << ex.what() << std::endl;
                     result->SetException(std::current_exception());
-                } catch (...) {}
             }
         }
 
@@ -399,10 +398,9 @@ namespace AsyncRuntime {
             try {
                 executor_state = executor_;
                 result->SetValue();
-            } catch (...) {
-                try {
-                    result->SetException(std::current_exception());
-                } catch (...) {}
+            } catch (const std::exception& ex) {
+                std::cerr << ex.what() << std::endl;
+                result->SetException(std::current_exception());
             }
         }
 

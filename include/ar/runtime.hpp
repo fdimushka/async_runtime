@@ -638,6 +638,17 @@ namespace AsyncRuntime {
         return Runtime::g_runtime->AsyncIO<NetWriteTask>(connection, buffer, size);
     }
 
+    /**
+     * @brief
+     * @param connection
+     * @param buffer
+     * @param size
+     * @return
+     */
+    inline IOResultPtr AsyncSend(const TCPConnectionPtr &connection, const char *buffer, size_t size) {
+        return Runtime::g_runtime->AsyncIO<NetTCPSendTask>(connection, buffer, size);
+    }
+
 
     /**
      * @brief

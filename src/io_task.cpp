@@ -29,6 +29,12 @@ NetWriteTask::NetWriteTask(const TCPConnectionPtr &connection, const char *buffe
     out.write(buffer, size);
 }
 
+NetTCPSendTask::NetTCPSendTask(const TCPConnectionPtr &connection, const char *buffer, size_t size) : _connection(
+        connection) {
+    std::ostream out(&_stream_buffer);
+    out.write(buffer, size);
+}
+
 bool FsOpenTask::Execute(uv_loop_t *loop) {
     _request.data = this;
     uv_fs_open(loop, &_request, _filename, _flags, _mode, &FsOpenCb);
@@ -210,6 +216,18 @@ bool NetWriteTask::Execute(uv_loop_t *loop) {
         return false;
     }
     return true;
+}
+
+bool NetTCPSendTask::Execute(uv_loop_t *loop) {
+    assert(_connection);
+    if (_connection->read_error.load(std::memory_order_relaxed) >= 0) {
+        int res = send(_connection->fd, _stream_buffer.data(), _stream_buffer.size(), MSG_NOSIGNAL);
+        Resolve(res);
+        return false;
+    } else {
+        Resolve(-1);
+        return false;
+    }
 }
 
 bool NetCloseTask::Execute(uv_loop_t *loop) {

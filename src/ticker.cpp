@@ -20,10 +20,10 @@ public:
             executor_state = executor_;
             tick_ts = TIMESTAMP_NOW_MICRO();
             result->SetValue(true);
-        } catch(...) {
-            try {
-                result->SetException(std::current_exception());
-            } catch(...) { }
+        } catch(const std::exception& ex) {
+            std::cerr << ex.what() << std::endl;
+            result->SetValue(false);
+            //result->SetException(std::current_exception());
         }
     }
 

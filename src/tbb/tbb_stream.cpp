@@ -42,7 +42,8 @@ void TBBStream::ExecuteTask() {
         executor_state.entity_tag = tag;
         executor_state.executor = task->GetExecutorState().executor;
         executor_state.work_group = task->GetExecutorState().work_group;
-        //executor_state.processor = std::this_thread::get_id();
+        //std::cout << "task " << tag << " " << executor_state.work_group << " " << std::this_thread::get_id() << std::endl;
+                  //executor_state.processor = std::this_thread::get_id();
         task->Execute(executor_state);
         delete task;
     }

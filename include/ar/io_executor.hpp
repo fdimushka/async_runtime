@@ -29,14 +29,14 @@ namespace AsyncRuntime {
         /**
          * @brief
          */
-        void Run();
+        virtual void Run();
 
 
         /**
          * @brief
          * @param thread_id
          */
-        void ThreadRegistration(std::thread::id thread_id);
+        virtual void ThreadRegistration(std::thread::id thread_id);
 
 
         /**
@@ -51,9 +51,9 @@ namespace AsyncRuntime {
          * @tparam Method
          * @param task
          */
-        void Post(IOTask *io_task);
+        virtual void Post(IOTask *io_task);
     private:
-        void Loop();
+        virtual void Loop();
 
 
         std::unordered_map<std::thread::id, uv_async_t*>    async_handlers;
