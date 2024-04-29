@@ -3,51 +3,42 @@
 
 using namespace AsyncRuntime;
 
-
-class TickerTaskImpl : public Task
-{
+class ticker_task : public task {
+    typedef promise_t<bool> promise_type;
 public:
-    explicit TickerTaskImpl(Timespan &ts, const ExecutorState& executor_) :
-        result(new Result<bool>() )
-        , tick_ts(ts) {
-        executor_state = executor_;
-    };
+    ticker_task(Timespan &ts) : tick_ts(ts) {};
+    ~ticker_task() override = default;
 
-    ~TickerTaskImpl() override = default;
-
-    void Execute(const ExecutorState& executor_) override {
+    void execute(const execution_state & state) override {
         try {
-            executor_state = executor_;
+            task::state = state;
             tick_ts = TIMESTAMP_NOW_MICRO();
-            result->SetValue(true);
-        } catch(const std::exception& ex) {
+            promise.set_value(true);
+        } catch (std::exception & ex) {
             std::cerr << ex.what() << std::endl;
-            result->SetValue(false);
-            //result->SetException(std::current_exception());
+            promise.set_value(false);
         }
     }
 
-    [[nodiscard]] std::shared_ptr<Result<bool>> GetResult() const { return result; }
+    future_t<bool> get_future() { return promise.get_future(); }
 private:
-    Timespan                                                        &tick_ts;
-    std::shared_ptr<Result<bool>>                                   result;
+    Timespan &tick_ts;
+    promise_type promise;
 };
 
 
-void Ticker::Stop()
-{
+void Ticker::Stop() {
     is_continue.store(false, std::memory_order_relaxed);
     //if(tick_result)
     //    tick_result->SetValue(false);
 }
 
 
-std::shared_ptr<Result<bool >> Ticker::AsyncTick(const ExecutorState& executor_state)
-{
+future_t<bool> Ticker::AsyncTick(const task::execution_state& execution_state) {
     bool cont = is_continue.load(std::memory_order_relaxed);
     if(!cont) {
         last_tick_ts = TIMESTAMP_NOW_MICRO();
-        return std::make_shared<Result<bool>>(false);
+        return make_resolved_future(false);
     }
 
     Timespan curr_tick_delay = TIMESTAMP_NOW_MICRO() - last_tick_ts;
@@ -55,27 +46,25 @@ std::shared_ptr<Result<bool >> Ticker::AsyncTick(const ExecutorState& executor_s
     if(curr_tick_delay < delay) {
         Runtime::g_runtime->CheckRuntime();
         curr_tick_delay = delay - curr_tick_delay;
-        auto task = new TickerTaskImpl(last_tick_ts, executor_state);
-        task->template SetDelay< Timestamp::Micro >(curr_tick_delay);
-        auto tick_result = task->GetResult();
+        auto task = std::make_shared<ticker_task>(last_tick_ts);
+        task->set_delay< Timestamp::Micro >(curr_tick_delay);
+        task->set_execution_state(execution_state);
         Runtime::g_runtime->Post(task);
-        return tick_result;
+        return task->get_future();
     } else {
         last_tick_ts = TIMESTAMP_NOW_MICRO();
-        return std::make_shared<Result<bool>>(true);
+        return make_resolved_future(true);
     }
 }
 
 
-std::shared_ptr<Result<bool>> Ticker::AsyncTick(CoroutineHandler* handler)
-{
-    return AsyncTick(handler->GetExecutorState());
+future_t<bool> Ticker::AsyncTick(CoroutineHandler* handler) {
+    return AsyncTick(handler->get_execution_state());
 }
 
 
-std::shared_ptr<Result<bool>> Ticker::AsyncTick()
-{
-    ExecutorState state;
+future_t<bool> Ticker::AsyncTick() {
+    task::execution_state state;
     return AsyncTick(state);
 }
 

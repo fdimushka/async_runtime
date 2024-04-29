@@ -33,9 +33,9 @@ namespace AsyncRuntime {
                        std::string  name, const std::string & executor_name, double util,  double cap, int priority = 0);
         ~ProcessorGroup() = default;
 
-        void Post(Task *task);
-        std::optional<Task *> Steal();
-        std::optional<Task *> Steal(const ObjectID& processor_id);
+        void Post(const std::shared_ptr<task> & task);
+        std::shared_ptr<task> Steal();
+        std::shared_ptr<task> Steal(const ObjectID& processor_id);
         [[nodiscard]] bool IsSteal() const;
         [[nodiscard]] const std::string& GetName() const { return name; }
         [[nodiscard]] double GetCap() const { return cap; }

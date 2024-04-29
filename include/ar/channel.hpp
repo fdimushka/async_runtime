@@ -34,16 +34,16 @@ namespace AsyncRuntime {
         Watcher() = default;
         ~Watcher() override;
 
-        std::optional<T*> Receive();
-        std::optional<T*> TryReceive();
-        std::shared_ptr<Result<T*>>   AsyncReceive();
+        std::optional<T> Receive();
+        std::optional<T> TryReceive();
+        future_t<void>   AsyncWait();
     private:
-        void Send(T *msg);
+        void Send(const T& msg);
 
-        WorkStealQueue<T*>                              queue;
+        WorkStealQueue<T>                               queue;
         std::condition_variable                         cv;
         std::mutex                                      mutex;
-        std::shared_ptr<Result<T*>>                     async_result_;
+        promise_t<void>                                 promise;
     };
 
 
@@ -56,25 +56,10 @@ namespace AsyncRuntime {
     public:
         typedef Watcher<T>  WatcherType;
 
-        /**
-         * @brief
-         * @param buff
-         * @param size
-         */
         void Send(const T& msg);
 
-
-        /**
-         * @brief
-         * @param watcher_id
-         */
         std::shared_ptr<WatcherType> Watch();
 
-
-        /**
-         * @brief
-         * @param watcher
-         */
         void UnWatch(const std::shared_ptr<WatcherType>& watcher);
     private:
         std::mutex                                             mutex;
@@ -107,8 +92,8 @@ namespace AsyncRuntime {
             const std::shared_ptr<WatcherType>& watcher = it->second;
 
             if (watcher.use_count() > 1) {
-                auto* clone_msg = new T(msg);
-                watcher->Send(clone_msg);
+                T new_msg(msg);
+                watcher->Send(new_msg);
                 ++it;
             } else {
                 it = watchers.erase(it);
@@ -125,28 +110,19 @@ namespace AsyncRuntime {
                 delete v.value();
             }
         }
-
-        //@TODO check and release async_result_
     }
 
 
     template<typename T>
-    void Watcher<T>::Send(T *msg) {
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            if( async_result_ && !async_result_->Resolved() ) {
-                async_result_->SetValue(msg);
-            }else{
-                queue.push(msg);
-            }
-        }
-
+    void Watcher<T>::Send(const T& msg) {
+        promise.set_value();
+        queue.push(msg);
         cv.notify_one();
     }
 
 
     template<typename T>
-    std::optional<T*> Watcher<T>::Receive() {
+    std::optional<T> Watcher<T>::Receive() {
         std::unique_lock<std::mutex>  lock(mutex);
         while(queue.empty()) {
             cv.wait(lock);
@@ -156,21 +132,19 @@ namespace AsyncRuntime {
 
 
     template<typename T>
-    std::optional<T*> Watcher<T>::TryReceive() {
+    std::optional<T> Watcher<T>::TryReceive() {
         return queue.steal();
     }
 
 
     template<typename T>
-    std::shared_ptr<Result<T*>> Watcher<T>::AsyncReceive() {
-        std::lock_guard<std::mutex> lock(mutex);
+    future_t<void> Watcher<T>::AsyncWait() {
         auto v = queue.steal();
         if(!v) {
-            //@TODO check and release prev async_result_
-            async_result_ = std::make_shared<Result<T*>>();
-            return async_result_;
+            promise = {};
+            return promise.get_future();
         } else {
-            return std::make_shared<Result<T*>>(v.value());
+            return make_resolved_future();
         }
     }
 }

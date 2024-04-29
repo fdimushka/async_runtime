@@ -1,6 +1,7 @@
 #ifndef AR_EXECUTOR_H
 #define AR_EXECUTOR_H
 
+#include "ar/task.hpp"
 #include "ar/processor.hpp"
 #include "ar/processor_group.hpp"
 #include "ar/metricer.hpp"
@@ -35,7 +36,7 @@ namespace AsyncRuntime {
         explicit IExecutor(const std::string & name, ExecutorType executor_type);
         ~IExecutor() override = default;
 
-        virtual void Post(Task* task) = 0;
+        virtual void Post(const std::shared_ptr<task> & task) = 0;
 
         virtual uint16_t AddEntity(void *ptr);
 
@@ -86,7 +87,7 @@ namespace AsyncRuntime {
          * @brief
          * @param task
          */
-        void Post(Task* task) override;
+        void Post(const std::shared_ptr<task> & task) override;
 
 
         /**

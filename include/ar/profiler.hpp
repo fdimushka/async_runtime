@@ -6,7 +6,6 @@
 #include "ar/ticker.hpp"
 #include "ar/work_steal_queue.hpp"
 #include "ar/coroutine.hpp"
-#include "ar/http.hpp"
 
 #include <list>
 

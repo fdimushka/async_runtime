@@ -19,7 +19,7 @@ namespace AsyncRuntime {
 
         void Reset();
 
-        void Post(AsyncRuntime::Task *task);
+        void Post(const std::shared_ptr<task> & task);
 
         void SetTag(int64_t t);
 
@@ -33,7 +33,7 @@ namespace AsyncRuntime {
 
         EntityTag tag;
         uint16_t index;
-        oneapi::tbb::concurrent_queue<AsyncRuntime::Task *> rq;
+        oneapi::tbb::concurrent_queue<std::shared_ptr<task>> rq;
         oneapi::tbb::task_group_context context;
         oneapi::tbb::task_group tg;
     };

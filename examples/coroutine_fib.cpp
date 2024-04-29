@@ -1,10 +1,10 @@
 #include <iostream>
 #include "ar/ar.hpp"
 
-namespace AR = AsyncRuntime;
+using namespace AsyncRuntime;
 
 
-void fib(AR::CoroutineHandler* handler, AR::Yield<int> & yield, int count) {
+int fib(coroutine_handler* handler, yield<int> & yield, int count) {
     int first = 1, second = 1;
     yield( first);
     yield( second);
@@ -14,15 +14,19 @@ void fib(AR::CoroutineHandler* handler, AR::Yield<int> & yield, int count) {
         second = third;
         yield( third);
     }
+    return 0;
 }
 
 
 int main() {
-    AR::Coroutine<int> coro_fib = AR::MakeCoroutine<int>(&fib, 8);
+    auto coro_fib = make_coroutine<int>(&fib, 8);
     std::cout << "Fibonacci number: \n";
 
-    for(int x : coro_fib) {
-        std::cout << x << std::endl;
+    while (!coro_fib->is_completed()) {
+        coro_fib->init_promise();
+        auto f = coro_fib->get_future();
+        coro_fib->resume();
+        std::cout << f.get() << std::endl;
     }
     return 0;
 }

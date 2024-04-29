@@ -5,7 +5,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=stringop-overflow")
 add_subdirectory(third_party/oneTBB)
 
 list(APPEND SOURCES src/tbb/tbb_executor.cpp)
-list(APPEND SOURCES src/tbb/tbb_io_executor.cpp)
 list(APPEND SOURCES src/tbb/tbb_stream.cpp)
 list(APPEND SOURCES src/tbb/tbb_delayed_scheduler.cpp)
 

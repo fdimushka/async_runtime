@@ -21,7 +21,7 @@ void TBBStream::Reset() {
     context.reset();
 }
 
-void TBBStream::Post(AsyncRuntime::Task *task) {
+void TBBStream::Post(const std::shared_ptr<task> & task) {
     rq.push(task);
     tg.run([this] { ExecuteTask(); });
 }
@@ -35,16 +35,11 @@ void TBBStream::SetIndex(int64_t i) {
 }
 
 void TBBStream::ExecuteTask() {
-    Task *task = nullptr;
+    std::shared_ptr<task> task;
     if (rq.try_pop(task)) {
         assert(task);
-        ExecutorState executor_state;
-        executor_state.entity_tag = tag;
-        executor_state.executor = task->GetExecutorState().executor;
-        executor_state.work_group = task->GetExecutorState().work_group;
-        //std::cout << "task " << tag << " " << executor_state.work_group << " " << std::this_thread::get_id() << std::endl;
-                  //executor_state.processor = std::this_thread::get_id();
-        task->Execute(executor_state);
-        delete task;
+        auto executor_state = task->get_execution_state();
+        executor_state.tag = tag;
+        task->execute(executor_state);
     }
 }

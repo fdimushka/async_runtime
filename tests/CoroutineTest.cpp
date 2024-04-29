@@ -25,18 +25,18 @@ void bar(CoroutineHandler* handler, YieldVoid &yield) {
 
 
 TEST_CASE( "Init coroutine test", "[coroutine]" ) {
-    auto coro1 = MakeCoroutine(&bar);
-    auto coro2 = MakeCoroutine(&foo, 100);
-    auto coro3 = MakeCoroutine(std::bind(&foo, std::placeholders::_1, std::placeholders::_2, 100));
-    auto coro4 = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield, int i){ }, 100);
-    auto coro5 = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield){ });
+    auto coro1 = make_coroutine(&bar);
+    auto coro2 = make_coroutine(&foo, 100);
+    auto coro3 = make_coroutine(std::bind(&foo, std::placeholders::_1, std::placeholders::_2, 100));
+    auto coro4 = make_coroutine([](CoroutineHandler* handler, YieldVoid &yield, int i){ }, 100);
+    auto coro5 = make_coroutine([](CoroutineHandler* handler, YieldVoid &yield){ });
 }
 
 
 TEST_CASE( "Call coroutine test", "[coroutine]" ) {
     bool exec = false;
-    auto coro = MakeCoroutine([&exec](CoroutineHandler* handler, YieldVoid &yield){ yield(); exec = true; });
-    coro();
+    auto coro = make_coroutine([&exec](CoroutineHandler* handler, YieldVoid &yield) { exec = true; });
+    coro->resume();
     REQUIRE(exec);
 }
 
@@ -44,7 +44,7 @@ TEST_CASE( "Call coroutine test", "[coroutine]" ) {
 TEST_CASE( "Coroutine yield test", "[coroutine]" ) {
     int step = 0;
 
-    Coroutine coro = MakeCoroutine([&step](CoroutineHandler* handler, YieldVoid &yield) {
+    auto coro = make_coroutine([&step](CoroutineHandler* handler, YieldVoid &yield) {
         step = 1;
         yield();
         step = 2;
@@ -52,93 +52,78 @@ TEST_CASE( "Coroutine yield test", "[coroutine]" ) {
         step = 3;
     });
 
+    coro->init_promise();
+    coro->resume();
     REQUIRE(step == 1);
-    coro();
+
+    coro->init_promise();
+    coro->resume();
     REQUIRE(step == 2);
-    coro();
+
+    coro->init_promise();
+    coro->resume();
+
     REQUIRE(step == 3);
-    REQUIRE(!coro.Valid());
-
-    REQUIRE_THROWS_AS(coro(), std::runtime_error);
-}
-
-
-TEST_CASE( "Coroutine exception test", "[coroutine]" ) {
-    auto coro = MakeCoroutine([](CoroutineHandler* handler, YieldVoid &yield) {
-        yield();
-        throw std::runtime_error("error");
-    });
-
-    coro();
-    auto result = coro.GetResult();
-    REQUIRE_THROWS_AS(result->Get(), std::runtime_error);
+    REQUIRE(coro->is_completed());
 }
 
 
 TEST_CASE( "Coroutine call in thread test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
-        yield(0);
+    auto coro = make_coroutine<int>([](CoroutineHandler* handler, yield<int> &yield) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        yield(100);
+        return 100;
     });
 
-    coro.MakeResult();
-    auto result = coro.GetResult();
-    std::thread th([&coro](){
-        coro();
+    auto task = std::make_shared<coroutine_task<int>>(coro);
+    auto f = task->get_future();
+    std::thread th([&task](){
+        task->execute({});
     });
 
-    result->Wait();
-    REQUIRE(result->Get() == 100);
+    REQUIRE(f.get() == 100);
     th.join();
 }
 
 
-TEST_CASE( "Coroutine create task test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
-        yield(0);
-        yield(100);
-    });
-
-    coro.MakeResult();
-    auto *task = coro.MakeExecTask();
-    task->Execute(ExecutorState());
-    delete task;
-    REQUIRE(coro.GetResult()->Get() == 100);
-}
-
-
 TEST_CASE( "Coroutine yield string value test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<std::string>([](CoroutineHandler* handler, Yield<std::string> &yield) {
+    auto coro = make_coroutine<std::string>([](CoroutineHandler* handler, yield<std::string> &yield) {
         yield("run");
         yield("hello");
         yield("world");
+        return "";
     });
 
-    coro();
-    REQUIRE(coro.GetResult()->Get() == "hello");
+    auto f = coro->get_future();
+    coro->resume();
+    REQUIRE(f.get() == "run");
 
-    coro();
-    REQUIRE(coro.GetResult()->Get() == "world");
+    coro->init_promise();
+    f = coro->get_future();
+    coro->resume();
+    REQUIRE(f.get() == "hello");
+
+    coro->init_promise();
+    f = coro->get_future();
+    coro->resume();
+    REQUIRE(f.get() == "world");
 }
 
 
 TEST_CASE( "Generator test", "[coroutine]" ) {
-    auto coro = MakeCoroutine<int>([](CoroutineHandler* handler, Yield<int> &yield) {
-        yield(0);
+    auto coro = make_coroutine<int>([](CoroutineHandler* handler, yield<int> &yield) {
         for(int i = 0; i < 5; ++i) {
             yield(i);
         }
+        return 0;
     });
 
     int i = 0;
 
-    while (coro.Valid()) {
-        coro();
-        if (!coro.Valid()) {
-          break;
-        }
-        i += coro.GetResult()->Get();
+    while (!coro->is_completed()) {
+        coro->init_promise();
+        auto f = coro->get_future();
+        coro->resume();
+        i += f.get();
     }
 
     REQUIRE(i == 10);

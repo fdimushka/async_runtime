@@ -7,7 +7,6 @@ std::shared_ptr<Port> Sink::operator[](const std::string &port_name) {
 }
 
 std::shared_ptr<Port> Sink::At(const std::string &port_name) {
-    std::lock_guard<std::mutex> lock(mutex);
     const auto &it = port_map.find(port_name);
     if (it == port_map.cend()) {
         throw std::runtime_error("Source port not found");

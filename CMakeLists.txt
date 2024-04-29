@@ -66,20 +66,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fno-omit-frame-pointer")
-#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fstack-protector-strong")
-#    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fstack-protector-strong")
-#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-#    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-#    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(version.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
-include(cmake/asm.cmake)
-include(cmake/libuv.cmake)
-include(cmake/llhttp.cmake)
+include(cmake/boost.cmake)
 
 if (WITH_TRACE)
     include(cmake/trace.cmake)
@@ -91,8 +84,10 @@ endif()
 
 configure_file(config.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
-file(GLOB SOURCES src/*.cpp src/http/*.cpp src/dataflow/*.cpp)
-file(GLOB HEADERS include/${LIB_NAME}/*.hpp include/${LIB_NAME}/dataflow/*.hpp src/dataflow/shared_buffer.hpp)
+file(GLOB SOURCES   src/*.cpp
+                    src/io/*.cpp
+                    src/dataflow/*.cpp)
+file(GLOB HEADERS include/${LIB_NAME}/*.hpp include/${LIB_NAME}/dataflow/*.hpp)
 
 if (WITH_OPENCV)
     include(cmake/opencv.cmake)
@@ -106,14 +101,14 @@ endif()
 
 include_directories(include/)
 include_directories(src/)
-include_directories(src/http)
+include_directories(src/io)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 include_directories(third_party)
 
 add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread ${LibUV_LIBRARIES} ${LLHTTP_LIBRARIES} flatbuffers)
+target_link_libraries(${LIB_NAME} pthread flatbuffers ${BOOST_LIBRARIES})
 
 if (WITH_NUMA)
     target_link_libraries(${LIB_NAME} numa)
@@ -126,10 +121,6 @@ endif()
 if (WITH_TBB)
     target_link_libraries(${LIB_NAME} tbb)
 endif()
-
-#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#    target_link_libraries(${LIB_NAME} asan)
-#endif()
 
 if (WITH_PROFILER)
     add_custom_target(
@@ -151,7 +142,6 @@ endif()
 if (WITH_EXAMPLES)
     add_subdirectory(examples)
 endif()
-
 
 set(INSTALL_HEADERS ${HEADERS})
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "${INSTALL_HEADERS}")

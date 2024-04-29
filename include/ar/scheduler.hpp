@@ -9,7 +9,7 @@
 namespace AsyncRuntime {
 
     class Scheduler {
-        typedef std::priority_queue<Task *, std::vector < Task * >, Task::LessThanByDelay>
+        typedef std::priority_queue<std::shared_ptr<task>, std::vector < std::shared_ptr<task> >, task::less_than_by_delay_ptr>
         TasksPq;
     public:
         explicit Scheduler(std::vector<Processor*>  processors);
@@ -17,23 +17,23 @@ namespace AsyncRuntime {
 
         void SetProcessors(const std::vector<Processor*>&  processors);
 
-        void Post(Task *task);
+        void Post(std::shared_ptr<task> task);
 
         [[nodiscard]] std::thread::id GetThreadId() const;
 
-        std::optional<Task *> Steal();
+        std::shared_ptr<task> Steal();
         [[nodiscard]] bool IsSteal() const;
     private:
         std::random_device rd;
         std::mt19937 gen;
         std::uniform_int_distribution<> distr;
-        void ScheduleTask(Task *task);
+        void ScheduleTask(std::shared_ptr<task> task);
         void SchedulerLoop();
 
         size_t notify_inc;
         ThreadExecutor scheduler_th;
         std::atomic_bool is_continue;
-        WorkStealQueue<Task *> run_queue;
+        oneapi::tbb::concurrent_queue<std::shared_ptr<task>> run_queue;
         TasksPq delayed_task;
         std::condition_variable delayed_task_cv;
         std::mutex delayed_task_mutex;

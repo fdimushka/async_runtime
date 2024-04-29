@@ -5,7 +5,7 @@
 
 using namespace AsyncRuntime;
 
-IExecutor::IExecutor(const std::string & ex_name, ExecutorType executor_type) : name(ex_name), type(executor_type) {
+IExecutor::IExecutor(const std::string &ex_name, ExecutorType executor_type) : name(ex_name), type(executor_type) {
     m_entities_count = Runtime::g_runtime->MakeMetricsCounter("entities_count", {
             {"executor", name}
     });
@@ -21,7 +21,7 @@ uint16_t IExecutor::AddEntity(void *ptr) {
     }
 
     entities_count.fetch_add(1, std::memory_order_relaxed);
-    
+
     return 0;
 }
 
@@ -37,14 +37,13 @@ void IExecutor::DeleteEntity(uint16_t id) {
 }
 
 
-Executor::Executor(const std::string & name_,
-                   const std::vector<AsyncRuntime::CPU> & cpus,
+Executor::Executor(const std::string &name_,
+                   const std::vector<AsyncRuntime::CPU> &cpus,
                    std::vector<WorkGroupOption> work_groups_option) :
         IExecutor(name_, kCPU_EXECUTOR),
         processor_groups_option(std::move(work_groups_option)),
-        max_processors_count(cpus.size())
-{
-    for (int i =0; i < cpus.size(); ++i) {
+        max_processors_count(cpus.size()) {
+    for (int i = 0; i < cpus.size(); ++i) {
         auto *processor = new Processor(i, cpus[i]);
         processors.push_back(processor);
     }
@@ -91,7 +90,7 @@ Executor::~Executor() {
 
 std::vector<std::thread::id> Executor::GetThreadIds() {
     std::vector<std::thread::id> ids;
-    for (const auto & p : processors) {
+    for (const auto &p: processors) {
         ids.push_back(p->GetThreadId());
     }
 
@@ -102,11 +101,12 @@ std::vector<std::thread::id> Executor::GetThreadIds() {
     return ids;
 }
 
-void Executor::Post(Task *task) {
-    const auto &execute_state = task->GetExecutorState();
-    task->SetExecutorExecutorState(this);
+void Executor::Post(const std::shared_ptr<task> &task) {
+    auto execute_state = task->get_execution_state();
+    execute_state.executor = this;
+    task->set_execution_state(execute_state);
 
-    if (task->GetDelay() <= 0) {
+    if (task->get_delay() <= 0) {
         if (execute_state.processor != INVALID_OBJECT_ID) {
             processors[execute_state.processor]->Post(task);
         } else if (execute_state.work_group != INVALID_OBJECT_ID) {

@@ -9,13 +9,11 @@ using namespace AsyncRuntime;
 
 Processor::Processor(int pid, const CPU & cpu) :
         BaseObject(),
-        local_run_queue(MAX_GROUPS_COUNT),
         is_continue{true},
         notify_count{0},
         state{IDLE} {
 
     id = pid;
-
     thread_executor.Submit([this] {
         PROFILER_ADD_EVENT(1, Profiler::NEW_THREAD);
         Work();
@@ -28,19 +26,16 @@ Processor::Processor(int pid, const CPU & cpu) :
     }
 }
 
-
 Processor::~Processor()
 {
     is_continue.store(false, std::memory_order_relaxed);
 }
-
 
 void Processor::Run()
 {
     is_continue.store(true, std::memory_order_relaxed);
     cv.notify_one();
 }
-
 
 void Processor::Terminate()
 {
@@ -49,18 +44,15 @@ void Processor::Terminate()
     thread_executor.Join();
 }
 
-
 Processor::State Processor::GetState()
 {
     return state.load(std::memory_order_relaxed);
 }
 
-
 std::thread::id Processor::GetThreadId() const
 {
     return thread_executor.GetThreadId();
 }
-
 
 std::vector<ProcessorGroup *> Processor::GetGroups()
 {
@@ -69,14 +61,12 @@ std::vector<ProcessorGroup *> Processor::GetGroups()
     return std::move(g);
 }
 
-
 size_t Processor::GetGroupsSize()
 {
     std::lock_guard<std::mutex> lock(group_mutex);
     size_t size = groups.size();
     return size;
 }
-
 
 void Processor::AddGroup(ProcessorGroup *group)
 {
@@ -98,7 +88,6 @@ void Processor::AddGroup(ProcessorGroup *group)
     }
 }
 
-
 bool Processor::IsInGroup(const ProcessorGroup *group)
 {
     std::lock_guard<std::mutex> lock(group_mutex);
@@ -106,7 +95,6 @@ bool Processor::IsInGroup(const ProcessorGroup *group)
                        groups.end(),
                        [group](const auto *g) { return g->GetID() == group->GetID(); });
 }
-
 
 void Processor::Work() {
     //wait run
@@ -120,53 +108,47 @@ void Processor::Work() {
     while (is_continue.load(std::memory_order_relaxed)) {
         state.store(IDLE, std::memory_order_relaxed);
 
-        std::optional<Task *> task = Steal();
+        std::shared_ptr<task> task = Steal();
 
-        if (!task.has_value()) {
+        if (!task) {
             task = StealGlobal();
         }
 
-        if (task.has_value()) {
-            ExecuteTask(task.value(), task.value()->GetExecutorState());
+        if (task) {
+            ExecuteTask(task, task->get_execution_state());
         } else {
             WaitTask();
         }
     }
 }
 
-
-void Processor::ExecuteTask(Task *task, const ExecutorState &executor_state) {
+void Processor::ExecuteTask(const std::shared_ptr<task> & task, const task::execution_state &executor_state) {
     assert(task != nullptr);
 
     state.store(EXECUTE, std::memory_order_relaxed);
-    {
-        PROFILER_TASK_WORK_TIME(task->GetOriginId());
-        task->SetProcessorExecutorState(GetID());
-        task->Execute(executor_state);
-    }
-    delete task;
+    PROFILER_TASK_WORK_TIME(task->GetOriginId());
+    task::execution_state new_state = executor_state;
+    new_state.processor = GetID();
+    task->execute(new_state);
 }
 
-
-void Processor::Post(Task *task) {
+void Processor::Post(const std::shared_ptr<task> & task) {
     std::unique_lock<std::mutex> lock(mutex);
     notify_count++;
 
-    if (task->GetExecutorState().work_group != INVALID_OBJECT_ID)
-        local_run_queue[task->GetExecutorState().work_group].push(task);
+    if (task->get_execution_state().work_group != INVALID_OBJECT_ID)
+        local_run_queue[task->get_execution_state().work_group].push(task);
     else
         local_run_queue[0].push(task);
 
     cv.notify_one();
 }
 
-
 void Processor::Notify() {
     std::unique_lock<std::mutex> lock(mutex);
     notify_count++;
     cv.notify_one();
 }
-
 
 void Processor::WaitTask() {
     std::unique_lock<std::mutex> lock(mutex);
@@ -182,7 +164,6 @@ void Processor::WaitTask() {
     if (notify_count < 0) notify_count = 0;
 }
 
-
 bool Processor::IsStealGlobal()
 {
     std::lock_guard<std::mutex> lock(group_mutex);
@@ -194,8 +175,7 @@ bool Processor::IsStealGlobal()
     return false;
 }
 
-
-std::optional<Task *> Processor::StealGlobal() {
+std::shared_ptr<task> Processor::StealGlobal() {
     std::lock_guard<std::mutex> lock(group_mutex);
     for (auto *group: groups) {
         auto task = group->Steal(GetID());
@@ -203,9 +183,8 @@ std::optional<Task *> Processor::StealGlobal() {
             return task;
         }
     }
-    return std::nullopt;
+    return {};
 }
-
 
 bool Processor::IsSteal() const
 {
@@ -217,37 +196,37 @@ bool Processor::IsSteal() const
     return false;
 }
 
-
 bool Processor::IsSteal(ObjectID group_id) const
 {
     return !local_run_queue[group_id].empty();
 }
 
-
-std::optional<Task *> Processor::Steal()
+std::shared_ptr<task> Processor::Steal()
 {
     for (int group_id : rq_by_priority) {
-        auto task = local_run_queue[group_id].steal();
-        if (task)
+        std::shared_ptr<task> task;
+        if (local_run_queue[group_id].try_pop(task))
             return task;
     }
 
-    return std::nullopt;
+    return {};
 }
 
-std::optional<Task *> Processor::Pop()
+std::shared_ptr<task> Processor::Pop()
 {
     for (int group_id : rq_by_priority) {
-        auto task = local_run_queue[group_id].pop();
-        if (task)
+        std::shared_ptr<task> task;
+        if (local_run_queue[group_id].try_pop(task))
             return task;
     }
 
-    return std::nullopt;
+    return {};
 }
 
-
-std::optional<Task *> Processor::Steal(ObjectID group_id)
+std::shared_ptr<task> Processor::Steal(ObjectID group_id)
 {
-    return local_run_queue[group_id].steal();
+    std::shared_ptr<task> task;
+    if (local_run_queue[group_id].try_pop(task))
+        return task;
+    return {};
 }

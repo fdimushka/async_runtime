@@ -1,26 +1,25 @@
 #include "ar/runtime.hpp"
-#include "ar/io_executor.hpp"
 #include "ar/logger.hpp"
 #include "ar/profiler.hpp"
 #include "ar/cpu_helper.hpp"
 #include "numbers.h"
 #include "config.hpp"
 
-using namespace AsyncRuntime;
-
-#define MAIN_WORK_GROUP "main"
-#define MAIN_EXECUTOR_NAME "main"
-#define IO_EXECUTOR_NAME "io"
+#include "io_executor.h"
 
 #ifdef USE_OPENCV
 #include "ar/opencv_executor.h"
 #endif
 
 #ifdef USE_TBB
-
 #include "tbb_executor.h"
-#include "tbb/tbb_io_executor.h"
 #endif
+
+using namespace AsyncRuntime;
+
+#define MAIN_WORK_GROUP "main"
+#define MAIN_EXECUTOR_NAME "main"
+#define IO_EXECUTOR_NAME "io"
 
 Runtime *Runtime::g_runtime;
 
@@ -42,26 +41,11 @@ void Runtime::Setup(const RuntimeOptions &_options) {
 
 #ifdef USE_TBB
     CreateTbbExecutors();
-    io_executor = CreateExecutor<TBBIOExecutor>(IO_EXECUTOR_NAME);
 #else
     CreateDefaultExecutors(_options.virtual_numa_nodes_count);
-
     io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
-
-//    for (const auto executor: cpu_executors) {
-//        for (const auto &id: executor->GetThreadIds()) {
-//            io_executor->ThreadRegistration(id);
-//        }
-//    }
 #endif
-
-
-
-    io_executor->Run();
-
-#ifdef USE_OPENCV
-    AsyncRuntime::CreateExecutor<OpenCVExecutor>("OpenCVExecutor");
-#endif
+    io_executor = CreateExecutor<IO::IOExecutor>(IO_EXECUTOR_NAME);
 
     is_setup = true;
 
@@ -215,17 +199,15 @@ Runtime::MakeMetricsCounter(const std::string &name, const std::map<std::string,
     }
 }
 
-void Runtime::Post(Task *task) {
-    const auto &executor_state = task->GetExecutorState();
+void Runtime::Post(const std::shared_ptr<task> & task) {
+    const auto &executor_state = task->get_execution_state();
     if (executor_state.executor == nullptr) {
-        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.entity_tag)
-                                                                         : FetchFreeExecutor(kCPU_EXECUTOR);
+        auto executor = (executor_state.tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.tag) : FetchFreeExecutor(kCPU_EXECUTOR);
         if (executor != nullptr) {
             executor->Post(task);
         } else {
             main_executor->Post(task);
         }
-        //main_executor->Post(task);
     } else {
         executor_state.executor->Post(task);
     }

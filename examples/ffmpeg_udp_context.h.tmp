@@ -1,0 +1,134 @@
+#ifndef AR_FFMPEG_UDP_CONTEXT_H
+#define AR_FFMPEG_UDP_CONTEXT_H
+
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libswscale/swscale.h"
+#include "libavutil/imgutils.h"
+#include "libavutil/opt.h"
+#include "libavformat/avformat.h"
+#include "libavformat/avio.h"
+#include "libavformat/url.h"
+#include "libavformat/version.h"
+}
+
+#include "ar/ar.hpp"
+#include "ar/io/io.hpp"
+#include "ffmpeg_context.h.tmp"
+#include <boost/url/url_view.hpp>
+
+using namespace AsyncRuntime;
+using namespace std::chrono_literals;
+
+typedef struct UDPContext : IOContext {
+    int rw_timeout;
+    int local_port;
+
+    IO::udp_session_ptr session;
+} UDPContext;
+
+#define UDP_OFFSET(x) offsetof(UDPContext, x)
+#define D AV_OPT_FLAG_DECODING_PARAM
+#define E AV_OPT_FLAG_ENCODING_PARAM
+static const AVOption udp_options[] = {
+//    { "listen",          "Listen for incoming connections",  OFFSET(listen),         AV_OPT_TYPE_INT, { .i64 = 0 },     0,       2,       .flags = D|E },
+        {"timeout", "set timeout (in microseconds) of socket I/O operations", UDP_OFFSET(rw_timeout), AV_OPT_TYPE_INT, {.i64 = -1}, -1, INT_MAX, .flags = D | E},
+
+//    { "listen_timeout",  "Connection awaiting timeout (in milliseconds)",      OFFSET(listen_timeout), AV_OPT_TYPE_INT, { .i64 = -1 },         -1, INT_MAX, .flags = D|E },
+//    { "send_buffer_size", "Socket send buffer size (in bytes)",                OFFSET(send_buffer_size), AV_OPT_TYPE_INT, { .i64 = -1 },         -1, INT_MAX, .flags = D|E },
+//    { "recv_buffer_size", "Socket receive buffer size (in bytes)",             OFFSET(recv_buffer_size), AV_OPT_TYPE_INT, { .i64 = -1 },         -1, INT_MAX, .flags = D|E },
+//    { "tcp_nodelay", "Use TCP_NODELAY to disable nagle's algorithm",           OFFSET(tcp_nodelay), AV_OPT_TYPE_BOOL, { .i64 = 0 },             0, 1, .flags = D|E },
+//#if !HAVE_WINSOCK2_H
+//    { "tcp_mss",     "Maximum segment size for outgoing TCP packets",          OFFSET(tcp_mss),     AV_OPT_TYPE_INT, { .i64 = -1 },         -1, INT_MAX, .flags = D|E },
+//#endif /* !HAVE_WINSOCK2_H */
+        {NULL}
+};
+
+static const AVClass udp_class = {
+        .class_name = "udp",
+        .item_name  = av_default_item_name,
+        .option     = udp_options,
+        .version    = LIBAVUTIL_VERSION_INT,
+};
+
+/* return non zero if error */
+static int udp_open(URLContext *h, const char *uri, int flags) {
+    boost::urls::url_view uv(uri);
+    std::string protocol = uv.scheme();
+    std::string host = uv.host();
+    int port = -1;
+    for (const auto &it : uv.params()) {
+        if (it.key == "localport" || it.key == "local_port") {
+            port = atoi(it.value.c_str());
+            break;
+        }
+    }
+
+    if (port <= 0) {
+        return -1;
+    }
+
+    auto *s = (UDPContext *)h->priv_data;
+    s->session = IO::MakeUDPSession();
+    s->session->set_read_timeout(10);
+
+    auto ec = Await(s->session->async_connect(host.c_str(), port), s->coro_handler);
+    std::cout << "connected: " << ec << std::endl;
+    if (ec) {
+        return -1;
+    }
+    return 0;
+}
+
+static int udp_read(URLContext *h, uint8_t *buf, int size) {
+    auto *s = (UDPContext *)h->priv_data;
+    const auto &session = s->session;
+    int res_size = session->read_input_stream((char*)buf, size);
+    if (res_size <= 0 ) {
+        auto res = Await(session->async_read(), s->coro_handler);
+
+        if (!std::get<IO::error_code>(res)) {
+            return session->read_input_stream((char*)buf, size);
+        } else {
+            return -1;
+        }
+    } else {
+        return res_size;
+    }
+}
+
+static int udp_write(URLContext *h, const uint8_t *buf, int size) {
+    auto *s = (UDPContext *)h->priv_data;
+    const auto &session = s->session;
+    auto ec = Await(session->async_write((const char*)buf, size), s->coro_handler);
+    if (ec) {
+        return -1;
+    }
+    return size;
+}
+
+static int udp_close(URLContext *h) {
+    auto *s = (UDPContext *)h->priv_data;
+    const auto &session = s->session;
+    session->close();
+    return 0;
+}
+
+static int udp_get_file_handle(URLContext *h) {
+    auto *s = (UDPContext *)h->priv_data;
+    return s->session->get_fd();
+}
+
+const URLProtocol udp_protocol = {
+        .name                = "udp",
+        .url_open            = udp_open,
+        .url_read            = udp_read,
+        .url_write           = udp_write,
+        .url_close           = udp_close,
+        .url_get_file_handle = udp_get_file_handle,
+        .priv_data_class     = &udp_class,
+        .priv_data_size      = sizeof(UDPContext),
+        .flags               = URL_PROTOCOL_FLAG_NETWORK,
+};
+
+#endif //AR_FFMPEG_TCP_CONTEXT_H

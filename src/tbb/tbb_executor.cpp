@@ -36,7 +36,7 @@ TBBExecutor::TBBExecutor(const std::string &name_,
         free_streams.push(&streams[i]);
     }
 
-    auto schedule_callback = [this](Task *task) {
+    auto schedule_callback = [this](const std::shared_ptr<task> &task) {
         Post(task);
     };
 
@@ -90,9 +90,10 @@ void TBBExecutor::SetIndex(int i) {
     }
 }
 
-void TBBExecutor::Post(Task *task) {
-    const auto &execute_state = task->GetExecutorState();
-    task->SetExecutorExecutorState(this);
+void TBBExecutor::Post(const std::shared_ptr<task> & task) {
+    auto execute_state = task->get_execution_state();
+    execute_state.executor = this;
+    task->set_execution_state(execute_state);
     tbb::task_arena* arena;
     if (execute_state.work_group != INVALID_OBJECT_ID &&
         execute_state.work_group >= 0 &&
@@ -103,9 +104,9 @@ void TBBExecutor::Post(Task *task) {
     }
 
     arena->enqueue([this, task]() {
-        const auto &execute_state = task->GetExecutorState();
-        if (task->GetDelay() <= 0) {
-            Enqueue(task, execute_state.entity_tag);
+        const auto &execute_state = task->get_execution_state();
+        if (task->get_delay() <= 0) {
+            Enqueue(task, execute_state.tag);
         } else {
             if (execute_state.work_group != INVALID_OBJECT_ID) {
                 delayed_schedulers[execute_state.work_group]->Post(task);
@@ -116,7 +117,7 @@ void TBBExecutor::Post(Task *task) {
     });
 }
 
-void TBBExecutor::PostToStream(Task *task, EntityTag tag) {
+void TBBExecutor::PostToStream(const std::shared_ptr<task> & task, EntityTag tag) {
     if (tag != INVALID_OBJECT_ID) {
         uint16_t executor_index;
         uint16_t entity_index;
@@ -131,12 +132,9 @@ void TBBExecutor::PostToStream(Task *task, EntityTag tag) {
     }
 }
 
-void TBBExecutor::Enqueue(Task *task, EntityTag tag) {
+void TBBExecutor::Enqueue(const std::shared_ptr<task> & task, EntityTag tag) {
     assert(task);
-    ExecutorState executor_state;
-    executor_state.entity_tag = tag;
-    executor_state.executor = task->GetExecutorState().executor;
-    executor_state.work_group = task->GetExecutorState().work_group;
-    task->Execute(executor_state);
-    delete task;
+    auto executor_state = task->get_execution_state();
+    executor_state.tag = tag;
+    task->execute(executor_state);
 }

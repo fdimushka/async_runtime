@@ -22,6 +22,7 @@ To build you will need:
 * cmake >= 3.12.4
 * gcc >= 4.6
 * libuv >= 1.44.1
+* boost >= v1.81
 * doxygen >= 1.9.3 (optional)
 * google benchmark >= v1.6.1 (optional)
 

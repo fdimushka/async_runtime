@@ -1,7 +1,7 @@
 #include <iostream>
 #include "ar/ar.hpp"
 
-namespace AR = AsyncRuntime;
+using namespace AsyncRuntime;
 
 struct Node {
     Node(int v) : val(v) {}
@@ -10,7 +10,7 @@ struct Node {
     Node *right = nullptr;
 };
 
-void dfs(AR::CoroutineHandler* handler, AR::Yield<int> & sink, Node *x) {
+int dfs(coroutine_handler* handler, yield<int> & sink, Node *x) {
     if (x->left) {
         dfs(handler, sink, x->left);
     }
@@ -18,6 +18,8 @@ void dfs(AR::CoroutineHandler* handler, AR::Yield<int> & sink, Node *x) {
     if (x->right) {
         dfs(handler, sink, x->right);
     }
+
+    return 0;
 }
 
 int main() {
@@ -29,12 +31,14 @@ int main() {
     x->right->left = new Node(15);
     x->right->left->right = new Node(17);
 
-    auto coro = AR::MakeCoroutine<int>(&dfs, x);
-
+    auto coro_fib = make_coroutine<int>(&dfs, x);
     std::cout << "Tree: \n";
 
-    for(int i : coro) {
-        std::cout << i << std::endl;
+    while (!coro_fib->is_completed()) {
+        coro_fib->init_promise();
+        auto f = coro_fib->get_future();
+        coro_fib->resume();
+        std::cout << f.get() << std::endl;
     }
 
     return 0;

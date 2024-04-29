@@ -80,6 +80,6 @@ Await(AsyncFsClose(in_stream), handler);
 ### Examples
 
 * Async tcp server example [see here](../examples/tcp_server.cpp).
-* Async tcp client example [see here](../examples/tcp_client.cpp).
+* Async tcp client example [see here](../examples/http_client.cpp).
 * Async dns example [see here](../examples/dns.cpp).
 * Async fs example [see here](../examples/io.cpp).

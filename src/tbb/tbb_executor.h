@@ -34,20 +34,12 @@ namespace AsyncRuntime {
 
         void SetIndex(int index) final;
 
-        /**
-         * @brief
-         * @param task
-         */
-        void Post(Task *task) final;
+        void Post(const std::shared_ptr<task> & task) final;
 
-        /**
-         * @brief
-         * @return
-         */
         std::vector<std::thread::id> GetThreadIds();
     private:
-        void Enqueue(Task *task, EntityTag tag);
-        void PostToStream(Task *task, EntityTag tag);
+        void Enqueue(const std::shared_ptr<task> & task, EntityTag tag);
+        void PostToStream(const std::shared_ptr<task> & task, EntityTag tag);
         
         TBBDelayedScheduler main_delayed_scheduler;
         std::vector<std::unique_ptr<TBBDelayedScheduler>> delayed_schedulers;

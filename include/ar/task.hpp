@@ -1,443 +1,147 @@
 #ifndef AR_TASK_H
 #define AR_TASK_H
 
-#include <iostream>
-#include <future>
-#include <functional>
-#include <typeinfo>
-#include <cstdio>
-#include <utility>
-#include <atomic>
+#define BOOST_THREAD_PROVIDES_FUTURE 1
+#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION 1
 
-#include "ar/helper.hpp"
+#include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
+#include <boost/context/continuation.hpp>
+#include <boost/function_types/result_type.hpp>
+
 #include "ar/object.hpp"
 #include "ar/logger.hpp"
 #include "ar/timestamp.hpp"
-#include "ar/resource.hpp"
-#include "ar/stream.hpp"
-
 
 namespace AsyncRuntime {
-    class Task;
     class IExecutor;
 
-
-    /**
-     * @class
-     * @brief
-     */
-    template<class Ret>
-    class Result {
-        friend class runtime;
-
+    class task {
     public:
-        typedef std::function<void(Result<Ret> *, void *)> completed_cb_t;
-        typedef Ret RetType;
-
-        class CallbackControlBlock {
-            friend Result;
-        public:
-            CallbackControlBlock(const completed_cb_t &cb, void *o = nullptr) : callback(cb), opaque(o) { }
-
-            void operator () (Result<Ret> *result) {
-                if (callback)
-                    callback(result, opaque);
-            }
-        private:
-            bool owner = true;
-            completed_cb_t callback;
-            void *opaque = nullptr;
+        struct execution_state {
+            int64_t tag = 0;
+            int64_t work_group = 0;
+            int64_t processor = 0;
+            IExecutor *executor = nullptr;
         };
 
-        explicit Result() : excepted(false) {
-            resolved.store(false, std::memory_order_relaxed);
-            future = promise.get_future();
+        struct less_than_by_delay_ptr {
+            bool operator()(const std::shared_ptr<task> & lhs, const std::shared_ptr<task> & rhs) const { return lhs->delay > rhs->delay; }
         };
 
+        task() noexcept: delay(0), created_at(TIMESTAMP_NOW_MICRO()) {};
 
-        template<typename T>
-        explicit Result(T &&v) : excepted(false) {
-            resolved.store(true, std::memory_order_relaxed);
-            future = promise.get_future();
-            promise.set_value(v);
-        };
+        task(task const &) = delete;
 
+        task &operator=(task const &) = delete;
 
-        Result(const Result &other) = delete;
+        virtual ~task() = default;
 
-        Result &operator=(const Result &other) = delete;
-
-        Result(Result &&other) = delete;
-
-        Result &operator=(Result &&other) = delete;
-
-        ~Result() = default;
-
-
-        /**
-         * @brief
-         * @param function
-         */
-        bool Then(const completed_cb_t &cb, void *opaque = nullptr) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!resolved.load(std::memory_order_relaxed)) {
-                callback_cb = std::make_shared<CallbackControlBlock>(cb, opaque);
-                callback_cb->owner = false;
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        bool Then(const std::shared_ptr<CallbackControlBlock> & cb) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!resolved.load(std::memory_order_relaxed)) {
-                callback_cb = cb;
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-
-        /**
-         * @brief
-         */
-        Result<Ret> *Wait() {
-            if (!resolved.load(std::memory_order_relaxed)) {
-                if (future.valid())
-                    future.wait();
-            }
-            return this;
-        }
-
-
-        /**
-         * @brief
-         * @param v
-         */
-        template<typename T>
-        void SetValue(T &&v) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
-                resolved.store(true, std::memory_order_relaxed);
-                promise.set_value(v);
-                InvokeCallback();
-            }
-        }
-
-
-        /**
-         * @brief
-         * @tparam T
-         * @param v
-         */
-        template<typename T>
-        void SetValue(T &v) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
-                resolved.store(true, std::memory_order_relaxed);
-                promise.set_value(v);
-                InvokeCallback();
-            }
-        }
-
-
-        /**
-         * @brief
-         * @tparam T
-         * @param v
-         */
-        template<typename T>
-        void SetValue(const T &v) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
-                resolved.store(true, std::memory_order_relaxed);
-                promise.set_value(v);
-                InvokeCallback();
-            }
-        }
-
-
-        /**
-         * @brief
-         * @param v
-         */
-        void SetValue() {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            if (!excepted && !Resolved()) {
-                resolved.store(true, std::memory_order_relaxed);
-                promise.set_value();
-                InvokeCallback();
-            }
-        }
-
-
-        /**
-         * @brief
-         * @param __p
-         */
-        void SetException(std::exception_ptr e) {
-            std::lock_guard<std::mutex> lock(resolve_mutex);
-            resolved.store(true, std::memory_order_relaxed);
-            promise.set_exception(e);
-            excepted = true;
-        }
-
-
-        /**
-         * @brief
-         * @return
-         */
-        Ret Get();
-
-
-        /**
-         * @brief
-         * @return
-         */
-        [[nodiscard]] bool Valid() const { return future.valid(); }
-
-
-        /**
-         * @brief
-         * @return
-         */
-        [[nodiscard]] bool Resolved() const {
-            bool res = resolved.load(std::memory_order_relaxed);
-            return res;
-        }
-
-    protected:
-        void InvokeCallback() {
-            if (callback_cb) {
-                if (callback_cb->owner) {
-                    if ( callback_cb.use_count() > 1) {
-                        callback_cb->operator()(this);
-                    }
-                } else {
-                    callback_cb->operator()(this);
-                }
-            }
-        }
-
-
-        std::future<Ret> future;
-        std::shared_ptr<CallbackControlBlock> callback_cb;
-        std::promise<Ret> promise;
-        std::atomic_bool resolved = {false};
-        std::mutex resolve_mutex;
-        bool excepted;
-    };
-
-
-    template<class Ret>
-    inline Ret Result<Ret>::Get() {
-        if (future.valid()) {
-            return std::move(future.get());
-        } else {
-            throw std::runtime_error("invalid future");
-        }
-    }
-
-
-    template<>
-    inline void Result<void>::Get() {
-        if (future.valid()) {
-            future.get();
-        } else {
-            throw std::runtime_error("invalid future");
-        }
-    }
-
-
-    /**
-     * @brief
-     */
-    struct ExecutorState {
-        EntityTag entity_tag = INVALID_OBJECT_ID;
-        IExecutor *executor = nullptr;
-        ObjectID work_group = INVALID_OBJECT_ID;
-        ObjectID processor = INVALID_OBJECT_ID;
-    };
-
-
-    /**
-     * @class TaskImplBase
-     * @brief Task interface
-     */
-    class Task {
-        friend class runtime;
-    public:
-        struct LessThanByDelay {
-            bool operator()(const Task *lhs, const Task *rhs) const {
-                return lhs->GetDelay() > rhs->GetDelay();
-            }
-        };
-
-        Task() : origin_id_(0), delayed(false), delay(0), start_time(TIMESTAMP_NOW_MICRO()) {};
-
-        virtual ~Task() = default;
-
-        virtual void Execute(const ExecutorState &executor) = 0;
+        virtual void execute(const execution_state &state) = 0;
 
         template<typename Rep, typename T>
-        void SetDelay(T time) {
-            if (time > 0) {
-                delayed = true;
-                delay = Timestamp::Cast<Rep, Timestamp::Micro>(time);
-                start_time = TIMESTAMP_NOW_MICRO() + delay;
-            }
+        void set_delay(T time) {
+            delay = Timestamp::Cast<Rep, Timestamp::Micro>(time);
+            created_at = TIMESTAMP_NOW_MICRO() + delay;
         }
 
-        void SetOriginId(uintptr_t origin_id);
+        int64_t get_delay() const { return created_at - TIMESTAMP_NOW_MICRO(); }
 
-        void SetExecutorState(const ExecutorState &executor) { executor_state = executor; }
+        const execution_state &get_execution_state() const { return state; }
 
-        void SetWorkGroupExecutorState(const ObjectID &group);
+        void set_execution_state(const execution_state & new_state) { state = new_state; }
 
-        void SetProcessorExecutorState(const ObjectID &processor) { executor_state.processor = processor; }
-
-        void SetExecutorExecutorState(IExecutor *executor) { executor_state.executor = executor; }
-
-
-        [[nodiscard]] bool Delayed() const { return delayed; }
-
-        [[nodiscard]] Timespan GetDelay() const;
-
-        [[nodiscard]] uintptr_t GetOriginId() const { return origin_id_; }
-
-        [[nodiscard]] const ExecutorState &GetExecutorState() const { return executor_state; }
-
-#ifdef USE_TESTS
-        Timespan delay;
-#else
-        protected:
-            Timespan delay;
-#endif
-
+        bool delayed() const { return delay > 0; }
     protected:
-        ExecutorState executor_state;
-        uintptr_t origin_id_;
-        bool delayed;
-        Timespan start_time;
+        execution_state state;
+    private:
+        int64_t delay;
+        int64_t created_at;
     };
 
+    template < typename T >
+    using promise_t = boost::promise<T>;
 
-    /**
-     * @class Task
-     * @brief Task container
-     */
-    template<class Callable>
-    class TaskImpl : public Task {
-        typedef typename std::result_of<Callable(const ExecutorState &)>::type return_type;
+    template < typename T >
+    using future_t = boost::future<T>;
+
+    template < typename T >
+    using shared_future_t = boost::shared_future<T>;
+
+    template< typename Fn >
+    class base_task : public task {
+        typedef typename std::result_of<Fn()>::type result_type;
+        typedef promise_t<result_type> promise_type;
     public:
-        explicit TaskImpl(Callable &&f) :
-                Task(),
-                fn(f),
-                result(new Result<return_type>()) {};
+        explicit base_task(Fn &&f) noexcept: fn(f) { }
 
-        ~TaskImpl() override = default;
+        ~base_task() override = default;
 
-
-        void Execute(const ExecutorState &executor_) override {
+        void execute(const execution_state & state) override {
             try {
-                executor_state = executor_;
-                Handle(result.get(), fn);
-            } catch (const std::exception& ex) {
+                task::state = state;
+                invoke_fn(promise);
+            } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
-                    result->SetException(std::current_exception());
+                promise.set_exception(ex);
             }
         }
 
-
-        std::shared_ptr<Result<return_type>> GetResult() {
-            return result;
-        }
-
+        future_t<result_type> get_future() { return promise.get_future(); }
     private:
-        /**
-         * @brief handle non-void here
-         * @tparam F
-         * @tparam R
-         * @param p
-         * @param f
-         */
-        template<typename F, typename R>
-        void Handle(Result<R> *r, F &&f) {
-            auto res = f(executor_state);
-            r->SetValue(res);
+        template<typename T>
+        inline void invoke_fn(promise_t<T> & p) {
+            p.set_value(fn());
         }
 
-
-        /**
-         * @class handle void here
-         * @tparam F
-         * @param p
-         * @param f
-         */
-        template<typename F>
-        void Handle(Result<void> *r, F &&f) {
-            f(executor_state);
-            r->SetValue();
+        template<typename T = void>
+        inline void invoke_fn(promise_t<void> & p) {
+            fn();
+            promise.set_value();
         }
 
-
-        Callable fn;
-        std::shared_ptr<Result<return_type>> result;
+        Fn fn;
+        promise_type promise;
     };
 
-    class DummyTaskImpl : public Task {
+    class dummy_task : public task {
+        typedef promise_t<void> promise_type;
     public:
-        explicit DummyTaskImpl() : result(new Result<void>()) {};
+        dummy_task() = default;
+        ~dummy_task() override = default;
 
-        ~DummyTaskImpl() override = default;
-
-
-        void Execute(const ExecutorState &executor_) override {
+        void execute(const execution_state & state) override {
             try {
-                executor_state = executor_;
-                result->SetValue();
-            } catch (const std::exception& ex) {
+                task::state = state;
+                promise.set_value();
+            } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
-                result->SetException(std::current_exception());
+                promise.set_exception(ex);
             }
         }
 
-
-        std::shared_ptr<Result<void>> GetResult() {
-            return result;
-        }
-
+        future_t<void> get_future() { return promise.get_future(); }
     private:
-
-
-        std::shared_ptr<Result<void>> result;
+        promise_type promise;
     };
 
-
-    /**
-     * @brief
-     * @tparam Callable
-     * @param f
-     * @return
-     */
-    template<class Fn>
-    inline TaskImpl<Fn> *MakeTask(Fn &&f) {
-        return new TaskImpl(std::forward<Fn>(f));
+    template < class Fn >
+    inline std::shared_ptr<base_task<Fn>> make_task_shared_ptr(Fn &&f) {
+        return std::make_shared<base_task<Fn>>(std::forward<Fn>(f));
     }
 
-
-    /**
-     * @brief
-     * @return
-     */
-    inline DummyTaskImpl *MakeDummyTask() {
-        return new DummyTaskImpl();
+    inline std::shared_ptr<dummy_task> make_dummy_task_shared_ptr() {
+        return std::make_shared<dummy_task>();
     }
 
+    template < typename T >
+    future_t<T> make_resolved_future(T v) {
+        promise_t<T> p;
+        p.set_value(v);
+        return p.get_future();
+    }
 
-    typedef std::shared_ptr<Result<void>> ResultVoidPtr;
+    future_t<void> make_resolved_future();
 }
 
 
