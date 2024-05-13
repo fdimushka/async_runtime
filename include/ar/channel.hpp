@@ -32,18 +32,17 @@ namespace AsyncRuntime {
         friend Channel<T>;
     public:
         Watcher() = default;
-        ~Watcher() override;
+        ~Watcher() override = default;
 
-        std::optional<T*> Receive();
-        std::optional<T*> TryReceive();
-        std::shared_ptr<Result<T*>>   AsyncReceive();
+        std::optional<T> TryReceive();
+        future_t<void>   AsyncWait();
     private:
-        void Send(T *msg);
+        void Send(const T& msg);
 
-        WorkStealQueue<T*>                              queue;
-        std::condition_variable                         cv;
+        std::queue<T>                                   queue;
         std::mutex                                      mutex;
-        std::shared_ptr<Result<T*>>                     async_result_;
+        promise_t<void>                                 promise;
+        bool                                            resolved = false;
     };
 
 
@@ -56,25 +55,10 @@ namespace AsyncRuntime {
     public:
         typedef Watcher<T>  WatcherType;
 
-        /**
-         * @brief
-         * @param buff
-         * @param size
-         */
         void Send(const T& msg);
 
-
-        /**
-         * @brief
-         * @param watcher_id
-         */
         std::shared_ptr<WatcherType> Watch();
 
-
-        /**
-         * @brief
-         * @param watcher
-         */
         void UnWatch(const std::shared_ptr<WatcherType>& watcher);
     private:
         std::mutex                                             mutex;
@@ -107,8 +91,8 @@ namespace AsyncRuntime {
             const std::shared_ptr<WatcherType>& watcher = it->second;
 
             if (watcher.use_count() > 1) {
-                auto* clone_msg = new T(msg);
-                watcher->Send(clone_msg);
+                T new_msg(msg);
+                watcher->Send(new_msg);
                 ++it;
             } else {
                 it = watchers.erase(it);
@@ -118,59 +102,40 @@ namespace AsyncRuntime {
 
 
     template<typename T>
-    Watcher<T>::~Watcher() {
-        while (!queue.empty()) {
-            auto v = queue.steal();
-            if(v) {
-                delete v.value();
-            }
+    void Watcher<T>::Send(const T& msg) {
+        std::lock_guard<std::mutex>  lock(mutex);
+        queue.push(msg);
+        if (!resolved) {
+            promise.set_value();
+            resolved = true;
         }
-
-        //@TODO check and release async_result_
     }
 
 
     template<typename T>
-    void Watcher<T>::Send(T *msg) {
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            if( async_result_ && !async_result_->Resolved() ) {
-                async_result_->SetValue(msg);
-            }else{
-                queue.push(msg);
-            }
-        }
-
-        cv.notify_one();
-    }
-
-
-    template<typename T>
-    std::optional<T*> Watcher<T>::Receive() {
-        std::unique_lock<std::mutex>  lock(mutex);
-        while(queue.empty()) {
-            cv.wait(lock);
-        }
-        return queue.steal();
-    }
-
-
-    template<typename T>
-    std::optional<T*> Watcher<T>::TryReceive() {
-        return queue.steal();
-    }
-
-
-    template<typename T>
-    std::shared_ptr<Result<T*>> Watcher<T>::AsyncReceive() {
-        std::lock_guard<std::mutex> lock(mutex);
-        auto v = queue.steal();
-        if(!v) {
-            //@TODO check and release prev async_result_
-            async_result_ = std::make_shared<Result<T*>>();
-            return async_result_;
+    std::optional<T> Watcher<T>::TryReceive() {
+        std::lock_guard<std::mutex>  lock(mutex);
+        if (!queue.empty()) {
+            T v = queue.front();
+            queue.pop();
+            return v;
         } else {
-            return std::make_shared<Result<T*>>(v.value());
+            return std::nullopt;
+        }
+    }
+
+
+    template<typename T>
+    future_t<void> Watcher<T>::AsyncWait() {
+        std::lock_guard<std::mutex>  lock(mutex);
+        if (queue.empty()) {
+            resolved = false;
+            promise = {};
+            return promise.get_future();
+        } else {
+            resolved = false;
+            promise = {};
+            return make_resolved_future();
         }
     }
 }

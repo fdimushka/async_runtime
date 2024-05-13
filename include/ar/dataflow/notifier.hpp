@@ -7,52 +7,49 @@
 
 namespace AsyncRuntime::Dataflow {
 
-    /**
-     * @class Notifyer
-     * @brief
-     */
     class Notifier {
-        typedef std::shared_ptr<AsyncRuntime::Result<int>> ResultPtr;
     public:
         Notifier() = default;
 
         void Notify(int state);
 
         template< typename... Arguments >
-        ResultPtr AsyncWatch(Arguments &&... args);
-        ResultPtr AsyncWatchAll();
+        future_t<int> AsyncWatch(Arguments &&... args);
+        future_t<int> AsyncWatchAny();
 
         template <typename T>
         static bool HasState(int states, T state) { return ((states & (int)state) == (int)state) == 1; }
     private:
         void CheckNotifications(int & notifications, int state) const;
-        ResultPtr MakeWatcher();
-        ResultPtr MakeResult(int state);
-        ResultPtr Watch();
 
         std::mutex mutex;
-        ResultPtr async_watcher;
-        bool watch_all = false;
+        promise_t<int> promise;
+        bool notified = false;
+        bool watch_any = false;
         uint8_t watch_state = {0};
         uint8_t notify_state = {0};
     };
 
     template<typename... Arguments>
-    Notifier::ResultPtr Notifier::AsyncWatch(Arguments &&... args) {
+    future_t<int> Notifier::AsyncWatch(Arguments &&... args) {
         std::lock_guard<std::mutex> lock(mutex);
-        watch_all = false;
+        watch_any = false;
         int notifications = 0;
         ((void) CheckNotifications(notifications, (int)std::forward<Arguments>(args)), ...);
         if (notifications == 0) {
             watch_state = 0;
             notify_state = 0;
             ((watch_state |= (int)(std::forward<Arguments>(args))), ...);
-            return Watch();
+            promise = {};
+            notified = false;
+            return promise.get_future();
         } else {
             watch_state = 0;
             notify_state = 0;
             ((watch_state |= (int)(std::forward<Arguments>(args))), ...);
-            return MakeResult(notifications);
+            notified = false;
+            promise = {};
+            return make_resolved_future(notifications);
         }
     }
 }

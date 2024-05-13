@@ -1,50 +1,50 @@
 #include "ar/ar.hpp"
+#include "ar/io/io.hpp"
 
 using namespace AsyncRuntime;
+using namespace std::chrono_literals;
 
 
-void async_tcp(CoroutineHandler* handler, Yield<std::string>& yield, const std::string& host, int port, const std::string& req)
-{
-    auto connection = MakeTCPConnection(host.c_str(), port);
+void async_client(coroutine_handler* handler, yield<void> & yield) {
+    auto session = IO::MakeTCPSession();
+    session->set_read_timeout(10);
 
-    yield( {} );
+    auto ec = Await(session->async_connect("127.0.0.1", 8080), handler);
+    std::cout << "connected: " << ec << std::endl;
 
-    int ret = Await(AsyncConnect(connection), handler);
-    if(ret == IO_SUCCESS) {
-        ret = Await(AsyncWrite(connection, req.c_str(), req.size()), handler);
-        if(ret != IO_SUCCESS){
-            std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
+    for (;;) {
+        auto res = Await(session->async_read(), handler);
+
+        if (!std::get<IO::error_code>(res)) {
+            std::size_t size = std::get<std::size_t>(res);
+
+            if (size > 0)
+            {
+                char *buffer = (char*)std::malloc(size);
+                size = session->read_input_stream(buffer, size);
+                std::cout << "Received: " << buffer << "\n";
+
+                ec = Await(session->async_write(buffer, size), handler);
+                if (ec) {
+                    break;
+                }
+                std::cout << "Sended: " << size << "\n";
+            }
+        } else {
+            break;
         }
-
-        std::vector<char> buffer(65536);
-        int res_size = Await(AsyncRead(handler, connection, buffer.data(), buffer.size()), handler);
-        if(res_size > 0) {
-            Await(AsyncClose(connection), handler);
-            yield( { std::string(buffer.data(), res_size) } );
-        }else{
-            Await(AsyncClose(connection), handler);
-            std::cerr << "read error"<< std::endl;
-            yield( {} );
-        }
-    }else{
-        std::cerr << "error: " << FSErrorMsg(ret) << std::endl;
-        yield( {} );
     }
+
+    session->close();
+    std::cout << "close" << std::endl;
 }
 
-
 int main() {
+    AsyncRuntime::Logger::s_logger.SetStd();
     SetupRuntime();
-    std::string req = "GET / HTTP/1.1\r\n"
-                      "Host: example.com\r\n"
-                      "Connection: close\r\n"
-                      "User-Agent: ar example tcp server\r\n"
-                      "Accept: */*\r\n\r\n";
 
-    std::string host = "93.184.216.34";
-    auto coro = MakeCoroutine<std::string>(&async_tcp, host, 80, req);
-    std::string result = Await(Async(coro));
-    std::cout << result << std::endl;
+    Await(Async(make_coroutine(&async_client)));
+
     Terminate();
     return 0;
 }

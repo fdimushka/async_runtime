@@ -7,9 +7,7 @@ using namespace AsyncRuntime;
 using namespace std::chrono_literals;
 
 
-void async_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) {
-    yield();
-
+void async_fun(coroutine_handler* handler, yield<void> & yield, Ticker *ticker) {
     auto t_start = std::chrono::high_resolution_clock::now();
 
     while (Await(ticker->AsyncTick(), handler)) {
@@ -26,11 +24,11 @@ int main() {
     AsyncRuntime::Logger::s_logger.SetStd();
     SetupRuntime();
     Ticker ticker(40ms);
-    auto coro = MakeCoroutine(&async_fun, &ticker);
+    auto coro = make_coroutine(&async_fun, &ticker);
     auto result_async_fun = Async(coro);
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
     ticker.Stop();
-    result_async_fun->Wait();
+    result_async_fun.wait();
     Terminate();
     return 0;
 }

@@ -12,19 +12,22 @@
 #include <set>
 #include <thread>
 #include <condition_variable>
-
 #include <uv.h>
+
+#include "task_queue.hpp"
 
 
 namespace AsyncRuntime {
     class Executor;
     class ProcessorGroup;
+#define MAX_GROUPS_COUNT                10
 
     /**
      * @class Processor
      * @brief
      */
     class Processor: public BaseObject {
+        friend class ProcessorGroup;
     public:
         enum State {
             IDLE            =0,
@@ -35,60 +38,30 @@ namespace AsyncRuntime {
         explicit Processor(int pid, const CPU & cpu);
         ~Processor() override;
 
-
         Processor(Processor&&) = delete;
         Processor(const Processor&) = delete;
-
 
         Processor& operator =(const Processor&) = delete;
         Processor& operator =(Processor&&) = delete;
 
-
         void AddGroup(ProcessorGroup *group);
 
-
-        /**
-         * @brief
-         */
         void Run();
 
-
-        /**
-         * @brief
-         */
         void Terminate();
 
+        void Post(task *task);
 
-        /**
-         * @brief
-         * @param task
-         */
-        void Post(Task *task);
-
-
-        /**
-         * @brief
-         */
         void Notify();
 
-
-        /**
-         * @brief
-         * @return
-         */
         State GetState();
 
-
-        /**
-         * @brief
-         * @return
-         */
         [[nodiscard]] std::thread::id GetThreadId() const;
         bool IsSteal() const;
         bool IsSteal(ObjectID group_id) const;
-        std::optional<Task*> Pop();
-        std::optional<Task*> Steal();
-        std::optional<Task*> Steal(ObjectID group_id);
+        task *Pop();
+        task *Steal();
+        task *Steal(ObjectID group_id);
         std::vector<ProcessorGroup *> GetGroups();
         size_t GetGroupsSize();
         bool IsInGroup(const ProcessorGroup *group);
@@ -96,18 +69,18 @@ namespace AsyncRuntime {
     protected:
         void Work();
 
-        void ExecuteTask(Task* task, const ExecutorState &executor_state);
+        void ExecuteTask(task *task, const task::execution_state &executor_state);
         void WaitTask();
 
         bool IsStealGlobal();
-        std::optional<Task*> StealGlobal();
+        task *StealGlobal();
     private:
         CPU                                         cpu;
         std::vector<ProcessorGroup *>               groups;
 
         ThreadExecutor                              thread_executor;
-        std::vector<int>                            rq_by_priority;
-        std::vector<WorkStealQueue<Task*>>          local_run_queue;
+        TaskQueue<task*>                            task_queue[MAX_GROUPS_COUNT];
+        std::mutex                                  task_queue_mutex;
         std::atomic_bool                            is_continue;
         std::atomic<State>                          state;
 

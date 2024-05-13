@@ -9,7 +9,7 @@ namespace AsyncRuntime::Dataflow {
     template< class T >
     class FIFOBuffer : public SharedBuffer< T > {
     public:
-        explicit FIFOBuffer(size_t capacity = 0)
+        explicit FIFOBuffer(size_t capacity = 100)
         : SharedBuffer<T>(kFIFO_BUFFER) {
             queue.set_capacity(capacity);
         };
@@ -18,8 +18,8 @@ namespace AsyncRuntime::Dataflow {
             Flush();
         };
 
-        SharedBufferError Write( T && msg );
-        SharedBufferError Write( const T & msg );
+        SharedBufferError Write( T && msg ) override;
+        SharedBufferError Write( const T & msg ) override;
         std::optional<T> Read() override;
         bool TryRead( T & res ) override;
         bool Empty() override;

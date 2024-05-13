@@ -6,18 +6,16 @@ using namespace AsyncRuntime;
 using namespace std::chrono_literals;
 
 void async_management_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) {
-    yield();
 
     while (Await(ticker->AsyncTick(handler), handler)) {
-        std::cout << handler->GetExecutorState().work_group << " " << handler->GetExecutorState().processor << " tick management: " << TIMESTAMP_NOW() << std::endl;
+        std::cout << handler->get_execution_state().work_group << " " << handler->get_execution_state().processor << " tick management: " << TIMESTAMP_NOW() << std::endl;
     }
 }
 
 void async_va_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) {
-    yield();
 
     while (Await(ticker->AsyncTick(handler), handler)) {
-        std::cout << handler->GetExecutorState().work_group << " " << handler->GetExecutorState().processor << " tick va: " << TIMESTAMP_NOW() << std::endl;
+        std::cout << handler->get_execution_state().work_group << " " << handler->get_execution_state().processor << " tick va: " << TIMESTAMP_NOW() << std::endl;
     }
 }
 
@@ -34,17 +32,20 @@ int main() {
 
     Ticker ticker_management(100ms);
     Ticker ticker_va(1s);
-    auto coro_management = MakeCoroutine(&async_management_fun, &ticker_management);
-    auto coro_va = MakeCoroutine(&async_va_fun, &ticker_va);
+    auto coro_management = make_coroutine(&async_management_fun, &ticker_management);
+    auto coro_va = make_coroutine(&async_va_fun, &ticker_va);
 
-    coro_management.SetWorkGroup(management_group);
-    coro_va.SetWorkGroup(va_group);
+    task::execution_state state_1, state_2;
+    state_1.work_group = management_group;
+    state_2.work_group = va_group;
+    coro_management->set_execution_state(state_1);
+    coro_va->set_execution_state(state_2);
 
     auto f1 = Async(coro_management);
     auto f2 = Async(coro_va);
 
-    f1->Wait();
-    f2->Wait();
+    f1.wait();
+    f2.wait();
 
     ticker_management.Stop();
     ticker_va.Stop();

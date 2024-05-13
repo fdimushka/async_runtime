@@ -5,7 +5,6 @@
 #ifndef AR_TRACE_H
 #define AR_TRACE_H
 
-#include "ar/helper.hpp"
 #include "ar/object.hpp"
 
 #include <vector>

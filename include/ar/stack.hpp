@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <new>
 #include <cstring>
+#include <memory>
+#include <cstdlib>
 
-#include "ar/helper.hpp"
+#include "ar/macros.hpp"
 
 # if defined(RNT_USE_SEGMENTED_STACKS)
 extern "C" {

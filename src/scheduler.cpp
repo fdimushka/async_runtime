@@ -5,45 +5,29 @@
 
 using namespace AsyncRuntime;
 
-Scheduler::Scheduler(std::vector<Processor*>  p) :
-        is_continue{true}
-        , processors(std::move(p))
-        , notify_inc(0)
-        , gen(rd())
-{
-    distr = std::uniform_int_distribution<>(0, processors.size()-1);
+Scheduler::Scheduler(const std::function<void(task *)> &task_callback)
+    : is_continue{true}
+    , task_callback(task_callback) {
     scheduler_th.Submit([this] { SchedulerLoop(); });
 }
 
 
-Scheduler::~Scheduler()
-{
+Scheduler::~Scheduler() {
     is_continue.store(false, std::memory_order_relaxed);
     delayed_task_cv.notify_one();
     scheduler_th.Join();
 }
 
-std::thread::id Scheduler::GetThreadId() const {
-    return scheduler_th.GetThreadId();
-}
-
-void Scheduler::SetProcessors(const std::vector<Processor *> &p)
-{
-    std::lock_guard<std::mutex> lock(processors_mutex);
-    processors = p;
-}
-
-
 void Scheduler::SchedulerLoop() {
     while (is_continue.load(std::memory_order_relaxed)) {
         std::unique_lock<std::mutex> lock(delayed_task_mutex);
         if (!delayed_task.empty()) {
-            Task *task = delayed_task.top();
+            task *task = delayed_task.top();
 
             if (task) {
-                int64_t delay = task->GetDelay();
+                int64_t delay = task->get_delay();
                 if (delay <= 0) {
-                    ScheduleTask(task);
+                    task_callback(task);
                     delayed_task.pop();
                 } else {
                     delayed_task_cv.wait_for(lock, std::chrono::microseconds(delay));
@@ -56,57 +40,8 @@ void Scheduler::SchedulerLoop() {
 }
 
 
-void Scheduler::Post(Task *task)
-{
-    if (task->GetDelay() <= 0) {
-        ScheduleTask(task);
-    } else {
-        std::unique_lock<std::mutex> lock(delayed_task_mutex);
-        delayed_task.push(task);
-        delayed_task_cv.notify_one();
-    }
-}
-
-
-std::optional<Task *> Scheduler::Steal()
-{
-    return run_queue.steal();
-}
-
-
-bool Scheduler::IsSteal() const
-{
-    return !run_queue.empty();
-}
-
-
-void Scheduler::ScheduleTask(Task *task)
-{
-    ObjectID pid = task->GetExecutorState().processor;
-    if (pid == INVALID_OBJECT_ID || pid <= 0 || pid >= processors.size()) {
-        pid = distr(gen);
-        task->SetProcessorExecutorState(pid);
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(run_queue_mutex);
-        run_queue.push(task);
-        processors[pid]->Notify();
-    }
-//
-//    std::lock_guard<std::mutex> lock(processors_mutex);
-//    bool notified = false;
-//    for (size_t i = 0; i < processors.size(); ++i) {
-//        notify_inc = (notify_inc + 1) % processors.size();
-//        auto p_state = processors[notify_inc]->GetState();
-//        if (p_state != Processor::EXECUTE) {
-//            notified = true;
-//            processors[notify_inc]->Notify();
-//            break;
-//        }
-//    }
-//
-//    if (!notified) {
-//        processors[notify_inc]->Notify();
-//    }
+void Scheduler::Post(task *task) {
+    std::unique_lock<std::mutex> lock(delayed_task_mutex);
+    delayed_task.push(task);
+    delayed_task_cv.notify_one();
 }

@@ -3,7 +3,7 @@
 #include "ar/os.hpp"
 
 
-std::string AsyncRuntime::OS::GetCPUInfo()
+std::string AsyncRuntime::GetCPUInfo()
 {
     std::string info = "";
     //info.resize(49);
