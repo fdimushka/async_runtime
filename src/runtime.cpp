@@ -1,26 +1,25 @@
 #include "ar/runtime.hpp"
-#include "ar/io_executor.hpp"
 #include "ar/logger.hpp"
 #include "ar/profiler.hpp"
 #include "ar/cpu_helper.hpp"
 #include "numbers.h"
 #include "config.hpp"
 
-using namespace AsyncRuntime;
-
-#define MAIN_WORK_GROUP "main"
-#define MAIN_EXECUTOR_NAME "main"
-#define IO_EXECUTOR_NAME "io"
+#include "io_executor.h"
 
 #ifdef USE_OPENCV
 #include "ar/opencv_executor.h"
 #endif
 
 #ifdef USE_TBB
-
 #include "tbb_executor.h"
-#include "tbb/tbb_io_executor.h"
 #endif
+
+using namespace AsyncRuntime;
+
+#define MAIN_WORK_GROUP "main"
+#define MAIN_EXECUTOR_NAME "main"
+#define IO_EXECUTOR_NAME "io"
 
 Runtime *Runtime::g_runtime;
 
@@ -40,28 +39,9 @@ void Runtime::Setup(const RuntimeOptions &_options) {
     if (is_setup)
         return;
 
-#ifdef USE_TBB
-    CreateTbbExecutors();
-    io_executor = CreateExecutor<TBBIOExecutor>(IO_EXECUTOR_NAME);
-#else
     CreateDefaultExecutors(_options.virtual_numa_nodes_count);
-
-    io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
-
-//    for (const auto executor: cpu_executors) {
-//        for (const auto &id: executor->GetThreadIds()) {
-//            io_executor->ThreadRegistration(id);
-//        }
-//    }
-#endif
-
-
-
-    io_executor->Run();
-
-#ifdef USE_OPENCV
-    AsyncRuntime::CreateExecutor<OpenCVExecutor>("OpenCVExecutor");
-#endif
+    
+    io_executor = CreateExecutor<IO::IOExecutor>(IO_EXECUTOR_NAME);
 
     is_setup = true;
 
@@ -75,7 +55,7 @@ void Runtime::Setup(Runtime *other) {
 
 
 void Runtime::SetupWorkGroups(const std::vector<WorkGroupOption> &_work_groups_option) {
-    work_groups_option.push_back({MAIN_WORK_GROUP, 1.0, 1.0, WG_PRIORITY_MEDIUM});
+    work_groups_option.push_back({MAIN_WORK_GROUP, 1.0, 1.0, 0});
 
     if (work_groups_option.size() > MAX_GROUPS_COUNT)
         throw std::runtime_error("Work group size > " + std::to_string(MAX_GROUPS_COUNT));
@@ -143,9 +123,9 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
 
 void Runtime::CreateTbbExecutors() {
     std::vector<TBBExecutor *> tbb_executors;
-    auto nodes = GetNumaNodes();
-    for (size_t i = 0; i < nodes.size(); ++i) {
-        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, nodes[i].cpus, work_groups_option);
+    std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
+    for (size_t i = 0; i < numa_indexes.size(); ++i) {
+        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, tbb::info::default_concurrency(numa_indexes[i]), work_groups_option);
         executor->SetIndex(i);
         if (main_executor == nullptr) {
             main_executor = executor;
@@ -215,18 +195,16 @@ Runtime::MakeMetricsCounter(const std::string &name, const std::map<std::string,
     }
 }
 
-void Runtime::Post(Task *task) {
-    const auto &executor_state = task->GetExecutorState();
+void Runtime::Post(task *t) {
+    const auto &executor_state = t->get_execution_state();
     if (executor_state.executor == nullptr) {
-        auto executor = (executor_state.entity_tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.entity_tag)
-                                                                         : FetchFreeExecutor(kCPU_EXECUTOR);
+        auto executor = (executor_state.tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.tag) : FetchFreeExecutor(kCPU_EXECUTOR);
         if (executor != nullptr) {
-            executor->Post(task);
+            executor->Post(t);
         } else {
-            main_executor->Post(task);
+            main_executor->Post(t);
         }
-        //main_executor->Post(task);
     } else {
-        executor_state.executor->Post(task);
+        executor_state.executor->Post(t);
     }
 }

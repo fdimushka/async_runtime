@@ -8,8 +8,7 @@
 namespace AsyncRuntime {
 
     class TBBDelayedScheduler {
-        //typedef std::priority_queue<Task *, std::vector < Task * >, Task::LessThanByDelay> TasksPq;
-        typedef oneapi::tbb::concurrent_priority_queue<Task *, Task::LessThanByDelay> TasksPq;
+        typedef oneapi::tbb::concurrent_priority_queue<task *, task::less_than_by_delay_ptr> TasksPq;
     public:
         TBBDelayedScheduler();
         ~TBBDelayedScheduler();
@@ -20,18 +19,18 @@ namespace AsyncRuntime {
         TBBDelayedScheduler& operator =(TBBDelayedScheduler&&) = delete;
 
 
-        void Run(const std::function<void(Task *)> &task_callback);
+        void Run(const std::function<void(task *)> &task_callback);
         void Terminate();
 
-        void Post(Task *task);
+        void Post(task *task);
     private:
-        void ExecuteTask(Task *task);
+        void ExecuteTask(task *task);
         void Loop();
 
-        std::function<void(Task *)> exec_task_callback;
+        std::function<void(task *)> exec_task_callback;
         ThreadExecutor scheduler_th;
         std::atomic_bool is_continue;
-        oneapi::tbb::concurrent_queue<Task*> rq;
+        oneapi::tbb::concurrent_queue<task *> rq;
         TasksPq delayed_task;
         std::condition_variable delayed_task_cv;
         std::mutex delayed_task_mutex;

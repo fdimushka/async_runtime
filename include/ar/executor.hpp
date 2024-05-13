@@ -1,6 +1,7 @@
 #ifndef AR_EXECUTOR_H
 #define AR_EXECUTOR_H
 
+#include "ar/task.hpp"
 #include "ar/processor.hpp"
 #include "ar/processor_group.hpp"
 #include "ar/metricer.hpp"
@@ -18,7 +19,7 @@ namespace AsyncRuntime {
         std::string                     name;
         double                          cap;
         double                          util;
-        int                             priority = WG_PRIORITY_MEDIUM;
+        int                             slot_concurrency = 0;
     };
 
     enum ExecutorType {
@@ -27,7 +28,8 @@ namespace AsyncRuntime {
         kUSER_EXECUTOR
     };
 
-#define MAX_ENTITIES 2
+#define MAX_ENTITIES 500
+#define MAX_GROUPS 10
 
     class IExecutor: public BaseObject {
     public:
@@ -35,7 +37,7 @@ namespace AsyncRuntime {
         explicit IExecutor(const std::string & name, ExecutorType executor_type);
         ~IExecutor() override = default;
 
-        virtual void Post(Task* task) = 0;
+        virtual void Post(task *task) = 0;
 
         virtual uint16_t AddEntity(void *ptr);
 
@@ -61,6 +63,27 @@ namespace AsyncRuntime {
         int                                                      index = 0;
     };
 
+    class ExecutorSlot;
+
+    class ExecutorWorkGroup {
+    public:
+        ExecutorWorkGroup(int id,
+                          const WorkGroupOption & option,
+                          const std::vector<AsyncRuntime::CPU> &cpus,
+                          std::map<size_t, size_t>& cpus_wg);
+        ~ExecutorWorkGroup();
+
+        void Post(task *task);
+
+        void DeleteEntity(uint16_t id);
+    private:
+        int                             id;
+        std::mutex                      mutex;
+        std::map<uint16_t, int>         entities_peer_slot;
+        std::map<int, int>              cpus_peer_slot;
+        std::vector<ExecutorSlot*>      slots;
+        std::unique_ptr<Scheduler>      scheduler;
+    };
 
     class Executor  : public IExecutor {
         friend Processor;
@@ -70,7 +93,7 @@ namespace AsyncRuntime {
     public:
         Executor(const std::string & name_,
                  const std::vector<AsyncRuntime::CPU> & cpus,
-                 std::vector<WorkGroupOption> work_groups_option = {});
+                 const std::vector<WorkGroupOption> & work_groups_option);
 
         ~Executor() override;
 
@@ -84,23 +107,27 @@ namespace AsyncRuntime {
 
         /**
          * @brief
-         * @param task
+         * @param ptr
+         * @return
          */
-        void Post(Task* task) override;
-
+        uint16_t AddEntity(void *ptr) override;
 
         /**
          * @brief
-         * @return
+         * @param id
          */
-        std::vector<std::thread::id> GetThreadIds();
+        virtual void DeleteEntity(uint16_t id) override;
+
+        /**
+         * @brief
+         * @param task
+         */
+        void Post(task *task) override;
+
     private:
-        uint                                                     max_processors_count;
-        std::shared_ptr<Mon::Counter>                            processors_count;
-        std::vector<Processor*>                                  processors;
-        std::vector<ProcessorGroup*>                             processor_groups;
-        std::vector<WorkGroupOption>                             processor_groups_option;
-        ProcessorGroup                                          *main_processor_group;
+        std::atomic_uint16_t                                     entities_inc;
+        std::vector<ExecutorWorkGroup*>                          groups;
+        ExecutorWorkGroup                                        *main_group;
     };
 }
 

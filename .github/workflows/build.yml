@@ -17,6 +17,8 @@ jobs:
         submodules: recursive
     - name: install libuv
       run: sudo apt install -y libuv1-dev
+    - name: install boost
+      run: sudo apt install -y libboost1.81-dev
     - name: make
       run: |
         mkdir build && cd build

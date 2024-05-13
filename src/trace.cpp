@@ -1,5 +1,5 @@
 #include "trace.h"
-#include "ar/helper.hpp"
+#include "config.hpp"
 
 #ifdef USE_TRACE
 #include "TraceSchema_generated.h"

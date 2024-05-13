@@ -9,7 +9,7 @@ TBBDelayedScheduler::~TBBDelayedScheduler() {
     Terminate();
 }
 
-void TBBDelayedScheduler::Run(const std::function<void(Task *)> &task_callback) {
+void TBBDelayedScheduler::Run(const std::function<void(task *)> &task_callback) {
     exec_task_callback = task_callback;
     scheduler_th.Submit([this] { Loop(); });
 }
@@ -23,13 +23,13 @@ void TBBDelayedScheduler::Terminate() {
 void TBBDelayedScheduler::Loop() {
     while (is_continue.load(std::memory_order_relaxed)) {
         std::unique_lock<std::mutex> lock(delayed_task_mutex);
-        Task *task;
-        if (delayed_task.try_pop(task)) {
-            int64_t delay = task->GetDelay();
+        task * t = nullptr;
+        if (delayed_task.try_pop(t)) {
+            int64_t delay = t->get_delay();
             if (delay <= 0) {
-                ExecuteTask(task);
+                ExecuteTask(t);
             } else {
-                delayed_task.push(task);
+                delayed_task.push(t);
                 delayed_task_cv.wait_for(lock, std::chrono::microseconds(delay));
             }
         } else {
@@ -38,8 +38,8 @@ void TBBDelayedScheduler::Loop() {
     }
 }
 
-void TBBDelayedScheduler::Post(Task *task) {
-    if (task->GetDelay() <= 0) {
+void TBBDelayedScheduler::Post(task *task) {
+    if (task->get_delay() <= 0) {
         ExecuteTask(task);
     } else {
         delayed_task.push(task);
@@ -47,7 +47,7 @@ void TBBDelayedScheduler::Post(Task *task) {
     }
 }
 
-void TBBDelayedScheduler::ExecuteTask(Task *task) {
+void TBBDelayedScheduler::ExecuteTask(task *task) {
     if (exec_task_callback) {
         exec_task_callback(task);
     }

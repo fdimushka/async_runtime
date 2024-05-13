@@ -28,16 +28,14 @@ private:
 };
 
 void async_fun(CoroutineHandler* handler, YieldVoid & yield) {
-    yield();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
-
 int main() {
-    CreateMetricer<MyCounter>({{"name", "ar"}});
     SetupRuntime();
+    CreateMetricer<MyCounter>({{"name", "ar"}});
     for(int i = 0; i < 10; ++i) {
-        auto coro = MakeCoroutine(&async_fun);
+        auto coro = make_coroutine(&async_fun);
         Await(Async(coro));
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

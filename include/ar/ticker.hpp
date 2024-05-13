@@ -4,7 +4,6 @@
 
 #include <iostream>
 #include "ar/task.hpp"
-#include "ar/helper.hpp"
 #include "ar/timestamp.hpp"
 #include "ar/coroutine.hpp"
 
@@ -26,20 +25,11 @@ namespace AsyncRuntime {
             { };
         ~Ticker() = default;
 
-
-        /**
-         * @brief
-         */
         void Stop();
 
-
-        /**
-         * @brief
-         * @return
-         */
-        std::shared_ptr<Result<bool >> AsyncTick();
-        std::shared_ptr<Result<bool >> AsyncTick(const ExecutorState& executor_state);
-        std::shared_ptr<Result<bool >> AsyncTick(CoroutineHandler* handler);
+        future_t<bool> AsyncTick();
+        future_t<bool> AsyncTick(const task::execution_state& execution_state);
+        future_t<bool> AsyncTick(CoroutineHandler* handler);
     private:
         Timespan                        last_tick_ts;
         Timespan                        delay;
