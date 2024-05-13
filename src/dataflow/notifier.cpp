@@ -8,8 +8,9 @@ void Notifier::Notify(int state) {
     notify_state |= state;
     if (watch_any || ((watch_state & state) == state) == 1) {
         if (!notified) {
-            promise.set_value(notify_state);
             notified = true;
+            promise.set_value(notify_state);
+            return;
         }
     }
 }

@@ -16,6 +16,13 @@ namespace AsyncRuntime::Dataflow {
         kERROR =2
     };
 
+    enum KernelState : int {
+        kREADY = 0,
+        kINITIALIZED = 1,
+        kRUNNING = 2,
+        kTERMINATED = 3
+    };
+
     /**
      * @brief
      */
@@ -87,9 +94,9 @@ namespace AsyncRuntime::Dataflow {
         Sink sink;
         Notifier process_notifier;
     private:
+        std::atomic<KernelState> state;
         std::string name;
         shared_future_t<int> future_res;
-        bool is_initialized;
         std::shared_ptr<AsyncRuntime::coroutine<int>> coroutine;
     };
 
@@ -98,7 +105,7 @@ namespace AsyncRuntime::Dataflow {
             : source(&process_notifier)
             , sink(&process_notifier)
             , name(name)
-            , is_initialized(false)
+            , state{kREADY}
             , coroutine(make_coroutine<int>(&Kernel<KernelContextT>::AsyncLoop, this)) {
 
     }
@@ -119,17 +126,21 @@ namespace AsyncRuntime::Dataflow {
             int init_error = kernel->OnInit(handler, &context);
             if (init_error != 0) {
                 kernel->OnDispose(handler, &context);
-                kernel->is_initialized = false;
+                kernel->state.store(kTERMINATED, std::memory_order_relaxed);
                 return init_error;
             } else {
-                kernel->is_initialized = true;
+                kernel->state.store(kINITIALIZED, std::memory_order_relaxed);
             }
 
             yield(init_error);
+            if (kernel->state.load(std::memory_order_relaxed) == kINITIALIZED) {
+                kernel->state.store(kRUNNING, std::memory_order_relaxed);
 
-            auto res = kNEXT;
-            while ( res == kNEXT  ) {
-                res = kernel->OnUpdate(handler, &context);
+                auto res = kNEXT;
+                while (res == kNEXT) {
+                    res = kernel->OnUpdate(handler, &context);
+                }
+                kernel->state.store(kTERMINATED, std::memory_order_relaxed);
             }
 
             kernel->OnDispose(handler, &context);
@@ -144,12 +155,16 @@ namespace AsyncRuntime::Dataflow {
 
     template<class KernelContextT>
     AsyncRuntime::future_t<int> Kernel<KernelContextT>::AsyncInit() {
-        return AsyncRuntime::Async(coroutine);
+        try {
+            return AsyncRuntime::Async(coroutine);
+        } catch (...) {
+            return make_resolved_future(-1);
+        }
     }
 
     template<class KernelContextT>
     bool Kernel<KernelContextT>::Run() {
-        if (!is_initialized) {
+        if (state.load(std::memory_order_relaxed) != kINITIALIZED) {
             return false;
         }
 
@@ -164,12 +179,16 @@ namespace AsyncRuntime::Dataflow {
 
     template<class KernelContextT>
     bool Kernel<KernelContextT>::Run(std::function<void(int)> terminated_callback) {
-        if (!is_initialized) {
+        if (state.load(std::memory_order_relaxed) != kINITIALIZED) {
             return false;
         }
 
         if (!coroutine->is_completed()) {
-            future_res = AsyncRuntime::Async(coroutine);
+            try {
+                future_res = AsyncRuntime::Async(coroutine);
+            } catch (...) {
+                return false;
+            }
             if (terminated_callback) {
                 future_res.then(boost::launch::sync, [terminated_callback](boost::shared_future<int> f) {
                     int res = f.get();
@@ -193,11 +212,31 @@ namespace AsyncRuntime::Dataflow {
 
     template<class KernelContextT>
     AsyncRuntime::shared_future_t<int> Kernel<KernelContextT>::AsyncTerminate() {
-        if (!is_initialized) {
+        KernelState s = state.load(std::memory_order_relaxed);
+        if (s == kRUNNING) {
+            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+            if (future_res.valid()) {
+                return future_res;
+            } else {
+                return make_resolved_future(-1);
+            }
+        } else if (s == kINITIALIZED) {
+            state.store(kTERMINATED, std::memory_order_relaxed);
+            if (!coroutine->is_completed()) {
+                process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+                try {
+                    auto f = AsyncRuntime::Async(coroutine);
+                    future_res = f.share();
+                    return future_res;
+                } catch (...) {
+                    return make_resolved_future(-1);
+                }
+            } else {
+                return make_resolved_future(-1);
+            }
+        } else {
             return make_resolved_future(-1);
         }
-        process_notifier.Notify((int)KernelEvent::kKERNEL_EVENT_TERMINATE);
-        return future_res;
     }
 
     template<class KernelContextT>

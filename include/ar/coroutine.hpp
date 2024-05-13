@@ -14,6 +14,42 @@
 namespace AsyncRuntime {
     namespace ctx = boost::context;
 
+    template< typename traitsT >
+    class basic_tbb_fixedsize_stack {
+    private:
+        std::size_t     size_;
+
+    public:
+        typedef traitsT traits_type;
+
+        basic_tbb_fixedsize_stack( std::size_t size = traits_type::default_size() ) BOOST_NOEXCEPT_OR_NOTHROW :
+                size_( size) {
+        }
+
+        ctx::stack_context allocate() {
+            auto allocator = oneapi::tbb::cache_aligned_allocator<char>();
+            char * vp = allocator.allocate( size_);
+            if ( ! vp) {
+                throw std::bad_alloc();
+            }
+
+            ctx::stack_context sctx;
+            sctx.size = size_;
+            sctx.sp = static_cast< char * >( vp) + sctx.size;
+
+            return sctx;
+        }
+
+        void deallocate( ctx::stack_context & sctx) BOOST_NOEXCEPT_OR_NOTHROW {
+            BOOST_ASSERT( sctx.sp);
+            auto allocator = oneapi::tbb::cache_aligned_allocator<char>();
+            char * vp = static_cast< char * >( sctx.sp) - sctx.size;
+            allocator.deallocate( vp, sctx.size);
+        }
+    };
+
+    typedef basic_tbb_fixedsize_stack< ctx::stack_traits >  tbb_fixedsize_stack;
+
     template< typename T >
     class coroutine;
 
@@ -30,7 +66,7 @@ namespace AsyncRuntime {
 
         virtual void suspend_with(std::function<void(coroutine_handler *handler)> fn) = 0;
 
-        virtual std::shared_ptr<task> resume_task() = 0;
+        virtual task *resume_task() = 0;
 
         const task::execution_state &get_execution_state() const { return execution_state; }
 
@@ -52,9 +88,9 @@ namespace AsyncRuntime {
         friend class coroutine<T>;
         friend class coroutine_task<T>;
     public:
-        yield() noexcept = default;
+        yield() = default;
 
-        explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
+        //explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
 
         yield( yield && other) noexcept = default;
         yield( yield const& other) noexcept = delete;
@@ -78,9 +114,9 @@ namespace AsyncRuntime {
         friend class coroutine<void>;
         friend class coroutine_task<void>;
     public:
-        yield() noexcept = default;
+        yield() = default;
 
-        explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
+        //explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
 
         yield( yield && other) noexcept = default;
         yield( yield const& other) noexcept = delete;
@@ -108,12 +144,12 @@ namespace AsyncRuntime {
     public:
         coroutine() noexcept = default;
 
-        explicit coroutine(coroutine::Fn &&f) : fn(f) {
-            create();
-            continuation = ctx::continuation(ctx::callcc([this](ctx::continuation && c) {
+        explicit coroutine(coroutine::Fn &&f) : fn(f), end{false} {
+            continuation = ctx::continuation(ctx::callcc([this](ctx::continuation &&c) {
                 y.continuation = std::move(c);
                 y.continuation = y.continuation.resume();
                 call();
+                end.store(true, std::memory_order_relaxed);
                 return std::move(y.continuation);
             }));
         }
@@ -123,10 +159,10 @@ namespace AsyncRuntime {
         coroutine & operator=( coroutine const& other) noexcept = delete;
 
         ~coroutine() override {
-            destroy();
+            //destroy();
         };
 
-        bool is_completed() final { return !continuation; }
+        bool is_completed() final { return end.load(std::memory_order_relaxed) || !continuation; }
 
         void suspend() final {
             y.continuation = y.continuation.resume();
@@ -141,11 +177,15 @@ namespace AsyncRuntime {
 
         void resume() {
             std::unique_lock<std::mutex> lock(m);
-            continuation = continuation.resume();
+            if (!is_completed()) {
+                continuation = continuation.resume();
+            } else {
+                y.promise.set_exception(std::runtime_error("coroutine is completed"));
+            }
         }
 
-        std::shared_ptr<task> resume_task() final {
-            auto coro_task = std::static_pointer_cast<task>(std::make_shared<coroutine_task<Ret>>(get_ptr()));
+        task *resume_task() final {
+            task *coro_task = new coroutine_task<Ret>(get_ptr());
             coro_task->set_execution_state(execution_state);
             return coro_task;
         }
@@ -164,19 +204,28 @@ namespace AsyncRuntime {
         task::execution_state state;
         std::mutex m;
         ctx::continuation continuation;
+        std::atomic_bool end;
         yield_t y;
     };
 
     template< typename T >
     inline void coroutine<T>::call() {
-        T v = invoke(get_ptr(), y, std::forward<Fn>(fn));
-        y.promise.set_value(v);
+        try {
+            T v = invoke(get_ptr(), y, std::forward<Fn>(fn));
+            y.promise.set_value(v);
+        } catch (...) {
+            y.promise.set_exception(std::current_exception());
+        }
     }
 
     template< >
     inline void coroutine<void>::call() {
-        invoke(get_ptr(), y, std::forward<Fn>(fn));
-        y.promise.set_value();
+        try {
+            invoke(get_ptr(), y, std::forward<Fn>(fn));
+            y.promise.set_value();
+        } catch (...) {
+            y.promise.set_exception(std::current_exception());
+        }
     }
 
     template<typename Ret>

@@ -14,7 +14,9 @@ namespace AsyncRuntime::IO {
 
     udp_session_ptr MakeUDPSession();
 
-    http_session_ptr MakeHTTPSession();
+    http_session_ptr MakeHTTPSession(int timeout = 0);
+
+    http_multipart_session_ptr MakeHTTPMultipartSession(int timeout = 0);
 }
 
 #endif //AR_IO_H

@@ -74,10 +74,10 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
         bool terminated_call = false;
         kernel_test kernel;
         REQUIRE(Await(kernel.AsyncInit()) == 0);
-        kernel.Run([&terminated_call](int error){
+        REQUIRE(kernel.Run([&terminated_call](int error){
             terminated_call = true;
-        });
-        REQUIRE(Await(kernel.AsyncTerminate()) == 0);
+        })== true);
+        Await(kernel.AsyncTerminate());
         REQUIRE(terminated_call == true);
     }
 
@@ -102,6 +102,42 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
         REQUIRE(Await(kernel.AsyncTerminate()) == 0);
         REQUIRE(kernel.Run() == false);
     }
+
+    Terminate();
+}
+
+TEST_CASE( "run/terminate kernel in coroutine", "[kernel]" ) {
+    SetupRuntime();
+    auto coro = make_coroutine([](coroutine_handler *handler, yield<void> & yield) {
+        class kernel_test : public Kernel<TestKernelContext> {
+        public:
+            typedef Dataflow::Kernel<TestKernelContext> super;
+
+            kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") {};
+
+            ~kernel_test() override { Terminate(); }
+
+            int
+            OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
+
+            KernelProcessResult
+            OnProcess(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) override {
+                sleep(2);
+                return Dataflow::KernelProcessResult::kEND;
+            }
+        };
+
+        bool terminated_call = false;
+        kernel_test kernel;
+        REQUIRE(Await(kernel.AsyncInit(), handler) == 0);
+        REQUIRE(kernel.Run([&terminated_call](int error){
+                        terminated_call = true;
+        }) == true);
+        REQUIRE(Await(kernel.AsyncTerminate(), handler) == 0);
+        REQUIRE(terminated_call == true);
+    });
+
+    Await(Async(coro));
 
     Terminate();
 }

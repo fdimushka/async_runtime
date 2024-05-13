@@ -13,20 +13,24 @@
 #include "ar/logger.hpp"
 #include "ar/timestamp.hpp"
 
+#include <thread>
+//#include <future>
+#include <oneapi/tbb.h>
+
 namespace AsyncRuntime {
     class IExecutor;
 
     class task {
     public:
         struct execution_state {
-            int64_t tag = 0;
-            int64_t work_group = 0;
-            int64_t processor = 0;
+            int64_t tag = INVALID_OBJECT_ID;
+            int64_t work_group = INVALID_OBJECT_ID;
+            int64_t processor = INVALID_OBJECT_ID;
             IExecutor *executor = nullptr;
         };
 
         struct less_than_by_delay_ptr {
-            bool operator()(const std::shared_ptr<task> & lhs, const std::shared_ptr<task> & rhs) const { return lhs->delay > rhs->delay; }
+            bool operator()(const task * lhs, const task * rhs) const { return lhs->get_delay() > rhs->get_delay(); }
         };
 
         task() noexcept: delay(0), created_at(TIMESTAMP_NOW_MICRO()) {};
@@ -51,7 +55,13 @@ namespace AsyncRuntime {
 
         void set_execution_state(const execution_state & new_state) { state = new_state; }
 
+        void set_execution_state_wg(const int64_t & work_group) { state.work_group = work_group; }
+
+        void set_execution_state_tag(const int64_t & tag) { state.tag = tag; }
+
         bool delayed() const { return delay > 0; }
+
+        virtual bool resolved() { return false; }
     protected:
         execution_state state;
     private:
@@ -67,6 +77,28 @@ namespace AsyncRuntime {
 
     template < typename T >
     using shared_future_t = boost::shared_future<T>;
+
+//    template < typename T >
+//    class task_future : public std::future< T > {
+//    public:
+//
+//    private:
+//    };
+//
+//
+//    template < typename T >
+//    class task_promise : public std::promise< T > {
+//    public:
+//        task_promise();
+//
+//    private:
+//    };
+//
+//    template < typename T >
+//    using promise_t = task_promise<T>;
+//
+//    template < typename T >
+//    using future_t = task_future<T>;
 
     template< typename Fn >
     class base_task : public task {
@@ -126,12 +158,12 @@ namespace AsyncRuntime {
     };
 
     template < class Fn >
-    inline std::shared_ptr<base_task<Fn>> make_task_shared_ptr(Fn &&f) {
-        return std::make_shared<base_task<Fn>>(std::forward<Fn>(f));
+    inline base_task<Fn>* make_task(Fn &&f) {
+        return new base_task<Fn>(std::forward<Fn>(f));
     }
 
-    inline std::shared_ptr<dummy_task> make_dummy_task_shared_ptr() {
-        return std::make_shared<dummy_task>();
+    inline dummy_task* make_dummy_task() {
+        return new dummy_task();
     }
 
     template < typename T >

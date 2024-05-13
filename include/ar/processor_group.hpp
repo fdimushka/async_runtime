@@ -33,16 +33,21 @@ namespace AsyncRuntime {
                        std::string  name, const std::string & executor_name, double util,  double cap, int priority = 0);
         ~ProcessorGroup() = default;
 
-        void Post(const std::shared_ptr<task> & task);
-        std::shared_ptr<task> Steal();
-        std::shared_ptr<task> Steal(const ObjectID& processor_id);
-        [[nodiscard]] bool IsSteal() const;
+        void Post(task *task);
+        task *Steal();
+        task *Steal(const ObjectID& processor_id);
+        //[[nodiscard]] bool IsSteal() const;
         [[nodiscard]] const std::string& GetName() const { return name; }
         [[nodiscard]] double GetCap() const { return cap; }
         [[nodiscard]] double GetUtil() const { return util; }
         [[nodiscard]] ObjectID GetID() const { return id; }
-        const Scheduler *GetScheduler() const { return scheduler.get(); }
+        //const Scheduler *GetScheduler() const { return scheduler.get(); }
     private:
+        void Notify();
+
+        std::random_device rd;
+        std::mt19937 gen;
+        std::uniform_int_distribution<> distr;
         std::shared_ptr<Mon::Counter>   m_processors_count;
         std::vector<Processor*>         processors;
         std::unique_ptr<Scheduler>      scheduler;
@@ -51,6 +56,8 @@ namespace AsyncRuntime {
         double                          util;
         std::string                     name;
         int                             priority;
+        TaskQueue<task*>                task_queue;
+        std::mutex                      task_queue_mutex;
     };
 }
 

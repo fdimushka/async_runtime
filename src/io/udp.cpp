@@ -29,18 +29,10 @@ int udp_session::get_fd() {
 
 future_t<error_code> udp_session::async_connect(const char *ip_address, int port) {
     error_code ec;
-    auto task = std::make_shared<IO::task>();
+    auto task = std::make_shared<IO::io_task>();
     udp::resolver::query query(udp::v4(), ip_address, std::to_string(port));
     udp::resolver::iterator itr = resolver.resolve(query);
     sender_endpoint = *itr;
-
-//    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address(ip_address, ec), port);
-//
-//    if (ec) {
-//        return make_resolved_future(ec);
-//    }
-    //socket.async_connect(endpoint, boost::bind(&IO::task::handler, task->get_ptr(), _1));
-    //return task->get_future();
     return make_resolved_future(ec);
 }
 
@@ -62,9 +54,9 @@ future_t<read_result> udp_session::async_read() {
 }
 
 future_t<error_code> udp_session::async_write(const char *buffer, size_t size) {
-    auto task = std::make_shared<IO::task>();
+    auto task = std::make_shared<IO::io_task>();
     socket.async_send_to(boost::asio::buffer(buffer, size),
                          sender_endpoint,
-                         boost::bind(&IO::task::handler, task->get_ptr(), boost::placeholders::_1));
+                         boost::bind(&IO::io_task::handler, task->get_ptr(), boost::placeholders::_1));
     return task->get_future();
 }

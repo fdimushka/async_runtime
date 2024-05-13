@@ -39,12 +39,8 @@ void Runtime::Setup(const RuntimeOptions &_options) {
     if (is_setup)
         return;
 
-#ifdef USE_TBB
-    CreateTbbExecutors();
-#else
     CreateDefaultExecutors(_options.virtual_numa_nodes_count);
-    io_executor = CreateExecutor<IOExecutor>(IO_EXECUTOR_NAME);
-#endif
+    
     io_executor = CreateExecutor<IO::IOExecutor>(IO_EXECUTOR_NAME);
 
     is_setup = true;
@@ -59,7 +55,7 @@ void Runtime::Setup(Runtime *other) {
 
 
 void Runtime::SetupWorkGroups(const std::vector<WorkGroupOption> &_work_groups_option) {
-    work_groups_option.push_back({MAIN_WORK_GROUP, 1.0, 1.0, WG_PRIORITY_MEDIUM});
+    work_groups_option.push_back({MAIN_WORK_GROUP, 1.0, 1.0, 0});
 
     if (work_groups_option.size() > MAX_GROUPS_COUNT)
         throw std::runtime_error("Work group size > " + std::to_string(MAX_GROUPS_COUNT));
@@ -127,9 +123,9 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
 
 void Runtime::CreateTbbExecutors() {
     std::vector<TBBExecutor *> tbb_executors;
-    auto nodes = GetNumaNodes();
-    for (size_t i = 0; i < nodes.size(); ++i) {
-        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, nodes[i].cpus, work_groups_option);
+    std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
+    for (size_t i = 0; i < numa_indexes.size(); ++i) {
+        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, tbb::info::default_concurrency(numa_indexes[i]), work_groups_option);
         executor->SetIndex(i);
         if (main_executor == nullptr) {
             main_executor = executor;
@@ -199,16 +195,16 @@ Runtime::MakeMetricsCounter(const std::string &name, const std::map<std::string,
     }
 }
 
-void Runtime::Post(const std::shared_ptr<task> & task) {
-    const auto &executor_state = task->get_execution_state();
+void Runtime::Post(task *t) {
+    const auto &executor_state = t->get_execution_state();
     if (executor_state.executor == nullptr) {
         auto executor = (executor_state.tag != INVALID_OBJECT_ID) ? FetchExecutor(kCPU_EXECUTOR, executor_state.tag) : FetchFreeExecutor(kCPU_EXECUTOR);
         if (executor != nullptr) {
-            executor->Post(task);
+            executor->Post(t);
         } else {
-            main_executor->Post(task);
+            main_executor->Post(t);
         }
     } else {
-        executor_state.executor->Post(task);
+        executor_state.executor->Post(t);
     }
 }

@@ -32,18 +32,17 @@ namespace AsyncRuntime {
         friend Channel<T>;
     public:
         Watcher() = default;
-        ~Watcher() override;
+        ~Watcher() override = default;
 
-        std::optional<T> Receive();
         std::optional<T> TryReceive();
         future_t<void>   AsyncWait();
     private:
         void Send(const T& msg);
 
-        WorkStealQueue<T>                               queue;
-        std::condition_variable                         cv;
+        std::queue<T>                                   queue;
         std::mutex                                      mutex;
         promise_t<void>                                 promise;
+        bool                                            resolved = false;
     };
 
 
@@ -103,47 +102,39 @@ namespace AsyncRuntime {
 
 
     template<typename T>
-    Watcher<T>::~Watcher() {
-        while (!queue.empty()) {
-            auto v = queue.steal();
-            if(v) {
-                delete v.value();
-            }
-        }
-    }
-
-
-    template<typename T>
     void Watcher<T>::Send(const T& msg) {
-        promise.set_value();
+        std::lock_guard<std::mutex>  lock(mutex);
         queue.push(msg);
-        cv.notify_one();
-    }
-
-
-    template<typename T>
-    std::optional<T> Watcher<T>::Receive() {
-        std::unique_lock<std::mutex>  lock(mutex);
-        while(queue.empty()) {
-            cv.wait(lock);
+        if (!resolved) {
+            promise.set_value();
+            resolved = true;
         }
-        return queue.steal();
     }
 
 
     template<typename T>
     std::optional<T> Watcher<T>::TryReceive() {
-        return queue.steal();
+        std::lock_guard<std::mutex>  lock(mutex);
+        if (!queue.empty()) {
+            T v = queue.front();
+            queue.pop();
+            return v;
+        } else {
+            return std::nullopt;
+        }
     }
 
 
     template<typename T>
     future_t<void> Watcher<T>::AsyncWait() {
-        auto v = queue.steal();
-        if(!v) {
+        std::lock_guard<std::mutex>  lock(mutex);
+        if (queue.empty()) {
+            resolved = false;
             promise = {};
             return promise.get_future();
         } else {
+            resolved = false;
+            promise = {};
             return make_resolved_future();
         }
     }

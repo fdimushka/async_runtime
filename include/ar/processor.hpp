@@ -14,7 +14,7 @@
 #include <condition_variable>
 #include <uv.h>
 
-#include <oneapi/tbb.h>
+#include "task_queue.hpp"
 
 
 namespace AsyncRuntime {
@@ -27,6 +27,7 @@ namespace AsyncRuntime {
      * @brief
      */
     class Processor: public BaseObject {
+        friend class ProcessorGroup;
     public:
         enum State {
             IDLE            =0,
@@ -49,7 +50,7 @@ namespace AsyncRuntime {
 
         void Terminate();
 
-        void Post(const std::shared_ptr<task> & task);
+        void Post(task *task);
 
         void Notify();
 
@@ -58,9 +59,9 @@ namespace AsyncRuntime {
         [[nodiscard]] std::thread::id GetThreadId() const;
         bool IsSteal() const;
         bool IsSteal(ObjectID group_id) const;
-        std::shared_ptr<task> Pop();
-        std::shared_ptr<task> Steal();
-        std::shared_ptr<task> Steal(ObjectID group_id);
+        task *Pop();
+        task *Steal();
+        task *Steal(ObjectID group_id);
         std::vector<ProcessorGroup *> GetGroups();
         size_t GetGroupsSize();
         bool IsInGroup(const ProcessorGroup *group);
@@ -68,18 +69,18 @@ namespace AsyncRuntime {
     protected:
         void Work();
 
-        void ExecuteTask(const std::shared_ptr<task> & task, const task::execution_state &executor_state);
+        void ExecuteTask(task *task, const task::execution_state &executor_state);
         void WaitTask();
 
         bool IsStealGlobal();
-        std::shared_ptr<task> StealGlobal();
+        task *StealGlobal();
     private:
         CPU                                         cpu;
         std::vector<ProcessorGroup *>               groups;
 
         ThreadExecutor                              thread_executor;
-        std::vector<int>                            rq_by_priority;
-        oneapi::tbb::concurrent_queue<std::shared_ptr<task>>       local_run_queue[MAX_GROUPS_COUNT];
+        TaskQueue<task*>                            task_queue[MAX_GROUPS_COUNT];
+        std::mutex                                  task_queue_mutex;
         std::atomic_bool                            is_continue;
         std::atomic<State>                          state;
 

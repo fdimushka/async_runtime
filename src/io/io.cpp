@@ -15,7 +15,12 @@ udp_session_ptr AsyncRuntime::IO::MakeUDPSession() {
     return executor->MakeUDPSession();
 }
 
-http_session_ptr AsyncRuntime::IO::MakeHTTPSession() {
+http_session_ptr AsyncRuntime::IO::MakeHTTPSession(int timeout) {
     auto executor = static_cast<IOExecutor*>(Runtime::g_runtime->GetIOExecutor());
-    return executor->MakeHTTPSession();
+    return executor->MakeHTTPSession(timeout);
+}
+
+http_multipart_session_ptr AsyncRuntime::IO::MakeHTTPMultipartSession(int timeout) {
+    auto executor = static_cast<IOExecutor *>(Runtime::g_runtime->GetIOExecutor());
+    return executor->MakeHTTPMultipartSession(timeout);
 }

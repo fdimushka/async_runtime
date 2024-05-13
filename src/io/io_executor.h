@@ -7,13 +7,13 @@
 #include "ar/io/http.hpp"
 #include <boost/thread.hpp>
 #include <boost/asio/io_service.hpp>
-#include <oneapi/tbb.h>
+#include "io_task.h"
 
 namespace AsyncRuntime::IO {
 
     class IOExecutor : public IExecutor {
     public:
-        explicit IOExecutor(const std::string & name_, int max_threads = 2);
+        explicit IOExecutor(const std::string & name_, int max_threads = 4);
         ~IOExecutor() noexcept override;
 
         IOExecutor(const IOExecutor&) = delete;
@@ -25,14 +25,19 @@ namespace AsyncRuntime::IO {
 
         udp_session_ptr MakeUDPSession();
 
-        http_session_ptr MakeHTTPSession();
+        http_session_ptr MakeHTTPSession(int timeout = 0);
 
-        void Post(const std::shared_ptr<task> & task) override;
+        http_multipart_session_ptr MakeHTTPMultipartSession(int timeout = 0);
+
+        void Post(task *task) override;
+
+        void Post(const io_task_ptr & task);
+
+        void Post(const read_task_ptr & task);
     private:
         boost::asio::io_service io_service;
         boost::asio::io_service::work work;
-        tbb::task_arena task_arenas;
-        oneapi::tbb::task_group task_group;
+        std::vector<std::thread> thread_pool;
     };
 }
 

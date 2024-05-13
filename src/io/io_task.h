@@ -22,22 +22,24 @@
 namespace AsyncRuntime::IO {
     typedef std::tuple<boost::system::error_code, std::size_t> read_result;
 
-    class task : public std::enable_shared_from_this<task> {
+    class io_task : public std::enable_shared_from_this<io_task> {
         typedef promise_t<boost::system::error_code> promise_type;
     public:
-        explicit task() = default;
-        ~task() = default;
+        explicit io_task() = default;
+        ~io_task() = default;
 
         void handler(const boost::system::error_code & ec) {
             promise.set_value(ec);
         }
 
-        std::shared_ptr<task> get_ptr() { return shared_from_this(); };
+        std::shared_ptr<io_task> get_ptr() { return shared_from_this(); };
 
         future_t<boost::system::error_code> get_future() { return promise.get_future(); }
     private:
         promise_type promise;
     };
+
+    typedef std::shared_ptr<io_task>   io_task_ptr;
 
     class read_task : public std::enable_shared_from_this<read_task> {
         typedef promise_t<read_result> promise_type;
@@ -52,7 +54,12 @@ namespace AsyncRuntime::IO {
                     promise.set_value({ec, bytes_transferred});
                     resolved.store(true, std::memory_order_relaxed);
                 }
-            } catch (...) { }
+            } catch (...) {
+                if (!resolved.load(std::memory_order_relaxed)) {
+                    promise.set_value({boost::asio::error::eof, 0});
+                    resolved.store(true, std::memory_order_relaxed);
+                }
+            }
         }
 
         void handler_deadline() {
@@ -62,7 +69,12 @@ namespace AsyncRuntime::IO {
                         promise.set_value({boost::asio::error::timed_out, 0});
                         resolved.store(true, std::memory_order_relaxed);
                     }
-                } catch (...) { }
+                } catch (...) {
+                    if (!resolved.load(std::memory_order_relaxed)) {
+                        promise.set_value({boost::asio::error::eof, 0});
+                        resolved.store(true, std::memory_order_relaxed);
+                    }
+                }
             }
         }
 
@@ -74,6 +86,8 @@ namespace AsyncRuntime::IO {
         std::atomic_bool resolved = {false};
         promise_type promise;
     };
+
+    typedef std::shared_ptr<read_task>   read_task_ptr;
 }
 
 #endif //AR_IO_TASK_H

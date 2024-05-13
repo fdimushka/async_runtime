@@ -9,19 +9,17 @@ IOExecutor::IOExecutor(const std::string &name_, int max_threads)
     , work(io_service) {
     type = kIO_EXECUTOR;
 
-    std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
-    task_arenas.initialize(tbb::task_arena::constraints(numa_indexes[0]), 1, tbb::task_arena::priority::high);
-    task_arenas.execute([this] {
-        task_group.run(boost::bind(&boost::asio::io_service::run, &io_service));
-    });
+    for (int i = 0; i < max_threads; ++i) {
+        thread_pool.emplace_back(std::thread(boost::bind(&boost::asio::io_service::run, &io_service)));
+    }
 }
 
 IOExecutor::~IOExecutor() noexcept {
     io_service.stop();
-    task_arenas.execute([this] {
-        task_group.wait();
-    });
-    task_arenas.terminate();
+    for (auto &th : thread_pool) {
+        if (th.joinable())
+            th.join();
+    }
 }
 
 std::shared_ptr<tcp_session> IOExecutor::MakeTCPSession() {
@@ -32,11 +30,23 @@ std::shared_ptr<udp_session> IOExecutor::MakeUDPSession() {
     return std::make_shared<udp_session>(io_service);
 }
 
-http_session_ptr IOExecutor::MakeHTTPSession() {
-    return std::make_shared<http_session>(io_service);
+http_session_ptr IOExecutor::MakeHTTPSession(int timeout) {
+    return std::make_shared<http_session>(io_service, timeout);
 }
 
-void IOExecutor::Post(const std::shared_ptr<task> & task) {
+http_multipart_session_ptr IOExecutor::MakeHTTPMultipartSession(int timeout) {
+    return std::make_shared<http_multipart_session>(io_service, timeout);
+}
+
+void IOExecutor::Post(task *task) {
+    throw std::runtime_error("task not supported in IOExecutor use io_task");
+}
+
+void Post(const io_task_ptr & task) {
+
+}
+
+void Post(const read_task_ptr & task) {
 
 }
 

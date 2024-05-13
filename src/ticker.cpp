@@ -46,7 +46,7 @@ future_t<bool> Ticker::AsyncTick(const task::execution_state& execution_state) {
     if(curr_tick_delay < delay) {
         Runtime::g_runtime->CheckRuntime();
         curr_tick_delay = delay - curr_tick_delay;
-        auto task = std::make_shared<ticker_task>(last_tick_ts);
+        auto task = new ticker_task(last_tick_ts);
         task->set_delay< Timestamp::Micro >(curr_tick_delay);
         task->set_execution_state(execution_state);
         Runtime::g_runtime->Post(task);

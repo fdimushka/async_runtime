@@ -119,7 +119,7 @@ if (WITH_OPENCV)
 endif()
 
 if (WITH_TBB)
-    target_link_libraries(${LIB_NAME} tbb)
+    target_link_libraries(${LIB_NAME} ${TBB_LIBS})
 endif()
 
 if (WITH_PROFILER)

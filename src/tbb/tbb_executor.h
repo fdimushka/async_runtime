@@ -14,7 +14,7 @@ namespace AsyncRuntime {
     public:
         TBBExecutor(const std::string &name_,
                     int numa_node,
-                    const std::vector<AsyncRuntime::CPU> &cpus,
+                    int max_concurrency,
                     std::vector<WorkGroupOption> work_groups_option = {});
 
         ~TBBExecutor() noexcept override;
@@ -34,12 +34,12 @@ namespace AsyncRuntime {
 
         void SetIndex(int index) final;
 
-        void Post(const std::shared_ptr<task> & task) final;
+        void Post(task *task) final;
 
         std::vector<std::thread::id> GetThreadIds();
     private:
-        void Enqueue(const std::shared_ptr<task> & task, EntityTag tag);
-        void PostToStream(const std::shared_ptr<task> & task, EntityTag tag);
+        void Enqueue(task * task, EntityTag tag);
+        void PostToStream(task * task, EntityTag tag, int64_t wg);
         
         TBBDelayedScheduler main_delayed_scheduler;
         std::vector<std::unique_ptr<TBBDelayedScheduler>> delayed_schedulers;

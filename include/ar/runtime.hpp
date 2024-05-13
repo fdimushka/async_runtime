@@ -124,7 +124,7 @@ namespace AsyncRuntime {
 
         void CheckRuntime();
 
-        void Post(const std::shared_ptr<task> & task);
+        void Post(task *t);
 
         void CreateDefaultExecutors(int virtual_numa_nodes_count = 0);
 
@@ -146,7 +146,7 @@ namespace AsyncRuntime {
     auto Runtime::Async(Callable &&f, Arguments &&... args)
     -> future_t<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))> {
         CheckRuntime();
-        auto task = make_task_shared_ptr(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
+        auto task = make_task(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         Post(task);
         return task->get_future();
     }
@@ -155,7 +155,7 @@ namespace AsyncRuntime {
     auto Runtime::AsyncDelayed(Callable &&f, Timespan delay_ms, Arguments &&... args)
     -> future_t<decltype(std::forward<Callable>(f)(std::forward<Arguments>(args)...))> {
         CheckRuntime();
-        auto task = make_task_shared_ptr(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
+        auto task = make_task(std::bind(std::forward<Callable>(f), std::forward<Arguments>(args)...));
         task->template set_delay<Timestamp::Milli>(delay_ms);
         Post(task);
         return task->get_future();
@@ -165,7 +165,7 @@ namespace AsyncRuntime {
     future_t<Ret> Runtime::Async(const std::shared_ptr<coroutine<Ret>> & coroutine) {
         CheckRuntime();
         coroutine->init_promise();
-        auto task = std::make_shared<coroutine_task<Ret>>(coroutine);
+        auto *task = (coroutine_task<Ret> *)coroutine->resume_task();
         Post(task);
         return task->get_future();
     }
@@ -173,7 +173,7 @@ namespace AsyncRuntime {
     template<typename Rep, typename Period>
     future_t<void> Runtime::AsyncSleep(const std::chrono::duration<Rep, Period> &rtime) {
         CheckRuntime();
-        auto task = make_dummy_task_shared_ptr();
+        auto task = make_dummy_task();
         task->set_delay<std::chrono::duration<Rep, Period> >(rtime.count());
         Post(task);
         return task->get_future();
@@ -183,7 +183,7 @@ namespace AsyncRuntime {
     future_t<typename TaskType::return_type> Runtime::AsyncTask(Arguments &&... args) {
         static_assert(std::is_base_of<task, TaskType>::value, "TaskType must derive from Task");
         CheckRuntime();
-        auto task = std::make_shared<TaskType>(std::forward<Arguments>(args)...);
+        auto task = new TaskType(std::forward<Arguments>(args)...);
         const std::type_info &eti = typeid(ExecutorType);
         ((ExecutorType *) executors.at(eti.hash_code()))->Post(task);
         return task->get_future();
@@ -233,7 +233,7 @@ namespace AsyncRuntime {
         if (!future.has_value() && !future.has_exception()) {
             future_t<Ret> done_future;
             handler->suspend_with([&future, &done_future](coroutine_handler *handler) {
-                done_future = future.then(boost::launch::sync, [handler](future_t<Ret> f) {
+                done_future = future.then(boost::launch::sync, [handler](shared_future_t<Ret> f) {
                     auto task = handler->resume_task();
                     Runtime::g_runtime->Post(task);
                     return f.get();

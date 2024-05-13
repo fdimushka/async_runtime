@@ -16,7 +16,7 @@ void async_client(coroutine_handler* handler, yield<void> & yield) {
     if (ec) {
         std::cerr << ec << std::endl;
     } else {
-        std::cout << session->res << std::endl;
+        std::cout << session->get_response() << std::endl;
     }
 
     session->close();
