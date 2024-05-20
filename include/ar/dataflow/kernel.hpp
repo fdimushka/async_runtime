@@ -185,7 +185,8 @@ namespace AsyncRuntime::Dataflow {
 
         if (!coroutine->is_completed()) {
             try {
-                future_res = AsyncRuntime::Async(coroutine);
+                auto f = AsyncRuntime::Async(coroutine);
+                future_res = f.share();
             } catch (...) {
                 return false;
             }
@@ -212,31 +213,36 @@ namespace AsyncRuntime::Dataflow {
 
     template<class KernelContextT>
     AsyncRuntime::shared_future_t<int> Kernel<KernelContextT>::AsyncTerminate() {
-        KernelState s = state.load(std::memory_order_relaxed);
-        if (s == kRUNNING) {
-            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
-            if (future_res.valid()) {
-                return future_res;
-            } else {
-                return make_resolved_future(-1);
-            }
-        } else if (s == kINITIALIZED) {
-            state.store(kTERMINATED, std::memory_order_relaxed);
-            if (!coroutine->is_completed()) {
-                process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
-                try {
-                    auto f = AsyncRuntime::Async(coroutine);
-                    future_res = f.share();
-                    return future_res;
-                } catch (...) {
-                    return make_resolved_future(-1);
-                }
-            } else {
-                return make_resolved_future(-1);
-            }
+        process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+        if (future_res.valid()) {
+            return future_res;
         } else {
             return make_resolved_future(-1);
         }
+//        if (s == kRUNNING) {
+//            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+//            if (future_res.valid()) {
+//                return future_res;
+//            } else {
+//                return make_resolved_future(-1);
+//            }
+//        } else if (s == kINITIALIZED) {
+//            state.store(kTERMINATED, std::memory_order_relaxed);
+//            if (!coroutine->is_completed()) {
+//                process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+//                try {
+//                    auto f = AsyncRuntime::Async(coroutine);
+//                    future_res = f.share();
+//                    return future_res;
+//                } catch (...) {
+//                    return make_resolved_future(-1);
+//                }
+//            } else {
+//                return make_resolved_future(-1);
+//            }
+//        } else {
+//            return make_resolved_future(-1);
+//        }
     }
 
     template<class KernelContextT>
