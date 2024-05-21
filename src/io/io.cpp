@@ -24,3 +24,8 @@ http_multipart_session_ptr AsyncRuntime::IO::MakeHTTPMultipartSession(int timeou
     auto executor = static_cast<IOExecutor *>(Runtime::g_runtime->GetIOExecutor());
     return executor->MakeHTTPMultipartSession(timeout);
 }
+
+tcp_endpoint AsyncRuntime::IO::Resolve(const char *host, int port) {
+    auto executor = static_cast<IOExecutor *>(Runtime::g_runtime->GetIOExecutor());
+    return executor->Resolve(host, port);
+}

@@ -92,9 +92,9 @@ namespace AsyncRuntime {
 
         //explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
 
-        yield( yield && other) noexcept = default;
-        yield( yield const& other) noexcept = delete;
-        yield & operator=( yield const& other) noexcept = delete;
+        yield( yield && other) = default;
+        yield( yield const& other) = delete;
+        yield & operator=( yield const& other) = delete;
 
         void operator ()(const T & v) {
             continuation = continuation.resume_with([this, &v](ctx::continuation && c) {
@@ -118,9 +118,9 @@ namespace AsyncRuntime {
 
         //explicit yield(ctx::continuation && c) : continuation(std::move(c)) {}
 
-        yield( yield && other) noexcept = default;
-        yield( yield const& other) noexcept = delete;
-        yield & operator=( yield const& other) noexcept = delete;
+        yield( yield && other) = default;
+        yield( yield const& other) = delete;
+        yield & operator=( yield const& other) = delete;
 
         void operator ()() {
             continuation = continuation.resume_with([this](ctx::continuation && c) {
@@ -142,7 +142,7 @@ namespace AsyncRuntime {
         typedef yield<Ret> yield_t;
         friend class coroutine_task<Ret>;
     public:
-        coroutine() noexcept = default;
+        coroutine() = default;
 
         explicit coroutine(coroutine::Fn &&f) : fn(f), end{false} {
             continuation = ctx::continuation(ctx::callcc([this](ctx::continuation &&c) {
@@ -154,13 +154,11 @@ namespace AsyncRuntime {
             }));
         }
 
-        coroutine( coroutine && other) noexcept = default;
-        coroutine( coroutine const& other) noexcept = delete;
-        coroutine & operator=( coroutine const& other) noexcept = delete;
+        coroutine( coroutine && other) = default;
+        coroutine( coroutine const& other) = delete;
+        coroutine & operator=( coroutine const& other) = delete;
 
-        ~coroutine() override {
-            //destroy();
-        };
+        ~coroutine() override = default;
 
         bool is_completed() final { return end.load(std::memory_order_relaxed) || !continuation; }
 
@@ -237,7 +235,7 @@ namespace AsyncRuntime {
     template< typename Ret >
     class coroutine_task : public task {
     public:
-        explicit coroutine_task(std::shared_ptr<coroutine<Ret>> coroutine) noexcept: coro(coroutine) {
+        explicit coroutine_task(std::shared_ptr<coroutine<Ret>> coroutine): coro(coroutine) {
             set_execution_state(coro->get_execution_state());
         }
 

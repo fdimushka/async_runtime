@@ -38,6 +38,13 @@ http_multipart_session_ptr IOExecutor::MakeHTTPMultipartSession(int timeout) {
     return std::make_shared<http_multipart_session>(io_service, timeout);
 }
 
+tcp_endpoint IOExecutor::Resolve(const char *host, int port) {
+    tcp::resolver resolver(io_service);
+    tcp::resolver::query query(tcp::v4(), host, std::to_string(port));
+    tcp::resolver::iterator iterator = resolver.resolve(query);
+    return *iterator;
+}
+
 void IOExecutor::Post(task *task) {
     throw std::runtime_error("task not supported in IOExecutor use io_task");
 }

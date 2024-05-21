@@ -29,6 +29,8 @@ namespace AsyncRuntime::IO {
 
         http_multipart_session_ptr MakeHTTPMultipartSession(int timeout = 0);
 
+        tcp_endpoint Resolve(const char *host, int port);
+
         void Post(task *task) override;
 
         void Post(const io_task_ptr & task);

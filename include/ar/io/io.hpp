@@ -17,6 +17,8 @@ namespace AsyncRuntime::IO {
     http_session_ptr MakeHTTPSession(int timeout = 0);
 
     http_multipart_session_ptr MakeHTTPMultipartSession(int timeout = 0);
+
+    tcp_endpoint Resolve(const char *host, int port);
 }
 
 #endif //AR_IO_H

@@ -22,6 +22,7 @@ namespace AsyncRuntime::IO {
     using boost::asio::ip::tcp;
     typedef boost::system::error_code error_code;
     typedef std::tuple<boost::system::error_code, std::size_t> read_result;
+    typedef boost::asio::ip::tcp::endpoint tcp_endpoint;
 
     class tcp_session : public std::enable_shared_from_this<tcp_session> {
     public:

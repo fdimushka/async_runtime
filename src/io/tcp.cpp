@@ -37,12 +37,13 @@ size_t tcp_session::read_input_stream(char *buffer, size_t size) {
 future_t<error_code> tcp_session::async_connect(const char *ip_address, int port) {
     error_code ec;
     auto task = std::make_shared<IO::io_task>();
-    boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address(ip_address, ec), port);
+    //boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address(ip_address, ec), port);
 
-    if (ec) {
-        return make_resolved_future(ec);
-    }
-    socket.async_connect(endpoint, boost::bind(&IO::io_task::handler, task->get_ptr(), boost::placeholders::_1));
+//    if (ec) {
+//        return make_resolved_future(ec);
+//    }
+    auto executor = static_cast<IOExecutor *>(Runtime::g_runtime->GetIOExecutor());
+    socket.async_connect(executor->Resolve(ip_address, port), boost::bind(&IO::io_task::handler, task->get_ptr(), boost::placeholders::_1));
     return task->get_future();
 }
 
