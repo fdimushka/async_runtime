@@ -217,7 +217,15 @@ namespace AsyncRuntime::Dataflow {
         if (future_res.valid()) {
             return future_res;
         } else {
-            return make_resolved_future(-1);
+            state.store(kTERMINATED, std::memory_order_relaxed);
+            try {
+                auto f = AsyncRuntime::Async(coroutine);
+                future_res = f.share();
+                return future_res;
+            } catch (...) {
+                return make_resolved_future(-1);
+            }
+
         }
 //        if (s == kRUNNING) {
 //            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);

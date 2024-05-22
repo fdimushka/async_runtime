@@ -4,6 +4,14 @@
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
 
+http_session::~http_session() {
+    close();
+}
+
+http_multipart_session::~http_multipart_session() {
+    close();
+}
+
 http::verb get_method(const http_request & request) {
     switch (request.method) {
         case get : return http::verb::get;

@@ -6,8 +6,13 @@
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
 
+tcp_session::~tcp_session() {
+    socket.close();
+    deadline.cancel();
+}
+
 void tcp_session::close() {
-    auto executor = (IOExecutor*)Runtime::g_runtime->GetIOExecutor();
+//    auto executor = (IOExecutor*)Runtime::g_runtime->GetIOExecutor();
     socket.close();
     deadline.cancel();
 //    executor->IOPost([this]() {

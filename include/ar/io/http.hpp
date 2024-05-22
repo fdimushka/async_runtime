@@ -52,6 +52,8 @@ namespace AsyncRuntime::IO {
         {
         };
 
+        ~http_session();
+
         void set_request_field(http::field field, const std::string & value);
 
         future_t<error_code> async_request(const http_request & request);
@@ -77,6 +79,8 @@ namespace AsyncRuntime::IO {
                 : http_session(io_service, timeout)
         {
         };
+
+        ~http_multipart_session();
 
         future_t<error_code> async_request_multipart(const http_request & request);
 

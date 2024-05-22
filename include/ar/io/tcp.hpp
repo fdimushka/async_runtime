@@ -33,7 +33,7 @@ namespace AsyncRuntime::IO {
         {
         };
 
-        ~tcp_session() = default;
+        ~tcp_session();
 
         void set_read_timeout(int seconds);
 
