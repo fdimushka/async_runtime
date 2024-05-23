@@ -213,19 +213,22 @@ namespace AsyncRuntime::Dataflow {
 
     template<class KernelContextT>
     AsyncRuntime::shared_future_t<int> Kernel<KernelContextT>::AsyncTerminate() {
-        process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
-        if (future_res.valid()) {
-            return future_res;
-        } else {
-            state.store(kTERMINATED, std::memory_order_relaxed);
-            try {
-                auto f = AsyncRuntime::Async(coroutine);
-                future_res = f.share();
+        if (state.load(std::memory_order_relaxed) != kTERMINATED) {
+            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
+            if (future_res.valid()) {
                 return future_res;
-            } catch (...) {
-                return make_resolved_future(-1);
+            } else {
+                state.store(kTERMINATED, std::memory_order_relaxed);
+                try {
+                    auto f = AsyncRuntime::Async(coroutine);
+                    future_res = f.share();
+                    return future_res;
+                } catch (...) {
+                    return make_resolved_future(-1);
+                }
             }
-
+        } else {
+            return make_resolved_future(0);
         }
 //        if (s == kRUNNING) {
 //            process_notifier.Notify((int) KernelEvent::kKERNEL_EVENT_TERMINATE);
