@@ -91,6 +91,7 @@ void ExecutorWorkGroup::DeleteEntity(uint16_t id) {
     std::lock_guard<std::mutex> lock(mutex);
     auto slot_it = entities_peer_slot.find(id);
     if (slot_it != entities_peer_slot.end()) {
+        slots[slot_it->second]->delete_entity();
         entities_peer_slot.erase(slot_it);
     }
 }
