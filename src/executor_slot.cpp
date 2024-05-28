@@ -138,13 +138,22 @@ void ExecutorSlot::invoke(Worker& w, task* t) {
     task::execution_state new_state = t->get_execution_state();
     new_state.processor = w.cpu_id;
     t->execute(new_state);
+//    if (m_executed_tasks_count) {
+//        m_executed_tasks_count->Increment();
+//    }
 }
 
 void ExecutorSlot::add_entity() {
+    if (m_entities_count) {
+        m_entities_count->Increment();
+    }
     entities_count.fetch_add(1, std::memory_order_relaxed);
 }
 
 void ExecutorSlot::delete_entity() {
+    if (m_entities_count) {
+        m_entities_count->Decrement();
+    }
     if (entities_count.fetch_sub(1, std::memory_order_relaxed) <= 0) {
         entities_count.store(0, std::memory_order_relaxed);
     }
@@ -155,6 +164,9 @@ int ExecutorSlot::get_util() {
 }
 
 void ExecutorSlot::post(task *task) {
+//    if (m_posted_tasks_count) {
+//        m_posted_tasks_count->Increment();
+//    }
     auto &state = task->get_execution_state();
     if (state.processor != INVALID_OBJECT_ID) {
         for (auto &w : workers) {

@@ -11,9 +11,7 @@
 class EXECUTOR_TEST_FRIEND;
 #endif
 
-
 namespace AsyncRuntime {
-
 
     struct WorkGroupOption {
         std::string                     name;
@@ -45,6 +43,8 @@ namespace AsyncRuntime {
 
         virtual void SetIndex(int i ) { index = i; }
 
+        virtual void MakeMetrics(const std::shared_ptr<Mon::IMetricer> &m) { metricer = m; }
+
         int GetEntitiesCount() const { return entities_count.load(std::memory_order_relaxed); }
 
         int GetMaxEntitiesCount() const { return MAX_ENTITIES; };
@@ -55,6 +55,7 @@ namespace AsyncRuntime {
 
         const std::string & GetName() const { return name; }
     protected:
+        std::shared_ptr<Mon::IMetricer>                          metricer;
         std::string                                              name;
         ExecutorType                                             type = kUSER_EXECUTOR;
         std::shared_ptr<Mon::Counter>                            m_entities_count;
@@ -73,11 +74,18 @@ namespace AsyncRuntime {
                           std::map<size_t, size_t>& cpus_wg);
         ~ExecutorWorkGroup();
 
+        void MakeMetrics(const std::string &executor_name, const std::shared_ptr<Mon::IMetricer> &m);
+
         void Post(task *task);
 
         void DeleteEntity(uint16_t id);
     private:
+        std::shared_ptr<Mon::IMetricer> metricer;
+        std::shared_ptr<Mon::Counter>   workers_count;
+        std::shared_ptr<Mon::Counter>   slots_count;
+
         int                             id;
+        std::string                     name;
         std::mutex                      mutex;
         std::map<uint16_t, int>         entities_peer_slot;
         std::map<int, int>              cpus_peer_slot;
@@ -97,37 +105,24 @@ namespace AsyncRuntime {
 
         ~Executor() override;
 
-
         Executor(const Executor&) = delete;
         Executor(Executor&&) = delete;
-
 
         Executor& operator =(const Executor&) = delete;
         Executor& operator =(Executor&&) = delete;
 
-        /**
-         * @brief
-         * @param ptr
-         * @return
-         */
+        void MakeMetrics(const std::shared_ptr<Mon::IMetricer> &m) override;
+
         uint16_t AddEntity(void *ptr) override;
 
-        /**
-         * @brief
-         * @param id
-         */
         virtual void DeleteEntity(uint16_t id) override;
 
-        /**
-         * @brief
-         * @param task
-         */
         void Post(task *task) override;
-
     private:
         std::atomic_uint16_t                                     entities_inc;
         std::vector<ExecutorWorkGroup*>                          groups;
         ExecutorWorkGroup                                        *main_group;
+
     };
 }
 

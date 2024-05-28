@@ -10,30 +10,15 @@ using namespace AsyncRuntime;
 IExecutor::IExecutor(const std::string &ex_name, ExecutorType executor_type)
     : name(ex_name)
     , type(executor_type) {
-    m_entities_count = Runtime::g_runtime->MakeMetricsCounter("entities_count", {
-            {"executor", name}
-    });
-
-    if (m_entities_count) {
-        m_entities_count->Increment(0);
-    }
 }
 
 uint16_t IExecutor::AddEntity(void *ptr) {
-    if (m_entities_count) {
-        m_entities_count->Increment();
-    }
-
     entities_count.fetch_add(1, std::memory_order_relaxed);
     return 0;
 }
 
 
 void IExecutor::DeleteEntity(uint16_t id) {
-    if (m_entities_count) {
-        m_entities_count->Decrement();
-    }
-
     if (entities_count.fetch_sub(1, std::memory_order_relaxed) <= 0) {
         entities_count.store(0, std::memory_order_relaxed);
     }
@@ -48,6 +33,7 @@ ExecutorWorkGroup::ExecutorWorkGroup(int id,
     max_cpus = std::min(std::max(1, max_cpus), (int)cpus.size());
     int slots_count = max_cpus/slot_concurrency;
     slots_count = std::max(1, slots_count);
+    name = option.name;
 
     for (int i = 0; i < slots_count; ++i) {
         std::vector<AsyncRuntime::CPU> slot_cpus;
@@ -72,6 +58,32 @@ ExecutorWorkGroup::ExecutorWorkGroup(int id,
 ExecutorWorkGroup::~ExecutorWorkGroup() {
     for (auto slot: slots) {
         delete slot;
+    }
+}
+
+void ExecutorWorkGroup::MakeMetrics(const std::string &executor_name, const std::shared_ptr<Mon::IMetricer> &m) {
+    metricer = m;
+    if (metricer) {
+        workers_count = metricer->MakeCounter("ar_workers_count", {
+                {"executor", executor_name},
+                {"group",    name},
+        });
+
+        slots_count = metricer->MakeCounter("ar_slots_count", {
+                {"executor", executor_name},
+                {"group",    name},
+        });
+
+        for (auto *slot: slots) {
+            slot->m_entities_count = metricer->MakeCounter("ar_entities_count", {
+                    {"executor", executor_name},
+                    {"group",    name},
+                    {"slot",     std::to_string(slot->id)},
+            });
+        }
+
+        workers_count->Increment(cpus_peer_slot.size());
+        slots_count->Increment(slots.size());
     }
 }
 
@@ -144,8 +156,17 @@ Executor::~Executor() {
     }
 }
 
+void Executor::MakeMetrics(const std::shared_ptr<Mon::IMetricer> &m) {
+    metricer = m;
+    if (metricer) {
+        for (auto group : groups) {
+            group->MakeMetrics(name, metricer);
+        }
+    }
+}
+
 uint16_t Executor::AddEntity(void *ptr) {
-    IExecutor::AddEntity(ptr);
+    entities_count.fetch_add(1, std::memory_order_relaxed);
     int e = entities_inc.fetch_add(1, std::memory_order_relaxed);
     if (e >= 65500) {
         entities_inc.store(0, std::memory_order_relaxed);
@@ -155,7 +176,9 @@ uint16_t Executor::AddEntity(void *ptr) {
 }
 
 void Executor::DeleteEntity(uint16_t id) {
-    IExecutor::DeleteEntity(id);
+    if (entities_count.fetch_sub(1, std::memory_order_relaxed) <= 0) {
+        entities_count.store(0, std::memory_order_relaxed);
+    }
     for (auto group : groups) {
         group->DeleteEntity(id);
     }

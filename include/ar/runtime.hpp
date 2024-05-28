@@ -130,6 +130,8 @@ namespace AsyncRuntime {
 
         void CreateTbbExecutors();
 
+        void CreateMetrics();
+
         IExecutor *FetchExecutor(ExecutorType type, const EntityTag &tag);
 
         IExecutor *FetchFreeExecutor(ExecutorType type);
@@ -139,7 +141,7 @@ namespace AsyncRuntime {
         IExecutor *main_executor;
         IExecutor *io_executor;
         bool is_setup;
-        std::unique_ptr<Mon::IMetricer> metricer;
+        std::shared_ptr<Mon::IMetricer> metricer;
     };
 
     template<class Callable, class... Arguments>
@@ -257,7 +259,8 @@ namespace AsyncRuntime {
 
     template<class CounterT>
     void Runtime::CreateMetricer(const std::map<std::string, std::string> &labels) {
-        metricer = std::make_unique<Mon::Metricer<CounterT>>(labels);
+        metricer = std::make_shared<Mon::Metricer<CounterT>>(labels);
+        CreateMetrics();
     }
 
     inline void SetupRuntime(const RuntimeOptions &options = {}) {
@@ -288,15 +291,16 @@ namespace AsyncRuntime {
         Runtime::g_runtime->CreateMetricer<CounterT>(labels);
     }
 
+    std::shared_ptr<Mon::Counter>
+    inline MakeMetricsCounter(const std::string &name, const std::map<std::string, std::string> &labels) {
+        return Runtime::g_runtime->MakeMetricsCounter(name, labels);
+    }
+
     inline ObjectID GetWorkGroup(const std::string &name) {
         return Runtime::g_runtime->GetWorkGroup(name);
     }
 
     inline EntityTag AddEntityTag(void *ptr) {
-        return Runtime::g_runtime->AddEntityTag(ptr);
-    }
-
-    inline EntityTag AddEntityTag(CoroutineHandler* handler, void *ptr) {
         return Runtime::g_runtime->AddEntityTag(ptr);
     }
 

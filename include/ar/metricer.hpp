@@ -17,7 +17,7 @@ namespace AsyncRuntime::Mon {
 
         Counter() = default;
 
-        ~Counter() = default;
+        virtual ~Counter() = default;
 
         virtual void Increment() = 0;
 

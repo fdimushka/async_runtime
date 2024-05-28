@@ -76,6 +76,9 @@ namespace AsyncRuntime {
         std::unordered_map<std::thread::id, size_t> wids;
         std::atomic<bool> done = {false};
         std::atomic_int    entities_count = {0};
+        std::shared_ptr<Mon::Counter>   m_entities_count;
+        std::shared_ptr<Mon::Counter>   m_posted_tasks_count;
+        std::shared_ptr<Mon::Counter>   m_executed_tasks_count;
     };
 }
 

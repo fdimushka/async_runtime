@@ -32,7 +32,6 @@ Runtime::~Runtime() {
 
 void Runtime::Setup(const RuntimeOptions &_options) {
     Logger::s_logger.SetStd();
-    coroutine_counter = MakeMetricsCounter("coroutines_count", {});
 
     SetupWorkGroups(_options.work_groups_option);
 
@@ -193,6 +192,13 @@ Runtime::MakeMetricsCounter(const std::string &name, const std::map<std::string,
     } else {
         return {};
     }
+}
+
+void Runtime::CreateMetrics() {
+    for (auto it : executors) {
+        it.second->MakeMetrics(metricer);
+    }
+    coroutine_counter = MakeMetricsCounter("ar_coroutines_count", {});
 }
 
 void Runtime::Post(task *t) {

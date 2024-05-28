@@ -58,7 +58,13 @@ namespace AsyncRuntime {
 
     class coroutine_handler : public std::enable_shared_from_this<coroutine_handler> {
     public:
-        virtual ~coroutine_handler() = default;
+        coroutine_handler() {
+            create();
+        }
+
+        virtual ~coroutine_handler() {
+            destroy();
+        }
 
         virtual bool is_completed() = 0;
 
