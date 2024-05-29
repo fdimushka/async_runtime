@@ -30,7 +30,7 @@ ExecutorWorkGroup::ExecutorWorkGroup(int id,
                                      std::map<size_t, size_t>& cpus_wg) : id(id) {
     int slot_concurrency = (option.slot_concurrency > 0)? option.slot_concurrency : std::thread::hardware_concurrency();
     int max_cpus = (int) ((double) cpus.size() * (1.0 / (option.cap / option.util)));
-    max_cpus = std::min(std::max(1, max_cpus), (int)cpus.size());
+    max_cpus = std::min(std::max(2, max_cpus), (int)cpus.size());
     int slots_count = max_cpus/slot_concurrency;
     slots_count = std::max(1, slots_count);
     name = option.name;

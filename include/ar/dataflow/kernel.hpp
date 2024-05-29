@@ -30,6 +30,11 @@ namespace AsyncRuntime::Dataflow {
     public:
         KernelContext() = default;
         virtual ~KernelContext() = default;
+
+        void SetErrorCode(int code) { error_code = code; }
+        int GetErrorCode() const { return error_code; }
+    private:
+        int error_code = 0;
     };
 
     /**
@@ -150,7 +155,7 @@ namespace AsyncRuntime::Dataflow {
             return -1;
         }
 
-        return 0;
+        return context.GetErrorCode();
     }
 
     template<class KernelContextT>
