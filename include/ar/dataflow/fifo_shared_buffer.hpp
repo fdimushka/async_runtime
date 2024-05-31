@@ -33,6 +33,9 @@ namespace AsyncRuntime::Dataflow {
         if (queue.try_push(std::move(msg))) {
             return SharedBufferError::kNO_ERROR;
         } else {
+            if (this->skip_counter) {
+                this->skip_counter->Increment();
+            }
             return SharedBufferError::kBUFFER_OVERFLOW;
         }
     }
@@ -42,6 +45,9 @@ namespace AsyncRuntime::Dataflow {
         if (queue.try_push(msg)) {
             return SharedBufferError::kNO_ERROR;
         } else {
+            if (this->skip_counter) {
+                this->skip_counter->Increment();
+            }
             return SharedBufferError::kBUFFER_OVERFLOW;
         }
     }

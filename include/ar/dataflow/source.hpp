@@ -45,6 +45,7 @@ namespace AsyncRuntime::Dataflow {
         void Activate() final { active.store(true, std::memory_order_relaxed ); };
         void Deactivate() final  { active.store(false, std::memory_order_relaxed ); };
         virtual bool IsActive() { return active.load(std::memory_order_relaxed); }
+        void SetSkipCounter(const std::shared_ptr<Mon::Counter> & counter) { buffer->SetSkipCounter(counter); }
     private:
         std::atomic_bool active = {true };
         Notifier *notifier;

@@ -2,6 +2,7 @@
 #define AR_DATAFLOW_SHARED_BUFFER_H
 
 #include "ar/ar.hpp"
+#include "ar/metricer.hpp"
 #include <typeinfo>
 
 namespace AsyncRuntime::Dataflow {
@@ -33,7 +34,10 @@ namespace AsyncRuntime::Dataflow {
         virtual bool TryRead(T & res) = 0;
         virtual bool Empty() =0;
         virtual void Flush() = 0;
+        void SetSkipCounter(const std::shared_ptr<Mon::Counter> & counter) { skip_counter = counter; }
         const SharedBufferType GetType() const { return type; }
+    protected:
+        std::shared_ptr<Mon::Counter> skip_counter;
     private:
         SharedBufferType type;
     };
