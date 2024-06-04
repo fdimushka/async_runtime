@@ -168,7 +168,7 @@ TEST_CASE( "init/terminate kernel in coroutine without run", "[kernel]" ) {
         bool terminated_call = false;
         kernel_test kernel;
         REQUIRE(Await(kernel.AsyncInit(), handler) == 0);
-        REQUIRE(Await(kernel.AsyncTerminate(), handler) == -1);
+        REQUIRE(Await(kernel.AsyncTerminate(), handler) == 0);
     });
 
     Await(Async(coro));

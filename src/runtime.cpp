@@ -121,6 +121,7 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
 }
 
 void Runtime::CreateTbbExecutors() {
+#ifdef USE_TBB
     std::vector<TBBExecutor *> tbb_executors;
     std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
     for (size_t i = 0; i < numa_indexes.size(); ++i) {
@@ -135,7 +136,9 @@ void Runtime::CreateTbbExecutors() {
     if (main_executor == nullptr) {
         throw std::runtime_error("main executor not setup");
     }
+#endif
 }
+
 
 EntityTag Runtime::AddEntityTag(void *ptr) {
     auto executor = FetchFreeExecutor(kCPU_EXECUTOR);

@@ -12,7 +12,7 @@ option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 option(WITH_NUMA "Use numa topology" ON)
-option(WITH_TBB "Use tbb" ON)
+option(WITH_TBB "Use tbb" OFF)
 option(WITH_OPENCV "Use opencv" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")

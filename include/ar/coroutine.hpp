@@ -14,42 +14,6 @@
 namespace AsyncRuntime {
     namespace ctx = boost::context;
 
-    template< typename traitsT >
-    class basic_tbb_fixedsize_stack {
-    private:
-        std::size_t     size_;
-
-    public:
-        typedef traitsT traits_type;
-
-        basic_tbb_fixedsize_stack( std::size_t size = traits_type::default_size() ) BOOST_NOEXCEPT_OR_NOTHROW :
-                size_( size) {
-        }
-
-        ctx::stack_context allocate() {
-            auto allocator = oneapi::tbb::cache_aligned_allocator<char>();
-            char * vp = allocator.allocate( size_);
-            if ( ! vp) {
-                throw std::bad_alloc();
-            }
-
-            ctx::stack_context sctx;
-            sctx.size = size_;
-            sctx.sp = static_cast< char * >( vp) + sctx.size;
-
-            return sctx;
-        }
-
-        void deallocate( ctx::stack_context & sctx) BOOST_NOEXCEPT_OR_NOTHROW {
-            BOOST_ASSERT( sctx.sp);
-            auto allocator = oneapi::tbb::cache_aligned_allocator<char>();
-            char * vp = static_cast< char * >( sctx.sp) - sctx.size;
-            allocator.deallocate( vp, sctx.size);
-        }
-    };
-
-    typedef basic_tbb_fixedsize_stack< ctx::stack_traits >  tbb_fixedsize_stack;
-
     template< typename T >
     class coroutine;
 
