@@ -17,6 +17,7 @@
 
 using namespace AsyncRuntime;
 
+#define MAX_GROUPS_COUNT 10
 #define MAIN_WORK_GROUP "main"
 #define MAIN_EXECUTOR_NAME "main"
 #define IO_EXECUTOR_NAME "io"

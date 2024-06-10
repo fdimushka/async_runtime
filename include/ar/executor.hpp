@@ -2,9 +2,9 @@
 #define AR_EXECUTOR_H
 
 #include "ar/task.hpp"
-#include "ar/processor.hpp"
-#include "ar/processor_group.hpp"
 #include "ar/metricer.hpp"
+#include "ar/scheduler.hpp"
+#include "ar/work_steal_queue.hpp"
 #include "ar/cpu_helper.hpp"
 
 #ifdef USE_TESTS
@@ -94,7 +94,6 @@ namespace AsyncRuntime {
     };
 
     class Executor  : public IExecutor {
-        friend Processor;
 #ifdef USE_TESTS
         friend EXECUTOR_TEST_FRIEND;
 #endif

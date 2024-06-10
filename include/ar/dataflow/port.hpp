@@ -3,6 +3,7 @@
 
 #include "ar/ar.hpp"
 #include <typeinfo>
+#include <set>
 
 namespace AsyncRuntime::Dataflow {
     /**

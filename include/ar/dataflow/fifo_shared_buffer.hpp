@@ -80,7 +80,7 @@ namespace AsyncRuntime::Dataflow {
     template< class T >
     class FIFOBuffer : public SharedBuffer< T > {
     public:
-        explicit FIFOBuffer(size_t capacity = 1000): SharedBuffer<T>(kFIFO_BUFFER), queue(capacity) {
+        explicit FIFOBuffer(size_t cap = 1000): SharedBuffer<T>(kFIFO_BUFFER), capacity(cap) {
         };
 
         ~FIFOBuffer() override {
@@ -88,7 +88,9 @@ namespace AsyncRuntime::Dataflow {
         };
 
         SharedBufferError Write(T && msg) override {
-            if (queue.push(std::move(msg))) {
+            std::lock_guard<std::mutex> lock(mutex);
+            if (queue.size() < capacity) {
+                queue.push(std::move(msg));
                 return SharedBufferError::kNO_ERROR;
             } else {
                 if (this->skip_counter) {
@@ -99,7 +101,9 @@ namespace AsyncRuntime::Dataflow {
         }
 
         SharedBufferError Write(const T & msg) override {
-            if (queue.push(msg)) {
+            std::lock_guard<std::mutex> lock(mutex);
+            if (queue.size() < capacity) {
+                queue.push(msg);
                 return SharedBufferError::kNO_ERROR;
             } else {
                 if (this->skip_counter) {
@@ -110,8 +114,10 @@ namespace AsyncRuntime::Dataflow {
         }
 
         std::optional<T> Read() override {
-            T msg;
-            if (queue.pop(msg)) {
+            std::lock_guard<std::mutex> lock(mutex);
+            if (!queue.empty()) {
+                T msg = queue.front();
+                queue.pop();
                 return msg;
             } else {
                 return std::nullopt;
@@ -119,23 +125,31 @@ namespace AsyncRuntime::Dataflow {
         }
 
         bool TryRead( T & res ) override {
-            return queue.pop(res);
+            std::lock_guard<std::mutex> lock(mutex);
+            if (!queue.empty()) {
+                res = queue.front();
+                queue.pop();
+                return true;
+            } else {
+                return false;
+            }
         }
 
         bool Empty() override {
+            std::lock_guard<std::mutex> lock(mutex);
             return queue.empty();
         }
 
         void Flush() override {
+            std::lock_guard<std::mutex> lock(mutex);
             while (!queue.empty()) {
-                T msg;
-                if (!queue.pop(msg)) {
-                    break;
-                }
+                queue.pop();
             }
         }
     private:
-        boost::lockfree::queue<T, boost::lockfree::fixed_sized<true>> queue;
+        int capacity;
+        std::mutex mutex;
+        std::queue<T> queue;
     };
 #endif
 }

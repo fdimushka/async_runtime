@@ -6,12 +6,12 @@
 #include <atomic>
 #include "ar/object.hpp"
 #include "ar/task.hpp"
-#include "ar/processor.hpp"
 #include "ar/work_steal_queue.hpp"
 #include "ar/thread_executor.hpp"
 #include "ar/scheduler.hpp"
 #include "ar/metricer.hpp"
 #include "work_notifier.h"
+#include "ar/task_queue.hpp"
 
 namespace AsyncRuntime {
     class ExecutorSlot;

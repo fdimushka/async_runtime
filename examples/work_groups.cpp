@@ -22,8 +22,8 @@ void async_va_fun(CoroutineHandler* handler, YieldVoid & yield, Ticker *ticker) 
 int main() {
     SetupRuntime({
         {
-                             {"management", 1.0, 1.0, WG_PRIORITY_MEDIUM},
-                             {"va", 1.0, 1.0, WG_PRIORITY_HIGH}
+                             {"management", 1.0, 1.0, (int)std::thread::hardware_concurrency()},
+                             {"va", 1.0, 1.0, (int)std::thread::hardware_concurrency()}
         }
     });
 

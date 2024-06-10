@@ -12,7 +12,6 @@ option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" ON)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 option(WITH_NUMA "Use numa topology" ON)
-option(WITH_TBB "Use tbb" OFF)
 option(WITH_OPENCV "Use opencv" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
@@ -23,13 +22,11 @@ message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Build with profiler: ${WITH_PROFILER}")
 message(STATUS "Build with numa: ${WITH_NUMA}")
 message(STATUS "Build with opencv: ${WITH_OPENCV}")
-message(STATUS "Build with tbb: ${WITH_TBB}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
 set(USE_PROFILER OFF)
 set(USE_OPENCV OFF)
-set(USE_TBB OFF)
 
 if (WITH_TESTS)
     set(USE_TESTS ON)
@@ -50,10 +47,6 @@ endif()
 
 if (WITH_OPENCV)
     set(USE_OPENCV ON)
-endif()
-
-if (WITH_TBB)
-    set(USE_TBB ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -95,10 +88,6 @@ else()
     list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/opencv_executor.cpp")
 endif()
 
-if (WITH_TBB)
-    include(cmake/tbb.cmake)
-endif()
-
 include_directories(include/)
 include_directories(src/)
 include_directories(src/io)
@@ -116,10 +105,6 @@ endif()
 
 if (WITH_OPENCV)
     target_link_libraries(${LIB_NAME} ${OpenCV_LIBS})
-endif()
-
-if (WITH_TBB)
-    target_link_libraries(${LIB_NAME} ${TBB_LIBS})
 endif()
 
 if (WITH_PROFILER)

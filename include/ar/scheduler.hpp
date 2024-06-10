@@ -2,7 +2,7 @@
 #define AR_WORK_SCHEDULER_H
 
 #include "ar/task.hpp"
-#include "ar/processor.hpp"
+#include "ar/thread_executor.hpp"
 
 #include <random>
 
