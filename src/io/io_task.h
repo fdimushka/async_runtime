@@ -63,7 +63,7 @@ namespace AsyncRuntime::IO {
         }
 
         void handler_deadline() {
-            if (deadline != nullptr && deadline->expires_at() <= deadline_timer::traits_type::now()){
+            if (deadline != nullptr && deadline->expires_at() <= deadline_timer::traits_type::now()) {
                 try {
                     if (!resolved.load(std::memory_order_relaxed)) {
                         promise.set_value({boost::asio::error::timed_out, 0});

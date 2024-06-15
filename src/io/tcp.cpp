@@ -12,13 +12,8 @@ tcp_session::~tcp_session() {
 }
 
 void tcp_session::close() {
-//    auto executor = (IOExecutor*)Runtime::g_runtime->GetIOExecutor();
     socket.close();
     deadline.cancel();
-//    executor->IOPost([this]() {
-//        socket.close();
-//        deadline.cancel();
-//    });
 }
 
 void tcp_session::set_read_timeout(int seconds) {
@@ -42,28 +37,35 @@ size_t tcp_session::read_input_stream(char *buffer, size_t size) {
 future_t<error_code> tcp_session::async_connect(const char *ip_address, int port) {
     error_code ec;
     auto task = std::make_shared<IO::io_task>();
-    //boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address(ip_address, ec), port);
-
-//    if (ec) {
-//        return make_resolved_future(ec);
-//    }
     auto executor = static_cast<IOExecutor *>(Runtime::g_runtime->GetIOExecutor());
     socket.async_connect(executor->Resolve(ip_address, port), boost::bind(&IO::io_task::handler, task->get_ptr(), boost::placeholders::_1));
     return task->get_future();
 }
 
+future_t<read_result> tcp_session::async_read(size_t size) {
+    if (read_timeout > 0) {
+        auto task = std::make_shared<IO::read_task>(&deadline);
+        boost::asio::async_read(socket, input_buffer,
+                                boost::asio::transfer_at_least(size),
+                                boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1, boost::placeholders::_2));
+
+        deadline.expires_from_now(boost::posix_time::seconds(read_timeout));
+        deadline.async_wait(boost::bind(&IO::read_task::handler_deadline, task->get_ptr()));
+
+        return task->get_future();
+    } else {
+        auto task = std::make_shared<IO::read_task>();
+        boost::asio::async_read(socket, input_buffer,
+                                boost::asio::transfer_at_least(size),
+                                boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1,
+                                            boost::placeholders::_2));
+        return task->get_future();
+    }
+}
+
 future_t<read_result> tcp_session::async_read() {
     if (read_timeout > 0) {
         auto task = std::make_shared<IO::read_task>(&deadline);
-        //auto executor = (IOExecutor*)Runtime::g_runtime->GetIOExecutor();
-//        executor->IOPost([this, task](){
-//            boost::asio::async_read(socket, input_buffer,
-//                                    boost::asio::transfer_at_least(1),
-//                                    boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1, boost::placeholders::_2));
-//
-//            deadline.expires_from_now(boost::posix_time::seconds(read_timeout));
-//            deadline.async_wait(boost::bind(&IO::read_task::handler_deadline, task->get_ptr()));
-//        });
         boost::asio::async_read(socket, input_buffer,
                                 boost::asio::transfer_at_least(1),
                                 boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1, boost::placeholders::_2));
@@ -78,13 +80,6 @@ future_t<read_result> tcp_session::async_read() {
                                 boost::asio::transfer_at_least(1),
                                 boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1,
                                             boost::placeholders::_2));
-//        auto executor = (IOExecutor*)Runtime::g_runtime->GetIOExecutor();
-//            executor->IOPost([this, task]() {
-//                boost::asio::async_read(socket, input_buffer,
-//                                        boost::asio::transfer_at_least(1),
-//                                        boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1,
-//                                                    boost::placeholders::_2));
-//        });
         return task->get_future();
     }
 }

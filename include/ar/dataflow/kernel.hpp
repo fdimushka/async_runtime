@@ -32,8 +32,23 @@ namespace AsyncRuntime::Dataflow {
         virtual ~KernelContext() = default;
 
         void SetErrorCode(int code) { error_code = code; }
+        void SetInterruptCallback(const std::function<int(void*)> & callback, void *opaque) {
+            interrupt_callback = callback;
+            interrupt_callback_opaque = opaque;
+        }
+
         int GetErrorCode() const { return error_code; }
+    protected:
+        int Interrupt() {
+            if (interrupt_callback) {
+                return interrupt_callback(interrupt_callback_opaque);
+            } else {
+                return 0;
+            }
+        }
     private:
+        std::function<int(void*)> interrupt_callback;
+        void *interrupt_callback_opaque = nullptr;
         int error_code = 0;
     };
 

@@ -47,6 +47,8 @@ namespace AsyncRuntime::IO {
 
         future_t<read_result> async_read();
 
+        future_t<read_result> async_read(size_t size);
+
         future_t<error_code> async_write(const char* buffer, size_t size);
 
         void close();
