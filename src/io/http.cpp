@@ -1,15 +1,15 @@
 #include "ar/io/http.hpp"
+#include "io_executor.h"
 #include "io_http_task.h"
+#include "ar/runtime.hpp"
 
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
 
 http_session::~http_session() {
-    close();
 }
 
 http_multipart_session::~http_multipart_session() {
-    close();
 }
 
 http::verb get_method(const http_request & request) {
@@ -95,6 +95,9 @@ future_t<error_code> http_multipart_session::async_read_part() {
 }
 
 void http_session::close() {
-    error_code ec;
-    stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+    auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
+    auto self(shared_from_this());
+    executor->Post([self](){
+        self->stream.socket().close();
+    });
 }
