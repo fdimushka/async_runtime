@@ -98,6 +98,10 @@ void http_session::close() {
     auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
     auto self(shared_from_this());
     executor->Post([self](){
-        self->stream.socket().close();
+        try {
+            self->stream.socket().close();
+        } catch (...) {
+            AR_LOG_SS(Error, "socket close failed.")
+        }
     });
 }

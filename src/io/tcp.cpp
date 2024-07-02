@@ -2,6 +2,7 @@
 #include "io_executor.h"
 #include "io_task.h"
 #include "ar/runtime.hpp"
+#include "ar/logger.hpp"
 
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
@@ -14,7 +15,11 @@ void tcp_session::close() {
     auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
     auto self(shared_from_this());
     executor->Post([self](){
-        self->socket.close();
+        try {
+            self->socket.close();
+        } catch (...) {
+            AR_LOG_SS(Error, "socket close failed.")
+        }
     });
 
     deadline.cancel();
