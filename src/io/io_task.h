@@ -35,6 +35,10 @@ namespace AsyncRuntime::IO {
         std::shared_ptr<io_task> get_ptr() { return shared_from_this(); };
 
         future_t<boost::system::error_code> get_future() { return promise.get_future(); }
+
+        void cancel() {
+            promise.set_value({boost::asio::error::timed_out, 0});
+        }
     private:
         promise_type promise;
     };
@@ -81,6 +85,13 @@ namespace AsyncRuntime::IO {
         std::shared_ptr<read_task> get_ptr() { return this->shared_from_this(); };
 
         future_t<read_result> get_future() { return promise.get_future(); }
+
+        void cancel() {
+            if (!resolved.load(std::memory_order_relaxed)) {
+                promise.set_value({boost::asio::error::timed_out, 0});
+                resolved.store(true, std::memory_order_relaxed);
+            }
+        }
     private:
         deadline_timer *deadline = {nullptr};
         std::atomic_bool resolved = {false};
