@@ -55,13 +55,13 @@ namespace AsyncRuntime::IO {
         void handler(const boost::system::error_code & ec, std::size_t bytes_transferred) {
             try {
                 if (!resolved.load(std::memory_order_relaxed)) {
-                    promise.set_value({ec, bytes_transferred});
                     resolved.store(true, std::memory_order_relaxed);
+                    promise.set_value({ec, bytes_transferred});
                 }
             } catch (...) {
                 if (!resolved.load(std::memory_order_relaxed)) {
-                    promise.set_value({boost::asio::error::eof, 0});
                     resolved.store(true, std::memory_order_relaxed);
+                    promise.set_value({boost::asio::error::eof, 0});
                 }
             }
         }
@@ -70,13 +70,13 @@ namespace AsyncRuntime::IO {
             if (deadline != nullptr && deadline->expires_at() <= deadline_timer::traits_type::now()) {
                 try {
                     if (!resolved.load(std::memory_order_relaxed)) {
-                        promise.set_value({boost::asio::error::timed_out, 0});
                         resolved.store(true, std::memory_order_relaxed);
+                        promise.set_value({boost::asio::error::timed_out, 0});
                     }
                 } catch (...) {
                     if (!resolved.load(std::memory_order_relaxed)) {
-                        promise.set_value({boost::asio::error::eof, 0});
                         resolved.store(true, std::memory_order_relaxed);
+                        promise.set_value({boost::asio::error::eof, 0});
                     }
                 }
             }
@@ -88,8 +88,8 @@ namespace AsyncRuntime::IO {
 
         void cancel() {
             if (!resolved.load(std::memory_order_relaxed)) {
-                promise.set_value({boost::asio::error::timed_out, 0});
                 resolved.store(true, std::memory_order_relaxed);
+                promise.set_value({boost::asio::error::timed_out, 0});
             }
         }
     private:

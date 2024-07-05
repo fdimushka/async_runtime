@@ -56,6 +56,7 @@ future_t<read_result> tcp_session::async_read(size_t size) {
         auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
         auto self(shared_from_this());
         auto task = std::make_shared<IO::read_task>(&deadline);
+        auto future = task->get_future();
         executor->Post([self, task, size]() {
             try {
                 boost::asio::async_read(self->socket, self->input_buffer,
@@ -70,11 +71,12 @@ future_t<read_result> tcp_session::async_read(size_t size) {
         deadline.expires_from_now(boost::posix_time::seconds(read_timeout));
         deadline.async_wait(boost::bind(&IO::read_task::handler_deadline, task->get_ptr()));
 
-        return task->get_future();
+        return std::move(future);
     } else {
         auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
         auto self(shared_from_this());
         auto task = std::make_shared<IO::read_task>();
+        auto future = task->get_future();
 
         executor->Post([self, task, size]() {
             try {
@@ -87,7 +89,7 @@ future_t<read_result> tcp_session::async_read(size_t size) {
                 task->cancel();
             }
         });
-        return task->get_future();
+        return std::move(future);
     }
 }
 
@@ -97,7 +99,7 @@ future_t<read_result> tcp_session::async_read() {
 
     if (read_timeout > 0) {
         auto task = std::make_shared<IO::read_task>(&deadline);
-
+        auto future = task->get_future();
         executor->Post([self, task]() {
             try {
                 boost::asio::async_read(self->socket, self->input_buffer,
@@ -113,10 +115,10 @@ future_t<read_result> tcp_session::async_read() {
         deadline.expires_from_now(boost::posix_time::seconds(read_timeout));
         deadline.async_wait(boost::bind(&IO::read_task::handler_deadline, task->get_ptr()));
 
-        return task->get_future();
+        return std::move(future);
     } else {
         auto task = std::make_shared<IO::read_task>();
-
+        auto future = task->get_future();
         executor->Post([self, task]() {
             try {
                 boost::asio::async_read(self->socket, self->input_buffer,
@@ -129,7 +131,7 @@ future_t<read_result> tcp_session::async_read() {
             }
         });
 
-        return task->get_future();
+        return std::move(future);
     }
 }
 
@@ -137,7 +139,7 @@ future_t<error_code> tcp_session::async_write(const char *buffer, size_t size) {
     auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
     auto self(shared_from_this());
     auto task = std::make_shared<IO::io_task>();
-
+    auto future = task->get_future();
     executor->Post([self, task, buffer, size]() {
         try {
             boost::asio::async_write(self->socket,
@@ -149,5 +151,5 @@ future_t<error_code> tcp_session::async_write(const char *buffer, size_t size) {
         }
     });
 
-    return task->get_future();
+    return std::move(future);
 }
