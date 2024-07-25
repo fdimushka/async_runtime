@@ -8,7 +8,11 @@ using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
 
 tcp_session::~tcp_session() {
-    deadline.cancel();
+    try {
+        deadline.cancel();
+    } catch (...) {
+        AR_LOG_SS(Error, "socket deadline failed.")
+    }
 }
 
 void tcp_session::close() {
@@ -22,7 +26,11 @@ void tcp_session::close() {
         }
     });
 
-    deadline.cancel();
+    try {
+        deadline.cancel();
+    } catch (...) {
+        AR_LOG_SS(Error, "socket deadline failed.")
+    }
 }
 
 void tcp_session::set_read_timeout(int seconds) {
@@ -138,18 +146,40 @@ future_t<read_result> tcp_session::async_read() {
 future_t<error_code> tcp_session::async_write(const char *buffer, size_t size) {
     auto executor = static_cast<IOExecutor*>(AsyncRuntime::Runtime::g_runtime->GetIOExecutor());
     auto self(shared_from_this());
-    auto task = std::make_shared<IO::io_task>();
-    auto future = task->get_future();
-    executor->Post([self, task, buffer, size]() {
-        try {
-            boost::asio::async_write(self->socket,
-                                     boost::asio::buffer(buffer, size),
-                                     boost::bind(&IO::io_task::handler, task->get_ptr(), boost::placeholders::_1));
-        } catch (...) {
-            AR_LOG_SS(Error, "write from socket failed.")
-            task->cancel();
-        }
-    });
+    if (read_timeout > 0) {
+        auto task = std::make_shared<IO::write_task>();
+        auto future = task->get_future();
+        executor->Post([self, task, buffer, size]() {
+            try {
+                boost::asio::async_write(self->socket,
+                                         boost::asio::buffer(buffer, size),
+                                         boost::bind(&IO::write_task::handler, task->get_ptr(),
+                                                     boost::placeholders::_1));
+            } catch (...) {
+                AR_LOG_SS(Error, "write from socket failed.")
+                task->cancel();
+            }
+        });
 
-    return std::move(future);
+        deadline.expires_from_now(boost::posix_time::seconds(read_timeout));
+        deadline.async_wait(boost::bind(&IO::write_task::handler_deadline, task->get_ptr()));
+
+        return std::move(future);
+    } else {
+        auto task = std::make_shared<IO::write_task>();
+        auto future = task->get_future();
+        executor->Post([self, task, buffer, size]() {
+            try {
+                boost::asio::async_write(self->socket,
+                                         boost::asio::buffer(buffer, size),
+                                         boost::bind(&IO::write_task::handler, task->get_ptr(),
+                                                     boost::placeholders::_1));
+            } catch (...) {
+                AR_LOG_SS(Error, "write from socket failed.")
+                task->cancel();
+            }
+        });
+
+        return std::move(future);
+    }
 }
