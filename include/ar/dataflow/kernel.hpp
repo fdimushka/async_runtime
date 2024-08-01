@@ -114,6 +114,7 @@ namespace AsyncRuntime::Dataflow {
         Sink sink;
         Notifier process_notifier;
     private:
+        KernelContextT *context = NULL;
         std::atomic<KernelState> state;
         std::string name;
         shared_future_t<int> future_res;
@@ -134,7 +135,7 @@ namespace AsyncRuntime::Dataflow {
     Kernel<KernelContextT>::~Kernel() {
         source.Flush();
         sink.DisconnectAll();
-        Terminate();
+        //Terminate();
     }
 
     template<class KernelContextT>
@@ -142,6 +143,7 @@ namespace AsyncRuntime::Dataflow {
                                           yield<int> &yield,
                                           Kernel<KernelContextT> *kernel) {
         KernelContextT context;
+        kernel->context = &context;
         try {
             int init_error = kernel->OnInit(handler, &context);
             if (init_error != 0) {
