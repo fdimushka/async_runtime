@@ -34,10 +34,14 @@ static int _get_numa_nodes_count() {
 
 
 int AsyncRuntime::SetAffinity(std::thread & thread, const AsyncRuntime::CPU &affinity_cpu) {
+#ifdef USE_NUMA
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(affinity_cpu.id, &cpuset);
     return pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+#else
+    return 1;
+#endif
 }
 
 

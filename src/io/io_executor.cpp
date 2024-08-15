@@ -50,11 +50,9 @@ void IOExecutor::Post(task *task) {
 }
 
 void Post(const io_task_ptr & task) {
-
 }
 
 void Post(const read_task_ptr & task) {
-
 }
 
 
