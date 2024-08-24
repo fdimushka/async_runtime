@@ -8,8 +8,11 @@
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::Dataflow;
 
-struct TestKernelContext : KernelContext {
+class TestKernelContext : public KernelContext {
+public:
     int data = 0;
+
+    ~TestKernelContext() override = default;
 };
 
 TEST_CASE( "run/terminate kernel", "[kernel]" ) {
@@ -20,7 +23,7 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             typedef Dataflow::Kernel<TestKernelContext> super;
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") { };
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
 
@@ -29,10 +32,10 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             }
         };
 
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run() == true);
-        REQUIRE(Await(kernel.AsyncTerminate()) == 0);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run() == true);
+        REQUIRE(Await(kernel->AsyncTerminate()) == 0);
     }
 
     SECTION( "init fail" ) {
@@ -41,7 +44,7 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             typedef Dataflow::Kernel<TestKernelContext> super;
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") { };
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return -1; }
 
@@ -50,10 +53,10 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             }
         };
 
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == -1);
-        REQUIRE(kernel.Run() == false);
-        Await(kernel.AsyncTerminate());
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == -1);
+        REQUIRE(kernel->Run() == false);
+        Await(kernel->AsyncTerminate());
     }
 
     SECTION( "then test" ) {
@@ -62,7 +65,7 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             typedef Dataflow::Kernel<TestKernelContext> super;
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") { };
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
 
@@ -72,12 +75,12 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
         };
 
         bool terminated_call = false;
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run([&terminated_call](int error){
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run([&terminated_call](int error){
             terminated_call = true;
         })== true);
-        Await(kernel.AsyncTerminate());
+        Await(kernel->AsyncTerminate());
         REQUIRE(terminated_call == true);
     }
 
@@ -87,7 +90,7 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             typedef Dataflow::Kernel<TestKernelContext> super;
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") { };
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
 
@@ -96,11 +99,41 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
             }
         };
 
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run() == true);
-        REQUIRE(Await(kernel.AsyncTerminate()) == 0);
-        REQUIRE(kernel.Run() == false);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run() == true);
+        REQUIRE(Await(kernel->AsyncTerminate()) == 0);
+        REQUIRE(kernel->Run() == false);
+    }
+
+    SECTION( "destroy kernel after init" ) {
+        class TestKernelContext2 : public KernelContext {
+        public:
+            int data = 0;
+
+            ~TestKernelContext2() override {
+                std::cout << "~TestKernelContext2" << std::endl;
+            }
+        };
+
+        class kernel_test : public Kernel<TestKernelContext2> {
+        public:
+            typedef Dataflow::Kernel<TestKernelContext2> super;
+            kernel_test() : Dataflow::Kernel<TestKernelContext2>("test_kernel") { };
+
+            ~kernel_test() override {
+                std::cout << "destroy kernel" << std::endl;
+            }
+
+            int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext2 *context) noexcept override { return 0; }
+
+            KernelProcessResult OnProcess(AsyncRuntime::CoroutineHandler *handler, TestKernelContext2 *context) override {
+                return Dataflow::KernelProcessResult::kNEXT;
+            }
+        };
+
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
     }
 
     Terminate();
@@ -115,7 +148,7 @@ TEST_CASE( "run/terminate kernel in coroutine", "[kernel]" ) {
 
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") {};
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int
             OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
@@ -128,14 +161,14 @@ TEST_CASE( "run/terminate kernel in coroutine", "[kernel]" ) {
         };
 
         bool terminated_call = false;
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit(), handler) == 0);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit(), handler) == 0);
 
-        REQUIRE(kernel.Run([&terminated_call](int error){
+        REQUIRE(kernel->Run([&terminated_call](int error){
                         terminated_call = true;
         }) == true);
         //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        REQUIRE(Await(kernel.AsyncTerminate(), handler) == 0);
+        REQUIRE(Await(kernel->AsyncTerminate(), handler) == 0);
         REQUIRE(terminated_call == true);
     });
 
@@ -153,7 +186,7 @@ TEST_CASE( "init/terminate kernel in coroutine without run", "[kernel]" ) {
 
             kernel_test() : Dataflow::Kernel<TestKernelContext>("test_kernel") {};
 
-            ~kernel_test() override { Terminate(); }
+            ~kernel_test() override { }
 
             int
             OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
@@ -166,9 +199,9 @@ TEST_CASE( "init/terminate kernel in coroutine without run", "[kernel]" ) {
         };
 
         bool terminated_call = false;
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit(), handler) == 0);
-        REQUIRE(Await(kernel.AsyncTerminate(), handler) == 0);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit(), handler) == 0);
+        REQUIRE(Await(kernel->AsyncTerminate(), handler) == 0);
     });
 
     Await(Async(coro));
@@ -185,7 +218,7 @@ TEST_CASE( "kernel sink subscription events", "[kernel]" ) {
             sink.Add<int>("output");
         };
 
-        ~kernel_test() override { Terminate(); }
+        ~kernel_test() override { }
 
         int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override { return 0; }
 
@@ -224,65 +257,66 @@ TEST_CASE( "kernel sink subscription events", "[kernel]" ) {
 
 
     SECTION( "Subscribe/Unsubscribe" ) {
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run() == true);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run() == true);
         Dataflow::PortUser port_user;
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == true);
-        kernel.GetSink().Subscribe("output", &port_user);
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == false);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == true);
+        kernel->GetSink().Subscribe("output", &port_user);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == false);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_subscription.load() >= 1);
-        kernel.GetSink().Unsubscribe("output", &port_user);
+        REQUIRE(kernel->call_subscription.load() >= 1);
+        kernel->GetSink().Unsubscribe("output", &port_user);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_unsubscription.load() >= 1);
-        REQUIRE(kernel.call_wait_subscription.load() >= 1);
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == true);
-        kernel.Terminate();
+        REQUIRE(kernel->call_unsubscription.load() >= 1);
+        REQUIRE(kernel->call_wait_subscription.load() >= 1);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == true);
+        Await(kernel->AsyncTerminate());
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_terminate.load() >= 1);
+        REQUIRE(kernel->call_terminate.load() >= 1);
     }
 
     SECTION( "Unsubscribe/Subscribe/Unsubscribe" ) {
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run() == true);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run() == true);
         Dataflow::PortUser port_user;
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == true);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == true);
 
-        kernel.GetSink().Unsubscribe("output", &port_user);
+        kernel->GetSink().Unsubscribe("output", &port_user);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_unsubscription.load() == 0);
+        REQUIRE(kernel->call_unsubscription.load() == 0);
 
-        kernel.GetSink().Subscribe("output", &port_user);
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == false);
+        kernel->GetSink().Subscribe("output", &port_user);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == false);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_subscription.load() >= 1);
+        REQUIRE(kernel->call_subscription.load() >= 1);
 
-        kernel.GetSink().Unsubscribe("output", &port_user);
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == true);
+        kernel->GetSink().Unsubscribe("output", &port_user);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == true);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_unsubscription.load() >= 1);
-        REQUIRE(kernel.call_wait_subscription.load() >= 1);
+        REQUIRE(kernel->call_unsubscription.load() >= 1);
+        REQUIRE(kernel->call_wait_subscription.load() >= 1);
 
-        kernel.Terminate();
+        Await(kernel->AsyncTerminate());
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.call_terminate.load() >= 1);
+        REQUIRE(kernel->call_terminate.load() >= 1);
     }
 
     SECTION( "Many subscribers" ) {
-        kernel_test kernel;
-        REQUIRE(Await(kernel.AsyncInit()) == 0);
-        REQUIRE(kernel.Run() == true);
+        std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
+        REQUIRE(Await(kernel->AsyncInit()) == 0);
+        REQUIRE(kernel->Run() == true);
         Dataflow::PortUser port_users[10];
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == true);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == true);
         for( int i = 0; i < 10; ++i ) {
-            kernel.GetSink().Subscribe("output", &port_users[i]);
+            kernel->GetSink().Subscribe("output", &port_users[i]);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(kernel.GetSink().SubscribersEmpty() == false);
-        REQUIRE(kernel.call_subscription.load() >= 10);
+        REQUIRE(kernel->GetSink().SubscribersEmpty() == false);
+        REQUIRE(kernel->call_subscription.load() >= 10);
+        Await(kernel->AsyncTerminate());
     }
 }
 

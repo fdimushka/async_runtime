@@ -7,6 +7,8 @@
 #include "ar/dataflow/port.hpp"
 #include "ar/dataflow/notifier.hpp"
 #include "ar/dataflow/kernel_events.hpp"
+
+#include <boost/lockfree/spsc_queue.hpp>
 #include <typeinfo>
 
 namespace AsyncRuntime::Dataflow {
@@ -19,21 +21,13 @@ namespace AsyncRuntime::Dataflow {
     class SourcePort : public Consumer< T > {
     public:
         template<class ...Arguments>
-        explicit SourcePort(Notifier *notifier, const std::string & name, size_t data_type, SharedBufferType buffer_type, Arguments &&... args)
+        explicit SourcePort(Notifier *notifier, const std::string & name, size_t data_type, SharedBufferType buffer_type, int capacity = 100)
             : Consumer< T >(name, data_type)
             , notifier(notifier)
-            , buffer(SharedBufferFactory::Make< T >(buffer_type, std::forward<Arguments>(args)...)) { };
-
-        template<class ...Arguments>
-        explicit SourcePort(Notifier *notifier, const std::string & name, size_t data_type, SharedBufferType buffer_type, const std::function<void(T &)> & deleter, Arguments &&... args)
-            : Consumer< T >(name, data_type)
-            , notifier(notifier)
-            , buffer(SharedBufferFactory::Make< T >(buffer_type, std::forward<Arguments>(args)...))
-            , deleter(deleter) { };
+            , queue(capacity) { };
 
         virtual ~SourcePort() {
             Flush();
-            delete buffer;
         }
 
         int Write(T && msg) final;
@@ -45,19 +39,25 @@ namespace AsyncRuntime::Dataflow {
         void Activate() final { active.store(true, std::memory_order_relaxed ); };
         void Deactivate() final  { active.store(false, std::memory_order_relaxed ); };
         virtual bool IsActive() { return active.load(std::memory_order_relaxed); }
-        void SetSkipCounter(const std::shared_ptr<Mon::Counter> & counter) { buffer->SetSkipCounter(counter); }
+        void SetSkipCounter(const std::shared_ptr<Mon::Counter> & counter) { skip_counter = counter; }
     private:
         std::atomic_bool active = {true };
         Notifier *notifier;
         std::function<void(T &)> deleter;
-        SharedBuffer< T > *buffer;
+        boost::lockfree::spsc_queue<T> queue;
+        std::shared_ptr<Mon::Counter> skip_counter;
     };
 
     template<class T>
     int SourcePort<T>::Write(T && msg) {
-        assert(buffer);
         SharedBufferError error = SharedBufferError::kNO_ERROR;
-        error = buffer->Write(std::move(msg));
+        if (!queue.push(std::move(msg))) {
+            error = SharedBufferError::kBUFFER_OVERFLOW;
+            if (skip_counter) {
+                skip_counter->Increment();
+            }
+        }
+
         if (notifier != nullptr) {
             notifier->Notify((int)KernelEvent::kKERNEL_EVENT_READ_SOURCE);
         }
@@ -66,9 +66,14 @@ namespace AsyncRuntime::Dataflow {
 
     template<class T>
     int SourcePort<T>::Write(const T & msg) {
-        assert(buffer);
         SharedBufferError error = SharedBufferError::kNO_ERROR;
-        error = buffer->Write(msg);
+        if (!queue.push(msg)) {
+            error = SharedBufferError::kBUFFER_OVERFLOW;
+            if (skip_counter) {
+                skip_counter->Increment();
+            }
+        }
+
         if (notifier != nullptr) {
             notifier->Notify((int)KernelEvent::kKERNEL_EVENT_READ_SOURCE);
         }
@@ -77,36 +82,26 @@ namespace AsyncRuntime::Dataflow {
 
     template<class T>
     std::optional<T> SourcePort<T>::Read() {
-        assert(buffer);
-        return buffer->Read();
+        T msg;
+        if (queue.pop(msg)) {
+            return msg;
+        } else {
+            return std::nullopt;
+        }
     }
 
     template<class T>
     bool SourcePort<T>::TryRead(T & res) {
-        assert(buffer);
-        return buffer->TryRead(res);
+        return queue.pop(res);
     }
 
     template<class T>
     bool SourcePort<T>::Empty() {
-        assert(buffer);
-        return buffer->Empty();
+        return queue.empty();
     }
 
     template<class T>
-    void SourcePort<T>::Flush() {
-        assert(buffer);
-        if (buffer->GetType() == SharedBufferType::kFIFO_BUFFER) {
-            while (!buffer->Empty()) {
-                auto v = buffer->Read();
-                if (v.has_value() && deleter) {
-                    deleter(v.value());
-                }
-            }
-        }
-
-        buffer->Flush();
-    }
+    void SourcePort<T>::Flush() { }
 
     /**
      * @class Source
