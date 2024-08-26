@@ -137,6 +137,7 @@ bool ExecutorSlot::explore_task(Worker& w, task*& t) {
 void ExecutorSlot::invoke(Worker& w, task* t) {
     task::execution_state new_state = t->get_execution_state();
     new_state.processor = w.cpu_id;
+
     t->execute(new_state);
 //    if (m_executed_tasks_count) {
 //        m_executed_tasks_count->Increment();
