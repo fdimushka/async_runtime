@@ -67,7 +67,7 @@ namespace AsyncRuntime::Dataflow {
 
         AsyncRuntime::future_t<int> AsyncInit();
 
-        bool Run(std::function<void(int)> terminated_callback);
+        bool Run(const std::function<void(int)> &terminated_callback);
         bool Run();
 
         AsyncRuntime::shared_future_t<int> AsyncTerminate();
@@ -199,7 +199,7 @@ namespace AsyncRuntime::Dataflow {
     }
 
     template<class KernelContextT>
-    bool Kernel<KernelContextT>::Run(std::function<void(int)> terminated_callback) {
+    bool Kernel<KernelContextT>::Run(const std::function<void(int)> &terminated_callback) {
         if (state.load(std::memory_order_relaxed) != kINITIALIZED) {
             return false;
         }
@@ -210,7 +210,7 @@ namespace AsyncRuntime::Dataflow {
             future_res = f.share();
 
             if (terminated_callback) {
-                future_res.then(boost::launch::sync, [terminated_callback](boost::shared_future<int> f) {
+                future_res.then(boost::launch::sync, [&terminated_callback](boost::shared_future<int> f) {
                     int res = f.get();
                     terminated_callback(res);
                     return res;

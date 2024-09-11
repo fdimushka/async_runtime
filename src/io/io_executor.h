@@ -13,7 +13,7 @@ namespace AsyncRuntime::IO {
 
     class IOExecutor : public IExecutor {
     public:
-        explicit IOExecutor(const std::string & name_, int max_threads = 4);
+        explicit IOExecutor(const std::string & name_, int max_threads = 1);
         ~IOExecutor() noexcept override;
 
         IOExecutor(const IOExecutor&) = delete;

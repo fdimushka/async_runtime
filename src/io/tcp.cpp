@@ -89,7 +89,7 @@ future_t<read_result> tcp_session::async_read(size_t size) {
         executor->Post([self, task, size]() {
             try {
                 boost::asio::async_read(self->socket, self->input_buffer,
-                                        boost::asio::transfer_at_least(size),
+                                        boost::asio::transfer_at_least(1),
                                         boost::bind(&IO::read_task::handler, task->get_ptr(), boost::placeholders::_1,
                                                     boost::placeholders::_2));
             } catch (...) {

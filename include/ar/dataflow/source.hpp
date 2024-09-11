@@ -44,7 +44,7 @@ namespace AsyncRuntime::Dataflow {
         std::atomic_bool active = {true };
         Notifier *notifier;
         std::function<void(T &)> deleter;
-        boost::lockfree::spsc_queue<T> queue;
+        boost::lockfree::spsc_queue<T, boost::lockfree::fixed_sized<true>> queue;
         std::shared_ptr<Mon::Counter> skip_counter;
     };
 
@@ -101,7 +101,14 @@ namespace AsyncRuntime::Dataflow {
     }
 
     template<class T>
-    void SourcePort<T>::Flush() { }
+    void SourcePort<T>::Flush() {
+        while (!queue.empty()) {
+            T msg;
+            if (!queue.pop(msg)) {
+                break;
+            }
+        }
+    }
 
     /**
      * @class Source
