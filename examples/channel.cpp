@@ -1,5 +1,5 @@
 #include "ar/ar.hpp"
-
+#include <boost/lockfree/spsc_queue.hpp>
 
 namespace AR = AsyncRuntime;
 //
@@ -22,9 +22,24 @@ namespace AR = AsyncRuntime;
 //    }
 //}
 
+class Foo {
+public:
+    Foo(int i) : data(i) { };
+    ~Foo() {
+        std::cout << "~Foo" << std::endl;
+    }
+    int data = 0;
+};
 
 int main() {
     AR::SetupRuntime();
+
+    {
+        boost::lockfree::spsc_queue<std::shared_ptr<Foo>> queue(25);
+        queue.push(std::make_shared<Foo>(0));
+        queue.push(std::make_shared<Foo>(1));
+        queue.push(std::make_shared<Foo>(2));
+    }
 //    AR::Channel<std::string> channel;
 //
 //    //send a -> b

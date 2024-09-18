@@ -35,11 +35,63 @@ namespace AsyncRuntime::IO {
         std::shared_ptr<io_task> get_ptr() { return shared_from_this(); };
 
         future_t<boost::system::error_code> get_future() { return promise.get_future(); }
+
+        void cancel() {
+            promise.set_value({boost::asio::error::timed_out, 0});
+        }
     private:
         promise_type promise;
     };
 
     typedef std::shared_ptr<io_task>   io_task_ptr;
+
+    class write_task : public std::enable_shared_from_this<write_task> {
+        typedef promise_t<boost::system::error_code> promise_type;
+    public:
+        explicit write_task() = default;
+        explicit write_task(deadline_timer *deadline) : deadline(deadline) {};
+        ~write_task() = default;
+
+        void handler(const boost::system::error_code & ec) {
+            try {
+                if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                    promise.set_value(ec);
+                }
+            } catch (...) {
+                if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                    promise.set_value(boost::asio::error::eof);
+                }
+            }
+        }
+
+        void handler_deadline() {
+            if (deadline != nullptr && deadline->expires_at() <= deadline_timer::traits_type::now()) {
+                try {
+                    if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                        promise.set_value(boost::asio::error::timed_out);
+                    }
+                } catch (...) {
+                    if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                        promise.set_value(boost::asio::error::eof);
+                    }
+                }
+            }
+        }
+
+        std::shared_ptr<write_task> get_ptr() { return this->shared_from_this(); };
+
+        future_t<boost::system::error_code> get_future() { return promise.get_future(); }
+
+        void cancel() {
+            if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                promise.set_value(boost::asio::error::eof);
+            }
+        }
+    private:
+        deadline_timer *deadline = {nullptr};
+        std::atomic_bool resolved = {false};
+        promise_type promise;
+    };
 
     class read_task : public std::enable_shared_from_this<read_task> {
         typedef promise_t<read_result> promise_type;
@@ -50,14 +102,12 @@ namespace AsyncRuntime::IO {
 
         void handler(const boost::system::error_code & ec, std::size_t bytes_transferred) {
             try {
-                if (!resolved.load(std::memory_order_relaxed)) {
+                if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
                     promise.set_value({ec, bytes_transferred});
-                    resolved.store(true, std::memory_order_relaxed);
                 }
             } catch (...) {
-                if (!resolved.load(std::memory_order_relaxed)) {
+                if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
                     promise.set_value({boost::asio::error::eof, 0});
-                    resolved.store(true, std::memory_order_relaxed);
                 }
             }
         }
@@ -65,14 +115,12 @@ namespace AsyncRuntime::IO {
         void handler_deadline() {
             if (deadline != nullptr && deadline->expires_at() <= deadline_timer::traits_type::now()) {
                 try {
-                    if (!resolved.load(std::memory_order_relaxed)) {
+                    if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
                         promise.set_value({boost::asio::error::timed_out, 0});
-                        resolved.store(true, std::memory_order_relaxed);
                     }
                 } catch (...) {
-                    if (!resolved.load(std::memory_order_relaxed)) {
+                    if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
                         promise.set_value({boost::asio::error::eof, 0});
-                        resolved.store(true, std::memory_order_relaxed);
                     }
                 }
             }
@@ -81,6 +129,12 @@ namespace AsyncRuntime::IO {
         std::shared_ptr<read_task> get_ptr() { return this->shared_from_this(); };
 
         future_t<read_result> get_future() { return promise.get_future(); }
+
+        void cancel() {
+            if (!std::atomic_exchange_explicit(&resolved, true, std::memory_order_acquire)) {
+                promise.set_value({boost::asio::error::timed_out, 0});
+            }
+        }
     private:
         deadline_timer *deadline = {nullptr};
         std::atomic_bool resolved = {false};

@@ -13,7 +13,7 @@ namespace AsyncRuntime::IO {
 
     class IOExecutor : public IExecutor {
     public:
-        explicit IOExecutor(const std::string & name_, int max_threads = 4);
+        explicit IOExecutor(const std::string & name_, int max_threads = 1);
         ~IOExecutor() noexcept override;
 
         IOExecutor(const IOExecutor&) = delete;
@@ -36,10 +36,19 @@ namespace AsyncRuntime::IO {
         void Post(const io_task_ptr & task);
 
         void Post(const read_task_ptr & task);
+
+        template <typename CompletionHandler>
+        void Post(CompletionHandler && handler);
     private:
         boost::asio::io_service io_service;
         boost::asio::io_service::work work;
         std::vector<std::thread> thread_pool;
+    };
+
+
+    template<typename CompletionHandler>
+    void IOExecutor::Post(CompletionHandler && handler) {
+        io_service.post(handler);
     };
 }
 

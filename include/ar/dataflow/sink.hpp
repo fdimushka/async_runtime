@@ -34,8 +34,8 @@ namespace AsyncRuntime::Dataflow {
         bool Send(const consumer_iterator & it, const T & msg);
         bool IsActive(const consumer_iterator & it);
 
-        void Connect(const std::weak_ptr<Consumer<T >> &consumer);
-        void Disconnect(const std::weak_ptr<Consumer<T >> &consumer);
+        void Connect(const std::shared_ptr<Consumer<T >> &consumer);
+        void Disconnect(const std::shared_ptr<Consumer<T >> &consumer);
         void DisconnectAll();
         virtual void Subscribe(const PortUser *user) override;
         virtual void Unsubscribe(const PortUser *user) override;
@@ -49,16 +49,14 @@ namespace AsyncRuntime::Dataflow {
         int64_t last_msg_ts;
         Notifier *notifier;
         std::function<void(T &)> deleter;
-        std::list<std::weak_ptr<Consumer< T >>> consumers;
+        std::list<std::shared_ptr<Consumer< T >>> consumers;
     };
 
     template<typename T>
-    void SinkPort<T>::Connect(const std::weak_ptr<Consumer<T >> &consumer) {
-        auto it = std::find_if(consumers.begin(), consumers.end(), [consumer](std::weak_ptr<Consumer<T >> p) {
-            std::shared_ptr<Consumer<T >> consumer_sp = consumer.lock();
-            std::shared_ptr<Consumer<T >> sp = p.lock();
-            if (consumer_sp && sp)
-                return consumer_sp == sp;
+    void SinkPort<T>::Connect(const std::shared_ptr<Consumer<T >> &consumer) {
+        auto it = std::find_if(consumers.begin(), consumers.end(), [consumer](std::shared_ptr<Consumer<T >> p) {
+            if (consumer && p)
+                return consumer == p;
             return false;
         });
         if (it != consumers.end()) {
@@ -68,12 +66,10 @@ namespace AsyncRuntime::Dataflow {
     }
 
     template<typename T>
-    void SinkPort<T>::Disconnect(const std::weak_ptr<Consumer<T >> &consumer) {
-        consumers.remove_if([consumer](std::weak_ptr<Consumer<T >> p) {
-            std::shared_ptr<Consumer<T >> consumer_sp = consumer.lock();
-            std::shared_ptr<Consumer<T >> sp = p.lock();
-            if (consumer_sp && sp)
-                return consumer_sp == sp;
+    void SinkPort<T>::Disconnect(const std::shared_ptr<Consumer<T >> &consumer) {
+        consumers.remove_if([consumer](std::shared_ptr<Consumer<T >> p) {
+            if (consumer && p)
+                return consumer == p;
             return false;
         });
     }
@@ -85,78 +81,46 @@ namespace AsyncRuntime::Dataflow {
 
     template<typename T>
     bool SinkPort<T>::Send(const consumer_iterator & it, T && msg) {
-        if (std::shared_ptr<Consumer<T >> c = (*it).lock()) {
-            if (c->Write(std::move(msg)) == 0) {
-                return true;
-            }
+        if ((*it)->Write(std::move(msg)) == 0) {
+            return true;
         }
-//        if (deleter) {
-//            deleter(msg);
-//        }
-
         return false;
     }
 
     template<typename T>
     bool SinkPort<T>::Send(const consumer_iterator & it, const T & msg) {
-        if (std::shared_ptr<Consumer<T >> c = (*it).lock()) {
-            if (c->Write(msg) == 0) {
-                return true;
-            }
+        if ((*it)->Write(msg) == 0) {
+            return true;
         }
-//        if (deleter) {
-//            deleter(msg);
-//        }
-
         return false;
     }
 
     template<typename T>
     bool SinkPort<T>::IsActive(const consumer_iterator & it) {
-        if (std::shared_ptr<Consumer<T >> c = (*it).lock()) {
-            return c->IsActive();
-        } else {
-            return false;
-        }
+        return (*it)->IsActive();
     }
 
     template<typename T>
     void SinkPort<T>::Send(const T & msg) {
         last_msg_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        typename std::list<std::weak_ptr<Consumer<T >>>::iterator it = consumers.begin();
+        typename std::list<std::shared_ptr<Consumer<T >>>::iterator it = consumers.begin();
         while (it != consumers.end()) {
-            if (std::shared_ptr<Consumer<T >> c = (*it).lock()) {
-                if (c->IsActive()) {
-                    if (c->Write(msg) != 0) {
-//                        if (deleter) {
-//                            deleter(msg);
-//                        }
-                    }
-                }
-                ++it;
-            } else {
-                it = consumers.erase(it);
+            if ((*it)->IsActive()) {
+                (*it)->Write(msg);
             }
+            ++it;
         }
     }
 
     template<typename T>
     void SinkPort<T>::Send(T && msg) {
         last_msg_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        typename std::list<std::weak_ptr<Consumer<T >>>::iterator it = consumers.begin();
+        typename std::list<std::shared_ptr<Consumer<T >>>::iterator it = consumers.begin();
         while (it != consumers.end()) {
-            if (std::shared_ptr<Consumer<T >> c = (*it).lock()) {
-                if (c->IsActive()) {
-                    if (c->Write(std::move(msg)) != 0) {
-//                        if (deleter) {
-//                            deleter(msg);
-//                        }
-                    }
-                }
-                ++it;
-            } else {
-                it = consumers.erase(it);
+            if ((*it)->IsActive()) {
+                (*it)->Write(std::move(msg));
             }
+            ++it;
         }
     }
 
