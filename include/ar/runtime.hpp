@@ -168,8 +168,9 @@ namespace AsyncRuntime {
         CheckRuntime();
         coroutine->init_promise();
         auto *task = (coroutine_task<Ret> *)coroutine->resume_task();
+        auto future = task->get_future();
         Post(task);
-        return task->get_future();
+        return std::move(future);
     }
 
     template<typename Rep, typename Period>
