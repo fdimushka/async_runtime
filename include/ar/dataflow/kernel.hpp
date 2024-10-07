@@ -28,11 +28,8 @@ namespace AsyncRuntime::Dataflow {
      */
     class KernelContext {
     public:
-        KernelContext() {
-        };
-
-        virtual ~KernelContext() {
-        };
+        KernelContext() = default;
+        virtual ~KernelContext() = default;
 
         void SetErrorCode(int code) { error_code = code; }
         void SetInterruptCallback(const std::function<int(void*)> & callback, void *opaque) {
@@ -109,13 +106,13 @@ namespace AsyncRuntime::Dataflow {
 
         virtual void OnDispose(AsyncRuntime::CoroutineHandler *handler, KernelContextT *context) { };
 
-        static int AsyncLoop(AsyncRuntime::CoroutineHandler *handler, yield<int> &yield, Kernel<KernelContextT>* kernel, KernelContextT* context);
+        static int AsyncLoop(AsyncRuntime::CoroutineHandler *handler, yield<int> &yield, Kernel<KernelContextT>* kernel);
 
         Source source;
         Sink sink;
         Notifier process_notifier;
     private:
-        std::unique_ptr<KernelContextT> context;
+        KernelContextT *context = NULL;
         std::atomic<KernelState> state;
         std::string name;
         shared_future_t<int> future_res;
@@ -128,7 +125,6 @@ namespace AsyncRuntime::Dataflow {
             , sink(&process_notifier)
             , name(name)
             , state{kREADY} {
-      context = std::make_unique<KernelContextT>();
     }
 
     template<class KernelContextT>
@@ -140,12 +136,13 @@ namespace AsyncRuntime::Dataflow {
     template<class KernelContextT>
     int Kernel<KernelContextT>::AsyncLoop(AsyncRuntime::CoroutineHandler *handler,
                                           yield<int> &yield,
-                                          Kernel<KernelContextT>* kernel,
-                                          KernelContextT* context) {
+                                          Kernel<KernelContextT>* kernel) {
+        KernelContextT context;
+        kernel->context = &context;
         try {
-            int init_error = kernel->OnInit(handler, context);
+            int init_error = kernel->OnInit(handler, &context);
             if (init_error != 0) {
-                kernel->OnDispose(handler, context);
+                kernel->OnDispose(handler, &context);
                 kernel->state.store(kTERMINATED, std::memory_order_relaxed);
                 return init_error;
             } else {
@@ -158,26 +155,26 @@ namespace AsyncRuntime::Dataflow {
 
                 auto res = kNEXT;
                 while (res == kNEXT && kernel->state.load(std::memory_order_relaxed) != kTERMINATED) {
-                    res = kernel->OnUpdate(handler, context);
+                    res = kernel->OnUpdate(handler, &context);
                 }
             }
 
             kernel->state.store(kTERMINATED, std::memory_order_relaxed);
-            kernel->OnDispose(handler, context);
+            kernel->OnDispose(handler, &context);
         } catch (std::exception & ex) {
             std::cerr << ex.what() << std::endl;
             kernel->state.store(kTERMINATED, std::memory_order_relaxed);
-            kernel->OnDispose(handler, context);
+            kernel->OnDispose(handler, &context);
             return -1;
         }
 
-        return context->GetErrorCode();
+        return context.GetErrorCode();
     }
 
     template<class KernelContextT>
     AsyncRuntime::future_t<int> Kernel<KernelContextT>::AsyncInit() {
         try {
-            coroutine = make_coroutine<int>(&Kernel<KernelContextT>::AsyncLoop, this, context.get());
+            coroutine = make_coroutine<int>(&Kernel<KernelContextT>::AsyncLoop, this);
             state.store(kREADY, std::memory_order_relaxed);
             return AsyncRuntime::Async(coroutine);
         } catch (...) {
@@ -213,9 +210,11 @@ namespace AsyncRuntime::Dataflow {
             future_res = f.share();
 
             if (terminated_callback) {
-                future_res.then(boost::launch::sync, [&terminated_callback](boost::shared_future<int> f) {
+                future_res.then(boost::launch::sync, [terminated_callback](boost::shared_future<int> f) {
                     int res = f.get();
-                    terminated_callback(res);
+                    if (terminated_callback) {
+                        terminated_callback(res);
+                    }
                     return res;
                 });
             }

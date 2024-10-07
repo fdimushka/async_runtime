@@ -47,10 +47,11 @@ future_t<bool> Ticker::AsyncTick(const task::execution_state& execution_state) {
         Runtime::g_runtime->CheckRuntime();
         curr_tick_delay = delay - curr_tick_delay;
         auto task = new ticker_task(last_tick_ts);
+        auto future = task->get_future();
         task->set_delay< Timestamp::Micro >(curr_tick_delay);
         task->set_execution_state(execution_state);
         Runtime::g_runtime->Post(task);
-        return task->get_future();
+        return future;
     } else {
         last_tick_ts = TIMESTAMP_NOW_MICRO();
         return make_resolved_future(true);

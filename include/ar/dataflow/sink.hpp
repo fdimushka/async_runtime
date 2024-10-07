@@ -15,7 +15,7 @@ namespace AsyncRuntime::Dataflow {
      */
     template<typename T>
     class SinkPort : public Port {
-        using consumer_iterator = typename std::list<std::shared_ptr<Consumer< T >>>::iterator;
+        using consumer_iterator = typename std::list<std::weak_ptr<Consumer< T >>>::iterator;
     public:
         SinkPort(const std::string & name, size_t data_type, Notifier *notifier)
             : Port(name, data_type)
@@ -28,8 +28,6 @@ namespace AsyncRuntime::Dataflow {
                 , last_msg_ts(0)
                 , deleter(deleter) { };
 
-        ~SinkPort() override = default;
-
         void Send(T && msg);
         void Send(const T & msg);
         bool Send(const consumer_iterator & it, T && msg);
@@ -39,8 +37,8 @@ namespace AsyncRuntime::Dataflow {
         void Connect(const std::shared_ptr<Consumer<T >> &consumer);
         void Disconnect(const std::shared_ptr<Consumer<T >> &consumer);
         void DisconnectAll();
-        void Subscribe(const PortUser *user) override;
-        void Unsubscribe(const PortUser *user) override;
+        virtual void Subscribe(const PortUser *user) override;
+        virtual void Unsubscribe(const PortUser *user) override;
         void Flush() final { };
         int ConsumersCount();
         int64_t GetLastMsgTs() const { return last_msg_ts; }
@@ -155,8 +153,7 @@ namespace AsyncRuntime::Dataflow {
     class Sink {
         using iterator = std::unordered_map<std::string, std::shared_ptr<Port>>::iterator;
     public:
-        explicit Sink(Notifier *notifier = nullptr) : notifier(notifier) { };
-        virtual ~Sink() = default;
+        Sink(Notifier *notifier = nullptr) : notifier(notifier) { };
 
         template<class T>
         std::shared_ptr<SinkPort<T>> Add( const std::string & port_name );
