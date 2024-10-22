@@ -77,9 +77,11 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
         bool terminated_call = false;
         std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
         REQUIRE(Await(kernel->AsyncInit()) == 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         REQUIRE(kernel->Run([&terminated_call](int error){
             terminated_call = true;
         })== true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         Await(kernel->AsyncTerminate());
         REQUIRE(terminated_call == true);
     }
@@ -139,6 +141,47 @@ TEST_CASE( "run/terminate kernel", "[kernel]" ) {
     Terminate();
 }
 
+TEST_CASE( "run/terminate kernel with resource pool", "[kernel]" ) {
+    SetupRuntime();
+
+    SECTION( "init/run/terminate" ) {
+
+        class kernel_test : public Kernel<TestKernelContext> {
+        public:
+            typedef Dataflow::Kernel<TestKernelContext> super;
+            explicit kernel_test(resource_pool *res) : resource(res), Dataflow::Kernel<TestKernelContext>(res, "test_kernel") { };
+
+            ~kernel_test() override = default;
+
+            int OnInit(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) noexcept override {
+                REQUIRE(handler->get_resource() == resource);
+                return 0;
+            }
+
+            KernelProcessResult OnProcess(AsyncRuntime::CoroutineHandler *handler, TestKernelContext *context) override {
+                REQUIRE(handler->get_resource() == resource);
+                return Dataflow::KernelProcessResult::kEND;
+            }
+        private:
+            resource_pool *resource;
+        };
+
+        auto resource_id = CreateResource();
+        {
+            auto resource = GetResource();
+            std::shared_ptr<kernel_test> kernel = make_shared_ptr<kernel_test>(resource, resource);
+            REQUIRE(Await(kernel->AsyncInit()) == 0);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            REQUIRE(kernel->Run() == true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            REQUIRE(Await(kernel->AsyncTerminate()) == 0);
+        }
+        DeleteResource(resource_id);
+    }
+
+    Terminate();
+}
+
 TEST_CASE( "run/terminate kernel in coroutine", "[kernel]" ) {
     SetupRuntime();
     auto coro = make_coroutine([](coroutine_handler *handler, yield<void> & yield) {
@@ -163,11 +206,11 @@ TEST_CASE( "run/terminate kernel in coroutine", "[kernel]" ) {
         bool terminated_call = false;
         std::shared_ptr<kernel_test> kernel = std::make_shared<kernel_test>();
         REQUIRE(Await(kernel->AsyncInit(), handler) == 0);
-
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         REQUIRE(kernel->Run([&terminated_call](int error){
                         terminated_call = true;
         }) == true);
-        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         REQUIRE(Await(kernel->AsyncTerminate(), handler) == 0);
         REQUIRE(terminated_call == true);
     });

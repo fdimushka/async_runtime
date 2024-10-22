@@ -49,7 +49,7 @@ include(Catch.cmake)
 foreach( name ${TARGETS_ALL} )
     target_include_directories( ${name} PRIVATE ${CATCH_HEADER_DIR} ${CATCH_DIR} )
     target_compile_options(${name} PRIVATE ${CXX_WARNING_FLAGS})
-    target_link_libraries(${name} ar tbb pthread)
+    target_link_libraries(${name} ar pthread)
 endforeach()
 
 foreach( name ${TARGETS_ALL} )

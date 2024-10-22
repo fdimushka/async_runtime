@@ -6,8 +6,10 @@
 #include "ar/dataflow/port.hpp"
 #include "ar/dataflow/notifier.hpp"
 #include "ar/dataflow/kernel_events.hpp"
+#include "ar/allocators.hpp"
 
 namespace AsyncRuntime::Dataflow {
+
     /**
      * @class SinkPort
      * @tparam T
@@ -16,17 +18,19 @@ namespace AsyncRuntime::Dataflow {
     template<typename T>
     class SinkPort : public Port {
         using consumer_iterator = typename std::list<std::weak_ptr<Consumer< T >>>::iterator;
+        using ConsumerPtr = std::shared_ptr<Consumer< T >>;
+        using ConsumerList = std::list<ConsumerPtr, Allocator<ConsumerPtr>>;
     public:
+        SinkPort(resource_pool *resource, const std::string & name, size_t data_type, Notifier *notifier)
+            : Port(resource, name, data_type)
+            , notifier(notifier)
+            , last_msg_ts(0)
+            , consumers(Allocator<ConsumerPtr>{resource}) { };
+
         SinkPort(const std::string & name, size_t data_type, Notifier *notifier)
             : Port(name, data_type)
             , notifier(notifier)
             , last_msg_ts(0) { };
-
-        SinkPort(const std::string & name, size_t data_type, Notifier *notifier, const std::function<void(T &)> & deleter)
-                : Port(name, data_type)
-                , notifier(notifier)
-                , last_msg_ts(0)
-                , deleter(deleter) { };
 
         void Send(T && msg);
         void Send(const T & msg);
@@ -34,8 +38,8 @@ namespace AsyncRuntime::Dataflow {
         bool Send(const consumer_iterator & it, const T & msg);
         bool IsActive(const consumer_iterator & it);
 
-        void Connect(const std::shared_ptr<Consumer<T >> &consumer);
-        void Disconnect(const std::shared_ptr<Consumer<T >> &consumer);
+        void Connect(const ConsumerPtr &consumer);
+        void Disconnect(const ConsumerPtr &consumer);
         void DisconnectAll();
         virtual void Subscribe(const PortUser *user) override;
         virtual void Unsubscribe(const PortUser *user) override;
@@ -49,7 +53,7 @@ namespace AsyncRuntime::Dataflow {
         int64_t last_msg_ts;
         Notifier *notifier;
         std::function<void(T &)> deleter;
-        std::list<std::shared_ptr<Consumer< T >>> consumers;
+        ConsumerList consumers;
     };
 
     template<typename T>
@@ -152,8 +156,14 @@ namespace AsyncRuntime::Dataflow {
      */
     class Sink {
         using iterator = std::unordered_map<std::string, std::shared_ptr<Port>>::iterator;
+        using PortMapAllocator = Allocator<std::pair<const std::string, std::shared_ptr<Port>>>;
+        using PortMap = std::unordered_map<std::string, std::shared_ptr<Port>, std::hash<std::string>, std::equal_to<std::string>, PortMapAllocator>;
     public:
         Sink(Notifier *notifier = nullptr) : notifier(notifier) { };
+        Sink(resource_pool *res, Notifier *notifier = nullptr)
+        : notifier(notifier)
+        , resource(res)
+        , port_map(PortMapAllocator{res}) { };
 
         template<class T>
         std::shared_ptr<SinkPort<T>> Add( const std::string & port_name );
@@ -179,7 +189,8 @@ namespace AsyncRuntime::Dataflow {
     private:
         std::mutex mutex;
         Notifier *notifier;
-        std::unordered_map<std::string, std::shared_ptr<Port>> port_map;
+        PortMap port_map;
+        resource_pool *resource = nullptr;
     };
 
     template< class T >
@@ -188,9 +199,16 @@ namespace AsyncRuntime::Dataflow {
         if (port_map.find(name) != port_map.cend()) {
             throw std::runtime_error("Source port already exists");
         }
-        auto port = std::make_shared<SinkPort<T>>(name, typeid(T).hash_code(), notifier);
-        port_map.template insert(std::make_pair(name, port));
-        return port;
+
+        if ( resource != nullptr) {
+            auto port = make_shared_ptr<SinkPort<T>>(resource, name, typeid(T).hash_code(), notifier);
+            port_map.template insert(std::make_pair(name, port));
+            return port;
+        } else {
+            auto port = std::make_shared<SinkPort<T>>(name, typeid(T).hash_code(), notifier);
+            port_map.template insert(std::make_pair(name, port));
+            return port;
+        }
     }
 
     template< class T >
@@ -199,9 +217,16 @@ namespace AsyncRuntime::Dataflow {
         if (port_map.find(name) != port_map.cend()) {
             throw std::runtime_error("Source port already exists");
         }
-        auto port = std::make_shared<SinkPort<T>>(name, typeid(T).hash_code(), notifier, deleter);
-        port_map.template insert(std::make_pair(name, port));
-        return port;
+
+        if ( resource != nullptr) {
+            auto port = make_shared_ptr<SinkPort<T>>(resource, name, typeid(T).hash_code(), notifier, deleter);
+            port_map.template insert(std::make_pair(name, port));
+            return port;
+        } else {
+            auto port = std::make_shared<SinkPort<T>>(name, typeid(T).hash_code(), notifier, deleter);
+            port_map.template insert(std::make_pair(name, port));
+            return port;
+        }
     }
 
     template<class T>

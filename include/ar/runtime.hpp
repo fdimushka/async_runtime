@@ -7,6 +7,7 @@
 #include "ar/coroutine.hpp"
 #include "ar/executor.hpp"
 #include "ar/metricer.hpp"
+#include "ar/resource_pool.hpp"
 
 namespace AsyncRuntime {
     class Ticker;
@@ -27,6 +28,8 @@ namespace AsyncRuntime {
     public:
         static Runtime *g_runtime;
 
+        typedef resource_pools_manager::id_type ResourceId;
+
         Runtime();
 
         ~Runtime();
@@ -45,6 +48,14 @@ namespace AsyncRuntime {
 
         template<class CounterT>
         void CreateMetricer(const std::map<std::string, std::string> &labels);
+
+        ResourceId CreateResource();
+
+        void DeleteResource(ResourceId id);
+
+        resource_pool *GetResource(ResourceId id);
+
+        resource_pool *GetResource();
 
         void Setup(const RuntimeOptions &options = {});
 
@@ -112,6 +123,10 @@ namespace AsyncRuntime {
 
         void DeleteEntityTag(EntityTag tag);
 
+        void SetCurrentResource(resource_pool * resource);
+
+        resource_pool * GetCurrentResource();
+
         std::shared_ptr<Mon::Counter>
         MakeMetricsCounter(const std::string &name, const std::map<std::string, std::string> &labels);
 
@@ -128,8 +143,6 @@ namespace AsyncRuntime {
 
         void CreateDefaultExecutors(int virtual_numa_nodes_count = 0);
 
-        void CreateTbbExecutors();
-
         void CreateMetrics();
 
         IExecutor *FetchExecutor(ExecutorType type, const EntityTag &tag);
@@ -142,6 +155,7 @@ namespace AsyncRuntime {
         IExecutor *io_executor;
         bool is_setup;
         std::shared_ptr<Mon::IMetricer> metricer;
+        resource_pools_manager resources_manager;
     };
 
     template<class Callable, class... Arguments>
@@ -397,164 +411,49 @@ namespace AsyncRuntime {
 
 
     /**
-     * @brief async open file
-     * @param stream
-     * @param filename
-     * @param flags
-     * @param mods
+     * @brief
      * @return
      */
-//    inline future_t<IOResult> AsyncFsOpen(const char *filename, int flags = O_RDWR | O_CREAT, int mode = S_IRWXU) {
-//        return Runtime::g_runtime->AsyncIO<FsOpenTask>(filename, flags, mode);
-//    }
-//
-//
-//    /**
-//     * @brief async close file
-//     * @param stream
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncFsClose(int fd) {
-//        return Runtime::g_runtime->AsyncIO<FsCloseTask>(fd);
-//    }
-//
-//
-//    /**
-//     * @brief async read from file
-//     * @param stream
-//     * @param offset
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncFsRead(int fd, const IOStreamPtr &stream, int64_t seek = -1, int64_t size = -1) {
-//        return Runtime::g_runtime->AsyncIO<FsReadTask>(fd, stream, seek);
-//    }
-//
-//
-//    /**
-//     * @brief async write to file
-//     * @param stream
-//     * @param offset
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncFsWrite(int fd, const IOStreamPtr &stream, int64_t seek = -1) {
-//        return Runtime::g_runtime->AsyncIO<FsWriteTask>(fd, stream, seek);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param handle_connection
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncConnect(const TCPConnectionPtr &connection) {
-//        return Runtime::g_runtime->AsyncIO<NetConnectionTask>(connection);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param server
-//     * @param callback
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncListen(const TCPServerPtr &server, const TCPSession::CallbackType &callback) {
-//        return Runtime::g_runtime->AsyncIO<NetListenTask>(server, callback);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param connection
-//     * @param stream
-//     * @return
-//     */
-//    inline future_t<IOResult>
-//    AsyncRead(CoroutineHandler *handler, const TCPConnectionPtr &connection, char *buffer, size_t size) {
-////        while (1) {
-////            if (connection->read_error.load(std::memory_order_relaxed) < 0) { break; }
-////            int res = Await(AsyncWaitReadStream(connection, size), handler);
-////            if (res >= size) { break; }
-////        }
-////        int res_size = ConsumeReadStream(connection, buffer, size);
-////        return std::make_shared<AsyncRuntime::Result<int>>(res_size);
-//        return {};
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param connection
-//     * @param stream
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncWrite(const TCPConnectionPtr &connection, const char *buffer, size_t size) {
-//        return Runtime::g_runtime->AsyncIO<NetWriteTask>(connection, buffer, size);
-//    }
-//
-//    /**
-//     * @brief
-//     * @param connection
-//     * @param buffer
-//     * @param size
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncSend(const TCPConnectionPtr &connection, const char *buffer, size_t size) {
-//        return Runtime::g_runtime->AsyncIO<NetTCPSendTask>(connection, buffer, size);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param connection
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncClose(const TCPConnectionPtr &connection) {
-//        return Runtime::g_runtime->AsyncIO<NetCloseTask>(connection);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param info
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncNetAddrInfo(const NetAddrInfoPtr &info) {
-//        return Runtime::g_runtime->AsyncIO<NetAddrInfoTask>(info);
-//    }
-//
-//
-//    /**
-//     * @brief async bind udp socket
-//     * @param udp
-//     * @param broadcast
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncUDPBind(const UDPPtr &udp, int flags = 0, bool broadcast = false) {
-//        return Runtime::g_runtime->AsyncIO<NetUDPBindTask>(udp, flags, broadcast);
-//    }
-//
-//
-//    /**
-//     * @brief async send to address
-//     * @param udp
-//     * @param stream
-//     * @param send_addr
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncSend(const UDPPtr &udp, const IOStreamPtr &stream, const IPv4Addr &send_addr) {
-//        return Runtime::g_runtime->AsyncIO<NetSendTask>(udp, stream, send_addr);
-//    }
-//
-//
-//    /**
-//     * @brief
-//     * @param udp
-//     * @param stream
-//     * @return
-//     */
-//    inline future_t<IOResult> AsyncRecv(const UDPPtr &udp, const IOStreamPtr &stream) {
-//        return Runtime::g_runtime->AsyncIO<NetRecvTask>(udp, stream);
-//    }
+    inline Runtime::ResourceId CreateResource() {
+        return Runtime::g_runtime->CreateResource();
+    }
+
+    /**
+     * @brief
+     * @param id
+     */
+    inline void DeleteResource(Runtime::ResourceId id) {
+        Runtime::g_runtime->DeleteResource(id);
+    }
+
+    /**
+     * @brief
+     * @param id
+     * @return
+     */
+    inline resource_pool * GetResource(Runtime::ResourceId id) {
+        if (id != 0) {
+            return Runtime::g_runtime->GetResource(id);
+        }
+
+        return Runtime::g_runtime->GetResource();
+    }
+
+    /**
+     * @brief
+     * @return
+     */
+    inline resource_pool * GetResource() {
+        return Runtime::g_runtime->GetResource();
+    }
+
+    /**
+     * @brief
+     * @return
+     */
+    inline resource_pool * GetCurrentResource() {
+        return Runtime::g_runtime->GetCurrentResource();
+    }
 }
 
 

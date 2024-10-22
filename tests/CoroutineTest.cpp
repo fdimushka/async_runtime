@@ -3,7 +3,7 @@
 
 
 #include "catch.hpp"
-#include "ar/coroutine.hpp"
+#include "ar/runtime.hpp"
 
 
 using namespace AsyncRuntime;

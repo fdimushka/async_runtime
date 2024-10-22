@@ -8,6 +8,8 @@
 #include <boost/thread/future.hpp>
 #include <boost/context/continuation.hpp>
 #include <boost/function_types/result_type.hpp>
+#include <boost/pool/object_pool.hpp>
+#include <boost/pool/pool_alloc.hpp>
 
 #include "ar/object.hpp"
 #include "ar/logger.hpp"
@@ -17,6 +19,8 @@
 
 namespace AsyncRuntime {
     class IExecutor;
+
+    class task_pool;
 
     class task {
     public:

@@ -12,7 +12,6 @@ option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" OFF)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 option(WITH_NUMA "Use numa topology" ON)
-option(WITH_OPENCV "Use opencv" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
 message(STATUS "Build with tests: ${WITH_TESTS}")
@@ -21,7 +20,6 @@ message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Build with profiler: ${WITH_PROFILER}")
 message(STATUS "Build with numa: ${WITH_NUMA}")
-message(STATUS "Build with opencv: ${WITH_OPENCV}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
@@ -43,10 +41,6 @@ endif()
 
 if (WITH_NUMA)
     set(USE_NUMA ON)
-endif()
-
-if (WITH_OPENCV)
-    set(USE_OPENCV ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -80,12 +74,6 @@ file(GLOB SOURCES   src/*.cpp
                     src/dataflow/*.cpp)
 file(GLOB HEADERS include/${LIB_NAME}/*.hpp include/${LIB_NAME}/dataflow/*.hpp)
 
-if (WITH_OPENCV)
-    include(cmake/opencv.cmake)
-else()
-    list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/opencv_executor.cpp")
-endif()
-
 include_directories(include/)
 include_directories(src/)
 include_directories(src/io)
@@ -93,16 +81,12 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LibUV_INCLUDE_DIR})
 include_directories(third_party)
 
-add_library(${LIB_NAME} ${ASM_SOURCES} ${SOURCES})
+add_library(${LIB_NAME} ${SOURCES})
 
-target_link_libraries(${LIB_NAME} pthread flatbuffers ${BOOST_LIBRARIES})
+target_link_libraries(${LIB_NAME} pthread ${BOOST_LIBRARIES})
 
 if (WITH_NUMA)
     target_link_libraries(${LIB_NAME} numa)
-endif()
-
-if (WITH_OPENCV)
-    target_link_libraries(${LIB_NAME} ${OpenCV_LIBS})
 endif()
 
 if (WITH_PROFILER)
@@ -112,6 +96,7 @@ if (WITH_PROFILER)
                     ${CMAKE_CURRENT_BINARY_DIR}/third_party/flatbuffers/flatc -o ${CMAKE_CURRENT_SOURCE_DIR}/profiler-viewer/ --ts ${CMAKE_CURRENT_SOURCE_DIR}/src/fbs/profiler_schema.fbs
             DEPENDS flatc)
     add_dependencies(${LIB_NAME} fbs_generation)
+    target_link_libraries(${LIB_NAME} flatbuffers)
 endif()
 
 if (WITH_TESTS)

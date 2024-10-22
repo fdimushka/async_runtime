@@ -7,6 +7,7 @@
 #include "ar/dataflow/notifier.hpp"
 #include "ar/dataflow/port.hpp"
 #include "ar/dataflow/kernel_events.hpp"
+#include "ar/allocators.hpp"
 
 namespace AsyncRuntime::Dataflow {
 
@@ -62,6 +63,7 @@ namespace AsyncRuntime::Dataflow {
                       "KernelContextT must derive from KernelContext");
     public:
         explicit Kernel(const std::string &name);
+        Kernel(resource_pool *resource, const std::string &name);
 
         virtual ~Kernel();
 
@@ -112,11 +114,11 @@ namespace AsyncRuntime::Dataflow {
         Sink sink;
         Notifier process_notifier;
     private:
-        KernelContextT *context = NULL;
         std::atomic<KernelState> state;
         std::string name;
         shared_future_t<int> future_res;
         std::shared_ptr<AsyncRuntime::coroutine<int>> coroutine;
+        resource_pool *resource = nullptr;
     };
 
     template<class KernelContextT>
@@ -125,6 +127,15 @@ namespace AsyncRuntime::Dataflow {
             , sink(&process_notifier)
             , name(name)
             , state{kREADY} {
+    }
+
+    template<class KernelContextT>
+    Kernel<KernelContextT>::Kernel(resource_pool *res, const std::string &name)
+            : source(res, &process_notifier)
+            , sink(&process_notifier)
+            , name(name)
+            , state{kREADY}
+            , resource(res) {
     }
 
     template<class KernelContextT>
@@ -138,7 +149,6 @@ namespace AsyncRuntime::Dataflow {
                                           yield<int> &yield,
                                           Kernel<KernelContextT>* kernel) {
         KernelContextT context;
-        kernel->context = &context;
         try {
             int init_error = kernel->OnInit(handler, &context);
             if (init_error != 0) {
@@ -174,7 +184,11 @@ namespace AsyncRuntime::Dataflow {
     template<class KernelContextT>
     AsyncRuntime::future_t<int> Kernel<KernelContextT>::AsyncInit() {
         try {
-            coroutine = make_coroutine<int>(&Kernel<KernelContextT>::AsyncLoop, this);
+            if (resource != nullptr) {
+                coroutine = make_coroutine<int>(resource, &Kernel<KernelContextT>::AsyncLoop, this);
+            }else{
+                coroutine = make_coroutine<int>(&Kernel<KernelContextT>::AsyncLoop, this);
+            }
             state.store(kREADY, std::memory_order_relaxed);
             return AsyncRuntime::Async(coroutine);
         } catch (...) {
