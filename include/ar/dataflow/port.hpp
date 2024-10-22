@@ -18,8 +18,10 @@ namespace AsyncRuntime::Dataflow {
      * @brief
      */
     class Port {
+        using PortSet = std::set<const PortUser*, std::less<const PortUser*>, Allocator<const PortUser*>>;
     public:
-        explicit Port(const std::string & name, size_t data_type);
+        Port(const std::string & name, size_t data_type);
+        Port(resource_pool *resource, const std::string & name, size_t data_type);
         virtual ~Port() = default;
 
         const std::string & GetName() const { return name; }
@@ -32,7 +34,7 @@ namespace AsyncRuntime::Dataflow {
         virtual void Deactivate() {  };
     private:
         std::string name;
-        std::set<const PortUser*> subscribers;
+        PortSet subscribers;
         std::atomic_size_t subscribers_count = {0};
         size_t data_type;
     };

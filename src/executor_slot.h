@@ -57,6 +57,8 @@ namespace AsyncRuntime {
         void delete_entity();
 
         int get_util();
+
+        std::vector<std::thread::id> get_thread_ids() const;
     private:
         inline size_t num_workers() const noexcept;
 

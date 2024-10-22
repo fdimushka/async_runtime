@@ -7,156 +7,58 @@
 #include <memory>
 #include <cstdlib>
 
-#include "ar/macros.hpp"
-
-# if defined(RNT_USE_SEGMENTED_STACKS)
-extern "C" {
-void *__splitstack_makecontext( std::size_t,
-                                void * [RNT_CONTEXT_SEGMENTS],
-                                std::size_t *);
-
-void __splitstack_releasecontext( void * [RNT_CONTEXT_SEGMENTS]);
-
-void __splitstack_resetcontext( void * [RNT_CONTEXT_SEGMENTS]);
-
-void __splitstack_block_signals_context( void * [RNT_CONTEXT_SEGMENTS],
-                                         int * new_value, int * old_value);
-}
-# endif
+#include <boost/context/continuation.hpp>
 
 namespace AsyncRuntime {
+    namespace ctx = boost::context;
 
-    /**
-     * @struct StackTraits
-     * @brief
-     */
-    struct  StackTraits
-    {
-        static bool IsUnbounded() RNT_NOEXCEPT_OR_NOTHROW;
-        static std::size_t PageSize() RNT_NOEXCEPT_OR_NOTHROW;
-        static std::size_t DefaultSize() RNT_NOEXCEPT_OR_NOTHROW;
-        static std::size_t MinimumSize() RNT_NOEXCEPT_OR_NOTHROW;
-        static std::size_t MaximumSize() RNT_NOEXCEPT_OR_NOTHROW;
-    };
-
-
-    /**
-     * @struct
-     * @brief
-     */
-    struct StackContext {
-        StackContext() :sp(0), size(0)
-# if defined(RNT_USE_SEGMENTED_STACKS)
-        , segments_ctx()
-# endif
-        {};
-
-        std::size_t              size;
-        void                    *sp;
-
-# if defined(RNT_USE_SEGMENTED_STACKS)
-        typedef void *  segments_context[RNT_CONTEXT_SEGMENTS];
-# endif
-
-# if defined(RNT_USE_SEGMENTED_STACKS)
-        segments_context        segments_ctx{};
-# endif
-    };
-
-    struct Preallocated {
-        void        *   sp;
-        std::size_t     size;
-        StackContext   sctx;
-
-        Preallocated( void * sp_, std::size_t size_, StackContext sctx_) noexcept :
-                sp( sp_), size( size_), sctx( sctx_) {
-        }
-    };
-
-    /**
-     * @class BasicFixedSizeStack<>
-     * @brief
-     * @tparam TraitsT
-     */
-    template< typename TraitsT >
-    class BasicFixedSizeStack {
+    template< typename traitsT >
+    class basic_fixedsize_stack {
     private:
         std::size_t     size_;
 
     public:
-        typedef TraitsT traits_type;
+        typedef traitsT traits_type;
 
-
-        explicit BasicFixedSizeStack( std::size_t size = traits_type::DefaultSize() ) RNT_NOEXCEPT_OR_NOTHROW :
+        basic_fixedsize_stack( std::size_t size = traits_type::default_size() ) BOOST_NOEXCEPT_OR_NOTHROW :
                 size_( size) {
+                }
+
+        ctx::stack_context allocate() {
+#if defined(BOOST_CONTEXT_USE_MAP_STACK)
+            void * vp = ::mmap( 0, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+        if ( vp == MAP_FAILED) {
+            throw std::bad_alloc();
         }
-
-
-        virtual StackContext Allocate() {
+#else
             void * vp = std::malloc( size_);
             if ( ! vp) {
                 throw std::bad_alloc();
             }
-
-            //std::memset(vp, 0, size_);
-
-            StackContext sctx;
+#endif
+            ctx::stack_context sctx;
             sctx.size = size_;
             sctx.sp = static_cast< char * >( vp) + sctx.size;
+#if defined(BOOST_USE_VALGRIND)
+            sctx.valgrind_stack_id = VALGRIND_STACK_REGISTER( sctx.sp, vp);
+#endif
             return sctx;
         }
 
+        void deallocate( ctx::stack_context & sctx) BOOST_NOEXCEPT_OR_NOTHROW {
+            BOOST_ASSERT( sctx.sp);
 
-        virtual void Deallocate( StackContext & sctx) RNT_NOEXCEPT_OR_NOTHROW {
-            assert( sctx.sp);
+#if defined(BOOST_USE_VALGRIND)
+            VALGRIND_STACK_DEREGISTER( sctx.valgrind_stack_id);
+#endif
             void * vp = static_cast< char * >( sctx.sp) - sctx.size;
+#if defined(BOOST_CONTEXT_USE_MAP_STACK)
+            ::munmap( vp, sctx.size);
+#else
             std::free( vp);
+#endif
         }
     };
-
-# if defined(RNT_USE_SEGMENTED_STACKS)
-    /**
-     * @brief
-     * @tparam TraitsT
-     */
-    template< typename TraitsT >
-    class BasicSegmentedStack {
-    private:
-        std::size_t     size_;
-
-    public:
-        typedef TraitsT traits_type;
-
-
-        explicit BasicSegmentedStack( std::size_t size = traits_type::DefaultSize() ) RNT_NOEXCEPT_OR_NOTHROW :
-                size_( size) {
-        }
-
-
-        virtual StackContext Allocate() {
-            AsyncRuntime::StackContext sctx;
-            void * vp = __splitstack_makecontext( size_, sctx.segments_ctx, & sctx.size);
-            if ( ! vp) throw std::bad_alloc();
-
-            // sctx.size is already filled by __splitstack_makecontext
-            sctx.sp = static_cast< char * >( vp) + sctx.size;
-
-            int off = 0;
-
-            __splitstack_block_signals_context( sctx.segments_ctx, & off, 0);
-
-            return sctx;
-        }
-
-
-        virtual void Deallocate( StackContext & sctx) RNT_NOEXCEPT_OR_NOTHROW {
-            __splitstack_releasecontext( sctx.segments_ctx);
-        }
-    };
-    typedef BasicSegmentedStack< StackTraits > SegmentedStack;
-# endif
-
-    typedef BasicFixedSizeStack< StackTraits > FixedSizeStack;
 }
 
 #endif //AR_STACK_H

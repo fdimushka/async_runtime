@@ -2,18 +2,11 @@
 #include "ar/logger.hpp"
 #include "ar/profiler.hpp"
 #include "ar/cpu_helper.hpp"
+#include "ar/resource_pool.hpp"
 #include "numbers.h"
 #include "config.hpp"
 
 #include "io_executor.h"
-
-#ifdef USE_OPENCV
-#include "ar/opencv_executor.h"
-#endif
-
-#ifdef USE_TBB
-#include "tbb_executor.h"
-#endif
 
 using namespace AsyncRuntime;
 
@@ -119,27 +112,35 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     if (main_executor == nullptr) {
         throw std::runtime_error("main executor not setup");
     }
+
+    for (const auto *cpu_executor : cpu_executors) {
+        resources_manager.add_thread_ids(cpu_executor->GetThreadIds());
+    }
 }
 
-void Runtime::CreateTbbExecutors() {
-#ifdef USE_TBB
-    std::vector<TBBExecutor *> tbb_executors;
-    std::vector<tbb::numa_node_id> numa_indexes = tbb::info::numa_nodes();
-    for (size_t i = 0; i < numa_indexes.size(); ++i) {
-        auto executor = new TBBExecutor("TBBExecutor_" + std::to_string(i), i, tbb::info::default_concurrency(numa_indexes[i]), work_groups_option);
-        executor->SetIndex(i);
-        if (main_executor == nullptr) {
-            main_executor = executor;
-        }
-        executors.insert(std::make_pair(i, executor));
-    }
-
-    if (main_executor == nullptr) {
-        throw std::runtime_error("main executor not setup");
-    }
-#endif
+Runtime::ResourceId Runtime::CreateResource() {
+   return resources_manager.create_resource();
 }
 
+void Runtime::DeleteResource(Runtime::ResourceId id) {
+    resources_manager.delete_resource(id);
+}
+
+resource_pool * Runtime::GetResource(Runtime::ResourceId id) {
+    return resources_manager.get_resource(id);
+}
+
+resource_pool * Runtime::GetResource() {
+    return resources_manager.get_default_resource();
+}
+
+resource_pool * Runtime::GetCurrentResource() {
+    return resources_manager.get_current_resource();
+}
+
+void Runtime::SetCurrentResource(resource_pool * resource) {
+    resources_manager.set_current_resource(resource);
+}
 
 EntityTag Runtime::AddEntityTag(void *ptr) {
     auto executor = FetchFreeExecutor(kCPU_EXECUTOR);

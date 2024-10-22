@@ -164,6 +164,14 @@ int ExecutorSlot::get_util() {
     return entities_count.load(std::memory_order_relaxed);
 }
 
+std::vector<std::thread::id> ExecutorSlot::get_thread_ids() const {
+    std::vector<std::thread::id> ids;
+    for (const auto &it : wids) {
+        ids.emplace_back(it.first);
+    }
+    return std::move(ids);
+}
+
 void ExecutorSlot::post(task *task) {
 //    if (m_posted_tasks_count) {
 //        m_posted_tasks_count->Increment();

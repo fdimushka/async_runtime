@@ -79,6 +79,8 @@ namespace AsyncRuntime {
         void Post(task *task);
 
         void DeleteEntity(uint16_t id);
+
+        const std::vector<ExecutorSlot*> & GetSlots() const { return slots;}
     private:
         std::shared_ptr<Mon::IMetricer> metricer;
         std::shared_ptr<Mon::Counter>   workers_count;
@@ -110,6 +112,8 @@ namespace AsyncRuntime {
         Executor& operator =(const Executor&) = delete;
         Executor& operator =(Executor&&) = delete;
 
+        const std::vector<std::thread::id> & GetThreadIds() const { return thread_ids; }
+
         void MakeMetrics(const std::shared_ptr<Mon::IMetricer> &m) override;
 
         uint16_t AddEntity(void *ptr) override;
@@ -121,7 +125,7 @@ namespace AsyncRuntime {
         std::atomic_uint16_t                                     entities_inc;
         std::vector<ExecutorWorkGroup*>                          groups;
         ExecutorWorkGroup                                        *main_group;
-
+        std::vector<std::thread::id>                             thread_ids;
     };
 }
 

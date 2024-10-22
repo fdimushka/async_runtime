@@ -5,72 +5,25 @@
 #include <type_traits>
 
 #include "ar/task.hpp"
-
-#include <boost/thread.hpp>
-#include <boost/thread/future.hpp>
-#include <boost/context/continuation.hpp>
-#include <boost/function_types/result_type.hpp>
-#include <boost/pool/simple_segregated_storage.hpp>
+#include "ar/resource_pool.hpp"
+#include "ar/stack.hpp"
+#include "ar/pooled_stack.hpp"
+#include "ar/allocators.hpp"
 
 namespace AsyncRuntime {
+    inline resource_pool * GetResource();
+    inline resource_pool * GetResource(int64_t resource_id);
+    inline resource_pool * GetCurrentResource();
+
     namespace ctx = boost::context;
-
-    //struct stack_pool {};
-    //static boost::singleton_pool<stack_pool, sizeof(int)> _stacks_pool;
-
-    template< typename traitsT >
-    class basic_fixedsize_stack {
-    private:
-        std::size_t     size_;
-
-    public:
-        typedef traitsT traits_type;
-
-        basic_fixedsize_stack( std::size_t size = traits_type::default_size() ) BOOST_NOEXCEPT_OR_NOTHROW :
-                size_( size) {
-        }
-
-        ctx::stack_context allocate() {
-#if defined(BOOST_CONTEXT_USE_MAP_STACK)
-            void * vp = ::mmap( 0, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-        if ( vp == MAP_FAILED) {
-            throw std::bad_alloc();
-        }
-#else
-            void * vp = std::malloc( size_);
-            if ( ! vp) {
-                throw std::bad_alloc();
-            }
-#endif
-            ctx::stack_context sctx;
-            sctx.size = size_;
-            sctx.sp = static_cast< char * >( vp) + sctx.size;
-#if defined(BOOST_USE_VALGRIND)
-            sctx.valgrind_stack_id = VALGRIND_STACK_REGISTER( sctx.sp, vp);
-#endif
-            return sctx;
-        }
-
-        void deallocate( ctx::stack_context & sctx) BOOST_NOEXCEPT_OR_NOTHROW {
-            BOOST_ASSERT( sctx.sp);
-
-#if defined(BOOST_USE_VALGRIND)
-            VALGRIND_STACK_DEREGISTER( sctx.valgrind_stack_id);
-#endif
-            void * vp = static_cast< char * >( sctx.sp) - sctx.size;
-#if defined(BOOST_CONTEXT_USE_MAP_STACK)
-            ::munmap( vp, sctx.size);
-#else
-            std::free( vp);
-#endif
-        }
-    };
 
     template< typename T >
     class coroutine;
 
     template< typename T >
     class coroutine_task;
+
+    void set_current_resource(resource_pool *resource);
 
     class coroutine_handler : public std::enable_shared_from_this<coroutine_handler> {
     public:
@@ -89,6 +42,8 @@ namespace AsyncRuntime {
         virtual void suspend_with(std::function<void(coroutine_handler *handler)> fn) = 0;
 
         virtual task *resume_task() = 0;
+
+        virtual resource_pool *get_resource() const = 0;
 
         const task::execution_state &get_execution_state() const { return execution_state; }
 
@@ -169,12 +124,21 @@ namespace AsyncRuntime {
         typedef coroutine<Ret> coroutine_t;
         typedef yield<Ret> yield_t;
         friend class coroutine_task<Ret>;
-        typedef basic_fixedsize_stack< ctx::stack_traits >  fixedsize_stack;
     public:
         coroutine() = default;
 
-        explicit coroutine(coroutine::Fn &&f) : fn(f), end{false} {
-            continuation = ctx::continuation(ctx::callcc(std::allocator_arg, fixedsize_stack(), [this](ctx::continuation &&c) {
+        explicit coroutine(coroutine::Fn &&f) : fn(f), end{false}, resource{nullptr} {
+            continuation = ctx::continuation(ctx::callcc(std::allocator_arg, basic_fixedsize_stack<ctx::stack_traits>(), [this](ctx::continuation &&c) {
+                y.continuation = std::move(c);
+                y.continuation = y.continuation.resume();
+                call();
+                end.store(true, std::memory_order_relaxed);
+                return std::move(y.continuation);
+            }));
+        }
+
+        explicit coroutine(coroutine::Fn &&f, resource_pool *res) : fn(f), end{false}, resource{res} {
+            continuation = ctx::continuation(ctx::callcc(std::allocator_arg, pooled_fixedsize_stack<ctx::stack_traits>(res), [this](ctx::continuation &&c) {
                 y.continuation = std::move(c);
                 y.continuation = y.continuation.resume();
                 call();
@@ -221,6 +185,8 @@ namespace AsyncRuntime {
 
         std::shared_ptr<coroutine_t> get_ptr() { return std::static_pointer_cast<coroutine_t>(shared_from_this()); };
 
+        resource_pool *get_resource() const final { return resource; }
+
         void init_promise() { y.promise = {}; }
     private:
         inline void call();
@@ -233,6 +199,7 @@ namespace AsyncRuntime {
         ctx::continuation continuation;
         std::atomic_bool end;
         yield_t y;
+        resource_pool *resource = nullptr;
     };
 
     template< typename T >
@@ -272,11 +239,14 @@ namespace AsyncRuntime {
 
         void execute(const execution_state & state) override {
             try {
+                set_current_resource(coro->get_resource());
                 task::state = state;
                 coro->set_execution_state(state);
                 coro->resume();
+                set_current_resource(nullptr);
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
+                set_current_resource(nullptr);
             }
         }
 
@@ -284,6 +254,15 @@ namespace AsyncRuntime {
     private:
         std::shared_ptr<coroutine<Ret>> coro;
     };
+
+    template<typename T>
+    Allocator<T>::Allocator(const coroutine_handler *handler) {
+        if (handler->get_resource() != nullptr) {
+            resource = handler->get_resource();
+        } else {
+            resource = GetResource();
+        }
+    }
 
     template <typename Ret = void, typename Fn, typename ...Arguments>
     std::shared_ptr<coroutine<Ret>> make_coroutine(Fn &&fn, Arguments &&... args) {
@@ -293,6 +272,32 @@ namespace AsyncRuntime {
     template <typename Ret = void, typename Fn>
     std::shared_ptr<coroutine<Ret>> make_coroutine(Fn &&fn) {
         return std::make_shared<coroutine<Ret>>(std::forward<Fn>(fn));
+    }
+
+    template <typename Ret = void, typename Fn, typename ...Arguments>
+    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn, Arguments &&... args) {
+        auto resource = GetResource(resource_id);
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource},
+                std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
+                resource);
+    }
+
+    template <typename Ret = void, typename Fn>
+    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn) {
+        auto resource = GetResource(resource_id);
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource}, std::forward<Fn>(fn), resource);
+    }
+
+    template <typename Ret = void, typename Fn, typename ...Arguments>
+    std::shared_ptr<coroutine<Ret>> make_coroutine(resource_pool *resource, Fn &&fn, Arguments &&... args) {
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource},
+                std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
+                resource);
+    }
+
+    template <typename Ret = void, typename Fn>
+    std::shared_ptr<coroutine<Ret>> make_coroutine(resource_pool *resource, Fn &&fn) {
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource}, std::forward<Fn>(fn), resource);
     }
 
     typedef coroutine_handler CoroutineHandler;

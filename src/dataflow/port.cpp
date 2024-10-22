@@ -6,6 +6,12 @@ Port::Port(const std::string & name, size_t data_type)
     : name(name), data_type(data_type) {
 }
 
+Port::Port(resource_pool *resource, const std::string & name, size_t data_type)
+    : name(name)
+    , subscribers(Allocator<const PortUser*>{resource})
+    , data_type(data_type) {
+}
+
 void Port::Subscribe(const PortUser *user) {
     subscribers.insert(user);
     subscribers_count.store(subscribers.size(), std::memory_order_relaxed);

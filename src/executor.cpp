@@ -145,7 +145,15 @@ Executor::Executor(const std::string &name_,
     for (int i = 0; i < cpus.size(); ++i) { cpus_wg[i] = 0; }
 
     for (int i = 0; i < work_groups_option.size(); ++i) {
-        groups.push_back(new ExecutorWorkGroup(i, work_groups_option[i], cpus, cpus_wg));
+        auto group = new ExecutorWorkGroup(i, work_groups_option[i], cpus, cpus_wg);
+        for(const auto *slot : group->GetSlots()) {
+            auto slot_thread_ids = slot->get_thread_ids();
+            for(auto thread_id : slot_thread_ids) {
+                thread_ids.push_back(thread_id);
+            }
+        }
+
+        groups.push_back(group);
     }
 
     main_group = groups[0];
