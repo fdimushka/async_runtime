@@ -28,6 +28,8 @@ namespace AsyncRuntime {
         void deallocate(void *ptr, size_t size);
 
         void deallocate(void *ptr);
+
+        int64_t get_id() const { return id; }
     private:
         int64_t id;
         size_t chunk_size;

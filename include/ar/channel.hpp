@@ -6,6 +6,8 @@
 #include "ar/object.hpp"
 #include "ar/array.hpp"
 #include "ar/work_steal_queue.hpp"
+#include "ar/resource_pool.hpp"
+#include "ar/allocators.hpp"
 
 #include <iostream>
 #include <map>
@@ -53,23 +55,38 @@ namespace AsyncRuntime {
         friend CHANNEL_TEST_FRIEND;
 #endif
     public:
+        Channel() = default;
+        explicit Channel(resource_pool *resource);
+
         typedef Watcher<T>  WatcherType;
 
         void Send(const T& msg);
 
         std::shared_ptr<WatcherType> Watch();
 
+        std::shared_ptr<WatcherType> Watch(resource_pool *resource);
+
         void UnWatch(const std::shared_ptr<WatcherType>& watcher);
     private:
         std::mutex                                             mutex;
-        std::map<ObjectID, std::shared_ptr<WatcherType>>       watchers;
+        map<ObjectID, std::shared_ptr<WatcherType>>            watchers;
     };
 
+    template<typename T>
+    Channel<T>::Channel(resource_pool *resource) : watchers(resource) { }
 
     template<typename T>
     std::shared_ptr<Watcher<T>> Channel<T>::Watch() {
         std::lock_guard<std::mutex> lock(mutex);
         auto watcher = std::make_shared<Watcher<T>>();
+        watchers.insert(std::make_pair(watcher->GetID(), watcher));
+        return watcher;
+    }
+
+    template<typename T>
+    std::shared_ptr<Watcher<T>> Channel<T>::Watch(resource_pool *resource) {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto watcher = make_shared_ptr<Watcher<T>>(resource);
         watchers.insert(std::make_pair(watcher->GetID(), watcher));
         return watcher;
     }

@@ -141,6 +141,42 @@ namespace AsyncRuntime {
 
         return {ptr, std::bind(deleter, std::placeholders::_1, alloc)};
     }
+
+
+    template <typename _Key, typename _Tp, typename _Compare = std::less<_Key>>
+    class map : public std::map<_Key, _Tp, _Compare, Allocator<std::pair<const _Key, _Tp>>> {
+        using Alloc = Allocator<std::pair<const _Key, _Tp>>;
+    public:
+        map() = default;
+
+        map(resource_pool *resource)
+        :std::map<_Key, _Tp, _Compare, Alloc>(Alloc{resource}) {
+        }
+    };
+
+
+    template<typename _Key, typename _Tp,
+            typename _Hash = std::hash<_Key>,
+            typename _Pred = std::equal_to<_Key>>
+    class unordered_map : public std::unordered_map<_Key, _Tp, _Hash, _Pred, Allocator<std::pair<const _Key, _Tp>>> {
+        using Alloc = Allocator<std::pair<const _Key, _Tp>>;
+    public:
+        unordered_map() = default;
+
+        unordered_map(resource_pool *resource)
+        :std::unordered_map<_Key, _Tp, _Hash, _Pred, Alloc>(Alloc{resource}) {
+        }
+    };
+
+    template<typename _Tp>
+    class list : public std::list<_Tp, Allocator<_Tp>> {
+    public:
+        list() = default;
+
+        list(resource_pool *resource) : std::list<_Tp, Allocator<_Tp>>(Allocator<_Tp>{resource}) {
+
+        }
+    };
 }
 
 #endif //AR_ALLOCATORS_H
