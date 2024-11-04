@@ -39,6 +39,10 @@ namespace AsyncRuntime::Dataflow {
         }
 
         int GetErrorCode() const { return error_code; }
+
+        void SetResource(resource_pool *res) { resource = res; }
+
+        resource_pool *GetResource() { return resource; }
     protected:
         int Interrupt() {
             if (interrupt_callback) {
@@ -47,6 +51,9 @@ namespace AsyncRuntime::Dataflow {
                 return 0;
             }
         }
+
+      resource_pool *resource = nullptr;
+
     private:
         std::function<int(void*)> interrupt_callback;
         void *interrupt_callback_opaque = nullptr;
@@ -113,12 +120,12 @@ namespace AsyncRuntime::Dataflow {
         Source source;
         Sink sink;
         Notifier process_notifier;
+        resource_pool *resource = nullptr;
     private:
         std::atomic<KernelState> state;
         std::string name;
         shared_future_t<int> future_res;
         std::shared_ptr<AsyncRuntime::coroutine<int>> coroutine;
-        resource_pool *resource = nullptr;
     };
 
     template<class KernelContextT>
@@ -149,6 +156,7 @@ namespace AsyncRuntime::Dataflow {
                                           yield<int> &yield,
                                           Kernel<KernelContextT>* kernel) {
         KernelContextT context;
+        context.SetResource(kernel->resource);
         try {
             int init_error = kernel->OnInit(handler, &context);
             if (init_error != 0) {

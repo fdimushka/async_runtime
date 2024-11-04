@@ -19,9 +19,3 @@ void coroutine_handler::destroy() {
 
     PROFILER_ADD_EVENT(reinterpret_cast<std::uintptr_t>(this), Profiler::DELETE_COROUTINE);
 }
-
-void AsyncRuntime::set_current_resource(resource_pool *resource) {
-    if (Runtime::g_runtime != nullptr) {
-        Runtime::g_runtime->SetCurrentResource(resource);
-    }
-}

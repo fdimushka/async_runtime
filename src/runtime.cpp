@@ -112,10 +112,6 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     if (main_executor == nullptr) {
         throw std::runtime_error("main executor not setup");
     }
-
-    for (const auto *cpu_executor : cpu_executors) {
-        resources_manager.add_thread_ids(cpu_executor->GetThreadIds());
-    }
 }
 
 Runtime::ResourceId Runtime::CreateResource() {
@@ -132,14 +128,6 @@ resource_pool * Runtime::GetResource(Runtime::ResourceId id) {
 
 resource_pool * Runtime::GetResource() {
     return resources_manager.get_default_resource();
-}
-
-resource_pool * Runtime::GetCurrentResource() {
-    return resources_manager.get_current_resource();
-}
-
-void Runtime::SetCurrentResource(resource_pool * resource) {
-    resources_manager.set_current_resource(resource);
 }
 
 EntityTag Runtime::AddEntityTag(void *ptr) {

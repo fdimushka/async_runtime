@@ -13,7 +13,6 @@
 namespace AsyncRuntime {
     inline resource_pool * GetResource();
     inline resource_pool * GetResource(int64_t resource_id);
-    inline resource_pool * GetCurrentResource();
 
     namespace ctx = boost::context;
 
@@ -22,8 +21,6 @@ namespace AsyncRuntime {
 
     template< typename T >
     class coroutine_task;
-
-    void set_current_resource(resource_pool *resource);
 
     class coroutine_handler : public std::enable_shared_from_this<coroutine_handler> {
     public:
@@ -239,14 +236,11 @@ namespace AsyncRuntime {
 
         void execute(const execution_state & state) override {
             try {
-                set_current_resource(coro->get_resource());
                 task::state = state;
                 coro->set_execution_state(state);
                 coro->resume();
-                set_current_resource(nullptr);
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
-                set_current_resource(nullptr);
             }
         }
 
@@ -257,6 +251,15 @@ namespace AsyncRuntime {
 
     template<typename T>
     Allocator<T>::Allocator(const coroutine_handler *handler) {
+        if (handler->get_resource() != nullptr) {
+            resource = handler->get_resource();
+        } else {
+            resource = GetResource();
+        }
+    }
+
+    template<typename T>
+    Allocator<T>::Allocator(const coroutine_handler *handler, int t) : tag(t) {
         if (handler->get_resource() != nullptr) {
             resource = handler->get_resource();
         } else {
@@ -277,7 +280,7 @@ namespace AsyncRuntime {
     template <typename Ret = void, typename Fn, typename ...Arguments>
     std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn, Arguments &&... args) {
         auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource},
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource),
                 std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
                 resource);
     }
@@ -285,19 +288,19 @@ namespace AsyncRuntime {
     template <typename Ret = void, typename Fn>
     std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn) {
         auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource}, std::forward<Fn>(fn), resource);
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource), std::forward<Fn>(fn), resource);
     }
 
     template <typename Ret = void, typename Fn, typename ...Arguments>
     std::shared_ptr<coroutine<Ret>> make_coroutine(resource_pool *resource, Fn &&fn, Arguments &&... args) {
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource},
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource),
                 std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
                 resource);
     }
 
     template <typename Ret = void, typename Fn>
     std::shared_ptr<coroutine<Ret>> make_coroutine(resource_pool *resource, Fn &&fn) {
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>{resource}, std::forward<Fn>(fn), resource);
+        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource), std::forward<Fn>(fn), resource);
     }
 
     typedef coroutine_handler CoroutineHandler;

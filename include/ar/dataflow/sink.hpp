@@ -25,7 +25,7 @@ namespace AsyncRuntime::Dataflow {
             : Port(resource, name, data_type)
             , notifier(notifier)
             , last_msg_ts(0)
-            , consumers(Allocator<ConsumerPtr>{resource}) { };
+            , consumers(Allocator<ConsumerPtr>(resource)) { };
 
         SinkPort(const std::string & name, size_t data_type, Notifier *notifier)
             : Port(name, data_type)

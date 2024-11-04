@@ -7,7 +7,6 @@ namespace AsyncRuntime {
 
     class coroutine_handler;
 
-    inline resource_pool * GetCurrentResource();
     inline resource_pool * GetResource();
 
     template<class T>
@@ -27,23 +26,31 @@ namespace AsyncRuntime {
             typedef Allocator<U> other;
         };
 
-        Allocator();
+        Allocator() : resource(GetResource()) { }
+
+        Allocator(int t) : resource(GetResource()), tag(t) { }
+
         explicit Allocator(const coroutine_handler *handler);
+
+        Allocator(const coroutine_handler *handler, int t);
+
         explicit Allocator(resource_pool *res) : resource(res) { }
 
+        Allocator(resource_pool *res, int t) : resource(res), tag(t) { }
+
         template<typename U>
-        constexpr explicit Allocator(const Allocator<U> & other) noexcept : resource(other.get_resource()) { }
+        constexpr explicit Allocator(const Allocator<U> & other) noexcept : resource(other.get_resource()), tag(other.get_tag()) { }
 
         pointer address(reference __x) const { return &__x; }
 
         const_pointer address(const_reference __x) const { return &__x; }
 
         T* allocate(size_type n) {
-            return static_cast<T *>(resource->allocate(n * sizeof(T)));
+            return static_cast<T *>(resource->allocate(n * sizeof(T), tag));
         }
 
         void deallocate(T* p, size_type n) noexcept {
-            resource->deallocate(p, n * sizeof(T));
+            resource->deallocate(p, n * sizeof(T), tag);
         }
 
         void construct(T* p, const T& val) {
@@ -75,23 +82,18 @@ namespace AsyncRuntime {
         }
 
         resource_pool *get_resource() const { return resource; }
-    protected:
+        int get_tag() const { return tag; }
+
+    private:
         resource_pool *resource = nullptr;
+        int tag = 0;
     };
 
     template <typename T, typename U>
-    inline bool operator == (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() == b.get_resource(); }
+    inline bool operator == (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() == b.get_resource() && a.get_tag() == b.get_tag(); }
 
     template <typename T, typename U>
-    inline bool operator != (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() != b.get_resource(); }
-
-    template<typename T>
-    Allocator<T>::Allocator() {
-        resource = GetCurrentResource();
-        if (resource == nullptr) {
-            resource = GetResource();
-        }
-    }
+    inline bool operator != (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() != b.get_resource() || a.get_tag() != b.get_tag(); }
 
     template<typename T, typename... Args>
     inline std::shared_ptr<T> make_shared_ptr(coroutine_handler *handler, Args&&... args) {
@@ -150,7 +152,7 @@ namespace AsyncRuntime {
         map() = default;
 
         map(resource_pool *resource)
-        :std::map<_Key, _Tp, _Compare, Alloc>(Alloc{resource}) {
+        :std::map<_Key, _Tp, _Compare, Alloc>(Alloc(resource)) {
         }
     };
 
@@ -164,7 +166,7 @@ namespace AsyncRuntime {
         unordered_map() = default;
 
         unordered_map(resource_pool *resource)
-        :std::unordered_map<_Key, _Tp, _Hash, _Pred, Alloc>(Alloc{resource}) {
+        :std::unordered_map<_Key, _Tp, _Hash, _Pred, Alloc>(Alloc(resource)) {
         }
     };
 
@@ -173,8 +175,17 @@ namespace AsyncRuntime {
     public:
         list() = default;
 
-        list(resource_pool *resource) : std::list<_Tp, Allocator<_Tp>>(Allocator<_Tp>{resource}) {
+        list(resource_pool *resource) : std::list<_Tp, Allocator<_Tp>>(Allocator<_Tp>(resource)) {
 
+        }
+    };
+
+    template<typename _Tp>
+    class vector : public std::vector<_Tp, Allocator<_Tp>> {
+    public:
+        vector() = default;
+
+        vector(resource_pool *resource) : std::vector<_Tp, Allocator<_Tp>>(Allocator<_Tp>(resource)) {
         }
     };
 }

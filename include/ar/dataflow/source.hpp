@@ -24,7 +24,8 @@ namespace AsyncRuntime::Dataflow {
         SourcePort(Notifier *notifier, const std::string & name, size_t data_type, SharedBufferType buffer_type, int capacity = 100)
             : Consumer< T >(name, data_type)
             , notifier(notifier)
-            , queue(capacity) { };
+            , queue(capacity) {
+            };
 
         virtual ~SourcePort() {
             Flush();

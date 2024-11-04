@@ -10,7 +10,7 @@ namespace AsyncRuntime::Dataflow {
         using PortPtrAllocator = Allocator<std::shared_ptr<Dataflow::Port>>;
     public:
         PortController() = default;
-        PortController(resource_pool *resource) : ports_used_(PortPtrAllocator{resource}) {}
+        PortController(resource_pool *resource) : ports_used_(PortPtrAllocator(resource)) {}
         ~PortController() = default;
 
         void AddUsedPort(const std::shared_ptr<Dataflow::Port> & port);

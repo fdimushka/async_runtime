@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 template<typename T>
 class BasePacket {
 public:
-    BasePacket(resource_pool *resource, int size) : buffer(Allocator<T>{resource}, size) {
+    BasePacket(resource_pool *resource, int size) : buffer(Allocator<T>(resource), size) {
     }
 
     ~BasePacket() {

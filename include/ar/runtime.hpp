@@ -123,10 +123,6 @@ namespace AsyncRuntime {
 
         void DeleteEntityTag(EntityTag tag);
 
-        void SetCurrentResource(resource_pool * resource);
-
-        resource_pool * GetCurrentResource();
-
         std::shared_ptr<Mon::Counter>
         MakeMetricsCounter(const std::string &name, const std::map<std::string, std::string> &labels);
 
@@ -445,14 +441,6 @@ namespace AsyncRuntime {
      */
     inline resource_pool * GetResource() {
         return Runtime::g_runtime->GetResource();
-    }
-
-    /**
-     * @brief
-     * @return
-     */
-    inline resource_pool * GetCurrentResource() {
-        return Runtime::g_runtime->GetCurrentResource();
     }
 }
 
