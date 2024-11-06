@@ -45,11 +45,11 @@ namespace AsyncRuntime {
 
         const_pointer address(const_reference __x) const { return &__x; }
 
-        T* allocate(size_type n) {
+        T* allocate(size_type n) const {
             return static_cast<T *>(resource->allocate(n * sizeof(T), tag));
         }
 
-        void deallocate(T* p, size_type n) noexcept {
+        void deallocate(T* p, size_type n) const noexcept {
             resource->deallocate(p, n * sizeof(T), tag);
         }
 
@@ -65,6 +65,17 @@ namespace AsyncRuntime {
         template<class U>
         void construct(U* p) {
             ::new(p) U();
+        }
+
+        template< class... Args >
+        pointer construct_at(Args&&... args ) const {
+            auto *ptr = allocate(sizeof(T));
+            return ::new (ptr) T(std::forward<Args>(args)...);
+        }
+
+        void destroy_at(T* p) const {
+            p->~T();
+            deallocate(p, sizeof(T));
         }
 
         template< class U >
@@ -152,21 +163,21 @@ namespace AsyncRuntime {
         map() = default;
 
         map(resource_pool *resource)
-        :std::map<_Key, _Tp, _Compare, Alloc>(Alloc(resource)) {
+            :std::map<_Key, _Tp, _Compare, Alloc>(Alloc(resource)) {
         }
     };
 
 
     template<typename _Key, typename _Tp,
-            typename _Hash = std::hash<_Key>,
-            typename _Pred = std::equal_to<_Key>>
+             typename _Hash = std::hash<_Key>,
+             typename _Pred = std::equal_to<_Key>>
     class unordered_map : public std::unordered_map<_Key, _Tp, _Hash, _Pred, Allocator<std::pair<const _Key, _Tp>>> {
         using Alloc = Allocator<std::pair<const _Key, _Tp>>;
     public:
         unordered_map() = default;
 
         unordered_map(resource_pool *resource)
-        :std::unordered_map<_Key, _Tp, _Hash, _Pred, Alloc>(Alloc(resource)) {
+            :std::unordered_map<_Key, _Tp, _Hash, _Pred, Alloc>(Alloc(resource)) {
         }
     };
 

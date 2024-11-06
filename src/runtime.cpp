@@ -114,8 +114,8 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     }
 }
 
-Runtime::ResourceId Runtime::CreateResource() {
-   return resources_manager.create_resource();
+Runtime::ResourceId Runtime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+   return resources_manager.create_resource(chunk_sz, nnext_size, nmax_size);
 }
 
 void Runtime::DeleteResource(Runtime::ResourceId id) {

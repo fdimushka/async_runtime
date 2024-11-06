@@ -49,7 +49,7 @@ namespace AsyncRuntime {
         template<class CounterT>
         void CreateMetricer(const std::map<std::string, std::string> &labels);
 
-        ResourceId CreateResource();
+        ResourceId CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
         void DeleteResource(ResourceId id);
 
@@ -410,8 +410,8 @@ namespace AsyncRuntime {
      * @brief
      * @return
      */
-    inline Runtime::ResourceId CreateResource() {
-        return Runtime::g_runtime->CreateResource();
+    inline Runtime::ResourceId CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0) {
+        return Runtime::g_runtime->CreateResource(chunk_sz, nnext_size, nmax_size);
     }
 
     /**

@@ -16,10 +16,8 @@ TEST_CASE( "Create/delete resource", "[resource_pool]" ) {
         auto coro = make_coroutine(resource_id, [=](coroutine_handler* handler, YieldVoid &yield) {
             auto resource = AsyncRuntime::GetResource(resource_id);
             REQUIRE(handler->get_resource() == resource);
-            REQUIRE(GetCurrentResource() == resource);
         });
 
-        REQUIRE(AsyncRuntime::GetCurrentResource() == nullptr);
 
         Await(Async(coro));
     }

@@ -46,8 +46,8 @@ void resource_pool::storage::deallocate(void *ptr) {
     pool.free(ptr);
 }
 
-resource_pool::resource_pool(const int64_t id): id(id) {
-    add_default_storage();
+resource_pool::resource_pool(const int64_t id, size_t chunk_sz, size_t nnext_size, size_t nmax_size): id(id) {
+    add_default_storage(chunk_sz, nnext_size, nmax_size);
 }
 
 resource_pool::~resource_pool() {
@@ -61,8 +61,8 @@ void resource_pool::add_storage(int tag, size_t chunk_sz, size_t nnext_size, siz
     storage_map.insert(std::make_pair(tag, new storage(chunk_sz, nnext_size, nmax_size)));
 }
 
-void resource_pool::add_default_storage() {
-    add_storage(0, 1024, 1024, 0);
+void resource_pool::add_default_storage(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+    add_storage(0, chunk_sz, nnext_size, nmax_size);
 }
 
 void *resource_pool::allocate(size_t size, int tag) {
@@ -87,9 +87,9 @@ resource_pools_manager::~resource_pools_manager() {
     }
 }
 
-id_type resource_pools_manager::create_resource() {
+id_type resource_pools_manager::create_resource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
     id_type id = get_unique_id();
-    auto *pool = new resource_pool(id);
+    auto *pool = new resource_pool(id, chunk_sz, nnext_size, nmax_size);
 
     std::lock_guard<std::mutex> lock(mutex);
     pools.insert(std::make_pair(id, pool));
@@ -105,9 +105,9 @@ void resource_pools_manager::delete_resource(id_type id) {
     }
 }
 
-void resource_pools_manager::create_default_resource() {
+void resource_pools_manager::create_default_resource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
     std::lock_guard<std::mutex> lock(mutex);
-    default_pool = new resource_pool(0);
+    default_pool = new resource_pool(0, chunk_sz, nnext_size, nmax_size);
     pools.insert(std::make_pair(0, default_pool));
 }
 
@@ -115,7 +115,6 @@ bool resource_pools_manager::is_from(id_type id) {
     std::lock_guard<std::mutex> lock(mutex);
     return pools.find(id) != pools.end();
 }
-
 
 resource_pool *resource_pools_manager::get_resource(id_type id) {
     std::lock_guard<std::mutex> lock(mutex);

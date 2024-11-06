@@ -124,6 +124,61 @@ SCENARIO( "Inherited object allocator test") {
 }
 
 
+SCENARIO( "allocator construct_at/destroy_at") {
+    static int foo_state = 0;
+    class Base {
+     public:
+      Base(int v) : base_value(v) {};
+      virtual ~Base() = default;
+
+      int base_value;
+    };
+
+    class Foo : public Base {
+     public:
+      Foo(): value(0), Base(0) {
+        foo_state = 1;
+      };
+
+      Foo(int v): value(v), Base(v+100) {
+        foo_state = 1;
+      };
+
+      ~Foo() {
+        foo_state = 0;
+      }
+
+      int value;
+    };
+
+    class Empty {
+     public:
+      Empty(){
+        foo_state = 1;
+      };
+      ~Empty(){
+        foo_state = 0;
+      };
+    };
+
+    SetupRuntime();
+
+    GIVEN("construct_at") {
+        Allocator<Foo> allocator(GetResource());
+        Foo *foo = allocator.construct_at(100);
+        REQUIRE(foo_state == 1);
+        REQUIRE(foo->value == 100);
+        REQUIRE(foo->base_value == 200);
+
+        Allocator<Foo> allocator_del(GetResource());
+        allocator_del.destroy_at(foo);
+        REQUIRE(foo_state == 0);
+    }
+
+    Terminate();
+}
+
+
 SCENARIO( "allocator for stl containers") {
     SetupRuntime();
 
@@ -192,4 +247,37 @@ SCENARIO( "allocator for stl containers") {
     Terminate();
 }
 
+
+SCENARIO( "allocator make shared_ptr") {
+
+  class Base {
+   public:
+    virtual ~Base() {
+      std::cout << "base" << std::endl;
+    }
+  };
+
+  class Foo: public Base {
+   public:
+    Foo() = default;
+    ~Foo() final {
+      std::cout << "foo" << std::endl;
+    }
+
+   private:
+    int v = 100;
+  };
+
+  SetupRuntime();
+
+  {
+    std::vector<std::shared_ptr<Base>, AsyncRuntime::Allocator<std::shared_ptr<Base>>> v((AsyncRuntime::Allocator<std::shared_ptr<Base>>(GetResource())));
+
+    auto foo_ptr = AsyncRuntime::make_shared_ptr<Foo>(GetResource());
+    v.push_back(foo_ptr);
+  }
+
+
+  Terminate();
+}
 
