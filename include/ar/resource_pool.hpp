@@ -9,6 +9,7 @@
 #include <boost/pool/simple_segregated_storage.hpp>
 #include <boost/pool/object_pool.hpp>
 #include <boost/pool/pool_alloc.hpp>
+#include <atomic>
 
 namespace AsyncRuntime {
 
@@ -70,11 +71,13 @@ namespace AsyncRuntime {
 
         bool is_from(id_type id);
     private:
+        id_type get_unique_id();
         void create_default_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
         std::mutex  mutex;
         std::map<id_type, resource_pool*> pools;
         resource_pool *default_pool = nullptr;
+        std::atomic<id_type> unique_id = {0};
     };
 }
 

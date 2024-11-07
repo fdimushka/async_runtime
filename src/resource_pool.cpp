@@ -13,13 +13,8 @@ static int get_chunks_count(size_t size, size_t chunk_size) {
     return (int)ceil((float)size / (float)chunk_size);
 }
 
-static id_type get_unique_id() {
-    static std::atomic<id_type> id = {1};
-    return ++id;
-}
-
 resource_pool::storage::storage(size_t chunk_sz, size_t nnext_size, size_t nmax_size)
-: pool(chunk_sz, nnext_size, nmax_size), chunk_size(chunk_sz) {
+    : pool(chunk_sz, nnext_size, nmax_size), chunk_size(chunk_sz) {
 }
 
 resource_pool::storage::~storage() {
@@ -85,6 +80,10 @@ resource_pools_manager::~resource_pools_manager() {
     for (auto pool : pools) {
         delete pool.second;
     }
+}
+
+id_type resource_pools_manager::get_unique_id() {
+    return ++unique_id;
 }
 
 id_type resource_pools_manager::create_resource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
