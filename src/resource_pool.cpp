@@ -33,7 +33,7 @@ void *resource_pool::storage::allocate(size_t size) {
 
 void resource_pool::storage::deallocate(void *ptr, size_t size) {
     std::lock_guard<std::mutex> const lock(mutex);
-    pool.free(ptr, get_chunks_count(size, chunk_size));
+    pool.ordered_free(ptr, get_chunks_count(size, chunk_size));
 }
 
 void resource_pool::storage::deallocate(void *ptr) {
