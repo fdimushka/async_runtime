@@ -69,13 +69,13 @@ namespace AsyncRuntime {
 
         template< class... Args >
         pointer construct_at(Args&&... args ) const {
-            auto *ptr = allocate(sizeof(T));
+            auto *ptr = allocate(1);
             return ::new (ptr) T(std::forward<Args>(args)...);
         }
 
         void destroy_at(T* p) const {
             p->~T();
-            deallocate(p, sizeof(T));
+            deallocate(p, 1);
         }
 
         template< class U >
@@ -144,12 +144,12 @@ namespace AsyncRuntime {
 
     template<typename T, typename... Args>
     inline std::unique_ptr<T, std::function<void(T *)>> make_unique_ptr(Allocator<T> & alloc, Args&&... args) {
-        auto *ptr = alloc.allocate(sizeof(T));
+        auto *ptr = alloc.allocate(1);
         alloc.construct(ptr, std::forward<Args>(args)...);
 
         auto deleter = [](T *p, Allocator<T> alloc) {
             alloc.destroy(p);
-            alloc.deallocate(p, sizeof(T));
+            alloc.deallocate(p, 1);
         };
 
         return {ptr, std::bind(deleter, std::placeholders::_1, alloc)};
