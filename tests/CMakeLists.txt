@@ -11,9 +11,9 @@ file(GLOB TESTS_SRC_CPP *.cpp)
 set(TESTS_SRC ${TESTS_SRC_CPP})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O0")
 endif()
 
 ## main-s for reporter-specific test sources:
