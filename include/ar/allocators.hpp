@@ -3,6 +3,9 @@
 
 #include "ar/resource_pool.hpp"
 
+#include <memory>
+#include <list>
+
 namespace AsyncRuntime {
 
     class coroutine_handler;

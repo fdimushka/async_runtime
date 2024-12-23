@@ -1,9 +1,7 @@
 #ifndef AR_DATAFLOW_FIFO_SHARED_BUFFER_H
 #define AR_DATAFLOW_FIFO_SHARED_BUFFER_H
 
-#include "ar/ar.hpp"
 #include "ar/dataflow/shared_buffer.hpp"
-#include "config.hpp"
 
 #include <boost/lockfree/queue.hpp>
 

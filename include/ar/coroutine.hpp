@@ -1,16 +1,14 @@
 #ifndef AR_COROUTINE_H
 #define AR_COROUTINE_H
 
-#include <iterator>
-#include <type_traits>
-
 #include "ar/task.hpp"
-#include "ar/resource_pool.hpp"
 #include "ar/stack.hpp"
 #include "ar/pooled_stack.hpp"
 #include "ar/allocators.hpp"
 
 namespace AsyncRuntime {
+    class resource_pool;
+
     inline resource_pool * GetResource();
     inline resource_pool * GetResource(int64_t resource_id);
 
