@@ -1,9 +1,8 @@
 #ifndef AR_DATAFLOW_SHARED_BUFFER_H
 #define AR_DATAFLOW_SHARED_BUFFER_H
 
-#include "ar/ar.hpp"
 #include "ar/metricer.hpp"
-#include <typeinfo>
+#include <optional>
 
 namespace AsyncRuntime::Dataflow {
     enum SharedBufferType {

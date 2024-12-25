@@ -1,13 +1,10 @@
 #ifndef AR_THREADEXECUTOR_H
 #define AR_THREADEXECUTOR_H
 
-#include <iostream>
-#include <vector>
-#include <thread>
-#include <algorithm>
-#include <memory>
-
 #include "ar/cpu_helper.hpp"
+
+#include <thread>
+#include <memory>
 
 namespace AsyncRuntime {
 

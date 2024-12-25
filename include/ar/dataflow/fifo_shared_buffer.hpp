@@ -3,7 +3,8 @@
 
 #include "ar/dataflow/shared_buffer.hpp"
 
-#include <boost/lockfree/queue.hpp>
+#include <mutex>
+#include <queue>
 
 namespace AsyncRuntime::Dataflow {
     template< class T >
