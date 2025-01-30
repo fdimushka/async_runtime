@@ -30,9 +30,9 @@ file(GLOB EXAMPLES_SRC_CPP *.cpp)
 set(EXAMPLES_SRC ${EXAMPLES_SRC_CPP})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(COMMON_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
 

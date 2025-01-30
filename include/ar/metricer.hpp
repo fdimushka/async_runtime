@@ -1,12 +1,8 @@
 #ifndef AR_METRICER_H
 #define AR_METRICER_H
 
-#include <mutex>
 #include <memory>
 #include <string>
-#include <string>
-#include <utility>
-#include <vector>
 #include <map>
 
 namespace AsyncRuntime::Mon {

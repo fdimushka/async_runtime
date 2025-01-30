@@ -3,6 +3,8 @@
 #include "io_http_task.h"
 #include "ar/runtime.hpp"
 
+#include "ar/logger.hpp"
+
 using namespace AsyncRuntime;
 using namespace AsyncRuntime::IO;
 

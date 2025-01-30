@@ -1,12 +1,7 @@
 #include "ar/resource_pool.hpp"
 #include <cmath>
-#include "ar/stack.hpp"
-#include <atomic>
-#include <cstddef>
-#include <iostream>
 
 using namespace AsyncRuntime;
-namespace ctx = boost::context;
 using id_type = resource_pools_manager::id_type;
 
 static int get_chunks_count(size_t size, size_t chunk_size) {

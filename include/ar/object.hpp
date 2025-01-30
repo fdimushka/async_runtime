@@ -1,17 +1,8 @@
 #ifndef AR_DUMMY_H
 #define AR_DUMMY_H
 
-#include <iostream>
-#include <functional>
-#include <vector>
-#include <queue>
-#include <optional>
-#include <mutex>
-#include <condition_variable>
-#include <algorithm>
 #include <climits>
-#include <atomic>
-#include <memory>
+#include <cstdint>
 
 
 namespace AsyncRuntime {

@@ -1,14 +1,9 @@
 #ifndef AR_POOLED_STACK_H
 #define AR_POOLED_STACK_H
 
-#include <cstddef>
-#include <new>
-#include <cstring>
-#include <memory>
-#include <cstdlib>
+#include "ar/resource_pool.hpp"
 
 #include <boost/context/continuation.hpp>
-#include "ar/resource_pool.hpp"
 
 namespace AsyncRuntime {
     namespace ctx = boost::context;

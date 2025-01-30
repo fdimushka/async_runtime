@@ -1,8 +1,8 @@
 #ifndef AR_CPU_HELPER_HPP
 #define AR_CPU_HELPER_HPP
 
-#include "ar/object.hpp"
 #include <thread>
+#include <vector>
 
 namespace AsyncRuntime {
 

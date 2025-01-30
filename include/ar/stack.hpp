@@ -1,13 +1,9 @@
 #ifndef AR_STACK_H
 #define AR_STACK_H
 
-#include <cstddef>
-#include <new>
-#include <cstring>
-#include <memory>
-#include <cstdlib>
-
 #include <boost/context/continuation.hpp>
+
+#include <cstdlib>
 
 namespace AsyncRuntime {
     namespace ctx = boost::context;

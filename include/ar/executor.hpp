@@ -4,8 +4,6 @@
 #include "ar/task.hpp"
 #include "ar/metricer.hpp"
 #include "ar/scheduler.hpp"
-#include "ar/work_steal_queue.hpp"
-#include "ar/cpu_helper.hpp"
 
 #ifdef USE_TESTS
 class EXECUTOR_TEST_FRIEND;

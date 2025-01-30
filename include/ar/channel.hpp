@@ -4,16 +4,11 @@
 
 #include "ar/task.hpp"
 #include "ar/object.hpp"
-#include "ar/array.hpp"
-#include "ar/work_steal_queue.hpp"
 #include "ar/resource_pool.hpp"
 #include "ar/allocators.hpp"
 
-#include <iostream>
-#include <map>
-#include <cstdint>
 #include <cstring>
-#include <atomic>
+#include <queue>
 
 #ifdef USE_TESTS
 class CHANNEL_TEST_FRIEND;

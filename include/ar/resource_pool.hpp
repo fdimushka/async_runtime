@@ -1,14 +1,8 @@
 #ifndef AR_RESOURCE_POOL_H
 #define AR_RESOURCE_POOL_H
 
-#include <iterator>
-#include <type_traits>
 #include <map>
-#include <vector>
-#include <thread>
-#include <boost/pool/simple_segregated_storage.hpp>
-#include <boost/pool/object_pool.hpp>
-#include <boost/pool/pool_alloc.hpp>
+#include <boost/pool/pool.hpp>
 #include <atomic>
 
 namespace AsyncRuntime {
