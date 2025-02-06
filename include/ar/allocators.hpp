@@ -4,13 +4,14 @@
 #include "ar/resource_pool.hpp"
 
 #include <memory>
+#include <map>
 #include <list>
 
 namespace AsyncRuntime {
 
     class coroutine_handler;
 
-    inline resource_pool * GetResource();
+    inline resource_pool * GetDefaultResource();
 
     template<class T>
     class Allocator {
@@ -29,31 +30,25 @@ namespace AsyncRuntime {
             typedef Allocator<U> other;
         };
 
-        Allocator() : resource(GetResource()) { }
-
-        Allocator(int t) : resource(GetResource()), tag(t) { }
+        Allocator() : resource(GetDefaultResource()) { }
 
         explicit Allocator(const coroutine_handler *handler);
 
-        Allocator(const coroutine_handler *handler, int t);
-
         explicit Allocator(resource_pool *res) : resource(res) { }
 
-        Allocator(resource_pool *res, int t) : resource(res), tag(t) { }
-
         template<typename U>
-        constexpr explicit Allocator(const Allocator<U> & other) noexcept : resource(other.get_resource()), tag(other.get_tag()) { }
+        constexpr explicit Allocator(const Allocator<U> & other) noexcept : resource(other.get_resource()) { }
 
         pointer address(reference __x) const { return &__x; }
 
         const_pointer address(const_reference __x) const { return &__x; }
 
         T* allocate(size_type n) const {
-            return static_cast<T *>(resource->allocate(n * sizeof(T), tag));
+            return static_cast<T *>(resource->allocate(n * sizeof(T)));
         }
 
         void deallocate(T* p, size_type n) const noexcept {
-            resource->deallocate(p, n * sizeof(T), tag);
+            resource->deallocate(p, n * sizeof(T));
         }
 
         void construct(T* p, const T& val) {
@@ -96,18 +91,16 @@ namespace AsyncRuntime {
         }
 
         resource_pool *get_resource() const { return resource; }
-        int get_tag() const { return tag; }
 
     private:
         resource_pool *resource = nullptr;
-        int tag = 0;
     };
 
     template <typename T, typename U>
-    inline bool operator == (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() == b.get_resource() && a.get_tag() == b.get_tag(); }
+    inline bool operator == (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() == b.get_resource(); }
 
     template <typename T, typename U>
-    inline bool operator != (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() != b.get_resource() || a.get_tag() != b.get_tag(); }
+    inline bool operator != (const Allocator<T>& a, const Allocator<U>& b) { return a.get_resource() != b.get_resource(); }
 
     template<typename T, typename... Args>
     inline std::shared_ptr<T> make_shared_ptr(coroutine_handler *handler, Args&&... args) {

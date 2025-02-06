@@ -1,9 +1,8 @@
 #ifndef AR_RESOURCE_POOL_H
 #define AR_RESOURCE_POOL_H
 
-#include <map>
+#include <vector>
 #include <boost/pool/pool.hpp>
-#include <atomic>
 
 namespace AsyncRuntime {
 
@@ -11,67 +10,54 @@ namespace AsyncRuntime {
 
     class resource_pool {
     public:
-        struct storage {
-            std::mutex mutex;
-            size_t chunk_size;
-            boost::pool<> pool;
-
-            storage(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
-            ~storage();
-
-            void *allocate(size_t size);
-
-            void deallocate(void *ptr, size_t size);
-
-            void deallocate(void *ptr);
-        };
-
-        resource_pool(const int64_t id, size_t chunk_sz, size_t nnext_size, size_t nmax_size);
+        resource_pool(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
         ~resource_pool();
 
         resource_pool(const resource_pool & other) = delete;
         resource_pool(resource_pool && other) = delete;
 
-        void add_storage(int tag, size_t chunk_sz, size_t nnext_size, size_t nmax_size);
+        resource_pool& operator=(const resource_pool & other) = delete;
+        resource_pool& operator=(resource_pool && other) = delete;
 
-        void *allocate(size_t size, int tag = 0);
+        void *allocate(size_t size);
 
-        void deallocate(void *ptr, size_t size, int tag = 0);
+        void deallocate(void *ptr, size_t size);
 
-        void deallocate(void *ptr, int tag = 0);
-
-        int64_t get_id() const { return id; }
+        void deallocate(void *ptr);
     private:
-        void add_default_storage(size_t chunk_sz, size_t nnext_size, size_t nmax_size);
 
-        int64_t id;
-        std::map<int, storage*> storage_map;
+        std::mutex mutex;
+        size_t chunk_size;
+        boost::pool<> pool;
     };
 
     class resource_pools_manager {
     public:
-        typedef int64_t id_type;
 
         resource_pools_manager();
         ~resource_pools_manager();
 
-        id_type create_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
+        resource_pool *create_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
-        void delete_resource(id_type id);
-
-        resource_pool *get_resource(id_type id);
+        void delete_resource(resource_pool *pool);
 
         resource_pool *get_default_resource() { return default_pool; }
 
-        bool is_from(id_type id);
     private:
-        id_type get_unique_id();
         void create_default_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
-        std::mutex  mutex;
-        std::map<id_type, resource_pool*> pools;
+        std::mutex mutex;
+        std::vector<resource_pool *> pools;
         resource_pool *default_pool = nullptr;
-        std::atomic<id_type> unique_id = {0};
+    };
+
+    extern resource_pool *CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size);
+    extern void DeleteResource(resource_pool *pool);
+
+    struct resource_pool_deleter {
+        void operator()(resource_pool *pool) const {
+            AsyncRuntime::DeleteResource(pool);
+        }
     };
 }
 

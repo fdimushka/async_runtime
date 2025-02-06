@@ -9,9 +9,6 @@
 namespace AsyncRuntime {
     class resource_pool;
 
-    inline resource_pool * GetResource();
-    inline resource_pool * GetResource(int64_t resource_id);
-
     namespace ctx = boost::context;
 
     template< typename T >
@@ -252,16 +249,7 @@ namespace AsyncRuntime {
         if (handler->get_resource() != nullptr) {
             resource = handler->get_resource();
         } else {
-            resource = GetResource();
-        }
-    }
-
-    template<typename T>
-    Allocator<T>::Allocator(const coroutine_handler *handler, int t) : tag(t) {
-        if (handler->get_resource() != nullptr) {
-            resource = handler->get_resource();
-        } else {
-            resource = GetResource();
+            resource = GetDefaultResource();
         }
     }
 
@@ -273,20 +261,6 @@ namespace AsyncRuntime {
     template <typename Ret = void, typename Fn>
     std::shared_ptr<coroutine<Ret>> make_coroutine(Fn &&fn) {
         return std::make_shared<coroutine<Ret>>(std::forward<Fn>(fn));
-    }
-
-    template <typename Ret = void, typename Fn, typename ...Arguments>
-    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn, Arguments &&... args) {
-        auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource),
-                std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
-                resource);
-    }
-
-    template <typename Ret = void, typename Fn>
-    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn) {
-        auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource), std::forward<Fn>(fn), resource);
     }
 
     template <typename Ret = void, typename Fn, typename ...Arguments>
