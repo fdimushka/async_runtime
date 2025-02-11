@@ -1,6 +1,7 @@
 #include "ar/ar.hpp"
 #include "ar/io/io.hpp"
 #include "ar/io/http_digest_authenticator.hpp"
+#include "ar/logger.hpp"
 
 using namespace AsyncRuntime;
 using namespace std::chrono_literals;
