@@ -1,5 +1,5 @@
 #include "ar/resource_pool.hpp"
-#include <algorithm>
+#include "ar/runtime.hpp"
 #include <cmath>
 
 using namespace AsyncRuntime;
@@ -46,12 +46,12 @@ resource_pools_manager::~resource_pools_manager() {
     }
 }
 
-resource_pool *resource_pools_manager::create_resource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+ResourcePoolPtr resource_pools_manager::create_resource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
     auto *pool = new resource_pool(chunk_sz, nnext_size, nmax_size);
 
     std::lock_guard<std::mutex> lock(mutex);
     pools.emplace_back(pool);
-    return pool;
+    return std::move(ResourcePoolPtr{pool});
 }
 
 void resource_pools_manager::delete_resource(resource_pool *pool) {
@@ -67,4 +67,12 @@ void resource_pools_manager::create_default_resource(size_t chunk_sz, size_t nne
     std::lock_guard<std::mutex> lock(mutex);
     default_pool = new resource_pool(chunk_sz, nnext_size, nmax_size);
     pools.push_back(default_pool);
+}
+
+ResourcePoolPtr AsyncRuntime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+    return Runtime::g_runtime->CreateResource(chunk_sz, nnext_size, nmax_size);
+}
+
+void AsyncRuntime::DeleteResource(resource_pool *pool) {
+    Runtime::g_runtime->DeleteResource(pool);
 }

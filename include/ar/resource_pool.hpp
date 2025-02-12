@@ -1,6 +1,7 @@
 #ifndef AR_RESOURCE_POOL_H
 #define AR_RESOURCE_POOL_H
 
+#include <memory>
 #include <vector>
 #include <boost/pool/pool.hpp>
 
@@ -31,13 +32,23 @@ namespace AsyncRuntime {
         boost::pool<> pool;
     };
 
+    void DeleteResource(resource_pool *pool);
+
+    struct resource_pool_deleter {
+        void operator()(resource_pool *pool) const {
+            AsyncRuntime::DeleteResource(pool);
+        }
+    };
+
+    using ResourcePoolPtr = std::unique_ptr<resource_pool, resource_pool_deleter>;
+    ResourcePoolPtr CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
+
     class resource_pools_manager {
     public:
-
         resource_pools_manager();
         ~resource_pools_manager();
 
-        resource_pool *create_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
+        ResourcePoolPtr create_resource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
         void delete_resource(resource_pool *pool);
 
@@ -49,15 +60,6 @@ namespace AsyncRuntime {
         std::mutex mutex;
         std::vector<resource_pool *> pools;
         resource_pool *default_pool = nullptr;
-    };
-
-    extern resource_pool *CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size);
-    extern void DeleteResource(resource_pool *pool);
-
-    struct resource_pool_deleter {
-        void operator()(resource_pool *pool) const {
-            AsyncRuntime::DeleteResource(pool);
-        }
     };
 }
 

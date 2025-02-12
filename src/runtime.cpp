@@ -113,7 +113,7 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     }
 }
 
-resource_pool *Runtime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+ResourcePoolPtr Runtime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
    return resources_manager.create_resource(chunk_sz, nnext_size, nmax_size);
 }
 
@@ -201,12 +201,4 @@ void Runtime::Post(task *t) {
     } else {
         executor_state.executor->Post(t);
     }
-}
-
-resource_pool *AsyncRuntime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
-    return Runtime::g_runtime->CreateResource(chunk_sz, nnext_size, nmax_size);
-}
-
-void AsyncRuntime::DeleteResource(resource_pool *pool) {
-    Runtime::g_runtime->DeleteResource(pool);
 }

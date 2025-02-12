@@ -44,7 +44,7 @@ namespace AsyncRuntime {
         template<class CounterT>
         void CreateMetricer(const std::map<std::string, std::string> &labels);
 
-        resource_pool *CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
+        ResourcePoolPtr CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
         void DeleteResource(resource_pool *pool);
 
@@ -397,19 +397,6 @@ namespace AsyncRuntime {
     inline future_t<void> AsyncSleep(const std::chrono::duration<Rep, Period> &rtime) {
         return Runtime::g_runtime->AsyncSleep<Rep, Period>(rtime);
     }
-
-
-    /**
-     * @brief
-     * @return
-     */
-    resource_pool *CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
-
-    /**
-     * @brief
-     * @param id
-     */
-    void DeleteResource(resource_pool *pool);
 
     /**
      * @brief
