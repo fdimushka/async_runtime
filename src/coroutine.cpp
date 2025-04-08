@@ -2,6 +2,9 @@
 #include "ar/profiler.hpp"
 #include "ar/runtime.hpp"
 
+#define BOOST_CHRONO_HEADER_ONLY
+#include <boost/chrono/thread_clock.hpp>
+
 using namespace AsyncRuntime;
 
 void coroutine_handler::create() {

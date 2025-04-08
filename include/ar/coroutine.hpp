@@ -6,6 +6,8 @@
 #include "ar/pooled_stack.hpp"
 #include "ar/allocators.hpp"
 
+#include <boost/chrono/thread_clock.hpp>
+
 namespace AsyncRuntime {
     class resource_pool;
 
@@ -180,6 +182,16 @@ namespace AsyncRuntime {
         resource_pool *get_resource() const final { return resource; }
 
         void init_promise() { y.promise = {}; }
+        
+        size_t GetCpuTime() {
+            auto r = cpu_time;
+            cpu_time = 0;
+            return r;
+        }
+
+        void AddCpuTime(size_t time) {
+            cpu_time += time;
+        }
     private:
         inline void call();
 
@@ -192,6 +204,7 @@ namespace AsyncRuntime {
         std::atomic_bool end;
         yield_t y;
         resource_pool *resource = nullptr;
+        size_t cpu_time{0};
     };
 
     template< typename T >
@@ -230,12 +243,18 @@ namespace AsyncRuntime {
         ~coroutine_task() override = default;
 
         void execute(const execution_state & state) override {
+            using namespace boost::chrono;
+            const auto start = thread_clock::now();
             try {
                 task::state = state;
                 coro->set_execution_state(state);
                 coro->resume();
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
+            }
+            const auto end = thread_clock::now();
+            if (end > start) {
+                coro->AddCpuTime(duration_cast<nanoseconds>(end - start).count());
             }
         }
 

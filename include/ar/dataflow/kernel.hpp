@@ -98,6 +98,10 @@ namespace AsyncRuntime::Dataflow {
 
         template<class T>
         std::shared_ptr<SinkPort<T>> GetSinkPort( const std::string & name ) { return sink.template At<T>(name); }
+
+        size_t GetCpuTime() {
+            return coroutine->GetCpuTime();
+        }
     protected:
         virtual int OnInit(AsyncRuntime::CoroutineHandler *handler, KernelContextT *context) = 0;
 
@@ -225,7 +229,6 @@ namespace AsyncRuntime::Dataflow {
         if (state.load(std::memory_order_relaxed) != kINITIALIZED) {
             return false;
         }
-
         if (coroutine && !coroutine->is_completed()) {
             state.store(kRUNNING, std::memory_order_relaxed);
             auto f = AsyncRuntime::Async(coroutine);
