@@ -187,7 +187,7 @@ namespace AsyncRuntime {
 
         void init_promise() { y.promise = {}; }
 
-#if defined(AR_MEASURE_CPU_TIME)
+#if defined(MEASURE_CPU_TIME)
         size_t get_cpu_time() {
             auto r = cpu_time.exchange(0, std::memory_order_relaxed);
             return r;
@@ -210,7 +210,7 @@ namespace AsyncRuntime {
         std::atomic_bool end;
         yield_t y;
         resource_pool *resource = nullptr;
-#if defined(AR_MEASURE_CPU_TIME)
+#if defined(MEASURE_CPU_TIME)
         std::atomic_size_t cpu_time{0};
 #endif
     };
@@ -251,7 +251,7 @@ namespace AsyncRuntime {
         ~coroutine_task() override = default;
 
         void execute(const execution_state & state) override {
-#if defined(AR_MEASURE_CPU_TIME)
+#if defined(MEASURE_CPU_TIME)
             using namespace boost::chrono;
             const auto start = thread_clock::now();
 #endif
@@ -262,7 +262,7 @@ namespace AsyncRuntime {
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
             }
-#if defined(AR_MEASURE_CPU_TIME)
+#if defined(MEASURE_CPU_TIME)
             const auto end = thread_clock::now();
             if (end > start) {
                 coro->add_cpu_time(duration_cast<nanoseconds>(end - start).count());

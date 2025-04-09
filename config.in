@@ -7,6 +7,6 @@
 #cmakedefine USE_NUMA
 #cmakedefine USE_OPENCV
 #cmakedefine USE_OPENCV_CUDA
-#cmakedefine AR_MEASURE_CPU_TIME
+#cmakedefine MEASURE_CPU_TIME
 
 #endif

@@ -100,7 +100,7 @@ namespace AsyncRuntime::Dataflow {
 
         template<class T>
         std::shared_ptr<SinkPort<T>> GetSinkPort( const std::string & name ) { return sink.template At<T>(name); }
-#if defined(AR_MEASURE_CPU_TIME)
+#if defined(MEASURE_CPU_TIME)
         size_t GetCpuTime() {
             return coroutine->get_cpu_time();
         }

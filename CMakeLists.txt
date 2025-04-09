@@ -46,7 +46,7 @@ if (WITH_NUMA)
 endif()
 
 if (MEASURE_CPU_TIME)
-    set(AR_MEASURE_CPU_TIME ON)
+    set(MEASURE_CPU_TIME ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
