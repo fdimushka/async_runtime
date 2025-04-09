@@ -7,5 +7,6 @@
 #cmakedefine USE_NUMA
 #cmakedefine USE_OPENCV
 #cmakedefine USE_OPENCV_CUDA
+#cmakedefine USE_CPU_TIMING
 
 #endif

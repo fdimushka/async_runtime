@@ -12,6 +12,7 @@ option(WITH_DOCS "Build with docs" OFF)
 option(WITH_PROFILER "Build with profiler" OFF)
 option(WITH_BENCHMARKS "Build with benchmarks" OFF)
 option(WITH_NUMA "Use numa topology" ON)
+option(WITH_CPU_TIMING "Build with cpu timing" OFF)
 
 message(STATUS "Build with tracing: ${WITH_TRACE}")
 message(STATUS "Build with tests: ${WITH_TESTS}")
@@ -20,6 +21,7 @@ message(STATUS "Build with docs: ${WITH_DOCS}")
 message(STATUS "Build with benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Build with profiler: ${WITH_PROFILER}")
 message(STATUS "Build with numa: ${WITH_NUMA}")
+message(STATUS "Build with cpu timing: ${WITH_CPU_TIMING}")
 
 set(USE_TRACE OFF)
 set(USE_TESTS OFF)
@@ -41,6 +43,10 @@ endif()
 
 if (WITH_NUMA)
     set(USE_NUMA ON)
+endif()
+
+if (WITH_CPU_TIMING)
+    set(USE_CPU_TIMING ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)

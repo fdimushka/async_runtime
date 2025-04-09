@@ -9,6 +9,8 @@
 #include "ar/dataflow/kernel_events.hpp"
 #include "ar/allocators.hpp"
 
+#include <config.hpp>
+
 namespace AsyncRuntime::Dataflow {
 
     enum KernelProcessResult : int {
@@ -98,10 +100,12 @@ namespace AsyncRuntime::Dataflow {
 
         template<class T>
         std::shared_ptr<SinkPort<T>> GetSinkPort( const std::string & name ) { return sink.template At<T>(name); }
-
+#ifdef USE_CPU_TIMING
         size_t GetCpuTime() {
-            return coroutine->GetCpuTime();
+            return coroutine->get_cpu_time();
         }
+#endif
+
     protected:
         virtual int OnInit(AsyncRuntime::CoroutineHandler *handler, KernelContextT *context) = 0;
 

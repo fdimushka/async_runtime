@@ -6,7 +6,11 @@
 #include "ar/pooled_stack.hpp"
 #include "ar/allocators.hpp"
 
+#include <config.hpp>
+
 #include <boost/chrono/thread_clock.hpp>
+
+#include <atomic>
 
 namespace AsyncRuntime {
     class resource_pool;
@@ -182,16 +186,18 @@ namespace AsyncRuntime {
         resource_pool *get_resource() const final { return resource; }
 
         void init_promise() { y.promise = {}; }
-        
-        size_t GetCpuTime() {
-            auto r = cpu_time;
-            cpu_time = 0;
+
+#ifdef USE_CPU_TIMING
+        size_t get_cpu_time() {
+            auto r = cpu_time.exchange(0, std::memory_order_relaxed);
             return r;
         }
 
-        void AddCpuTime(size_t time) {
+        void add_cpu_time(size_t time) {
             cpu_time += time;
+            cpu_time.fetch_add(time, std::memory_order_relaxed);
         }
+#endif
     private:
         inline void call();
 
@@ -204,7 +210,9 @@ namespace AsyncRuntime {
         std::atomic_bool end;
         yield_t y;
         resource_pool *resource = nullptr;
-        size_t cpu_time{0};
+#ifdef USE_CPU_TIMING
+        std::atomic_size_t cpu_time{0};
+#endif
     };
 
     template< typename T >
@@ -243,8 +251,10 @@ namespace AsyncRuntime {
         ~coroutine_task() override = default;
 
         void execute(const execution_state & state) override {
+#ifdef USE_CPU_TIMING
             using namespace boost::chrono;
             const auto start = thread_clock::now();
+#endif
             try {
                 task::state = state;
                 coro->set_execution_state(state);
@@ -252,10 +262,12 @@ namespace AsyncRuntime {
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
             }
+#ifdef USE_CPU_TIMING
             const auto end = thread_clock::now();
             if (end > start) {
-                coro->AddCpuTime(duration_cast<nanoseconds>(end - start).count());
+                coro->add_cpu_time(duration_cast<nanoseconds>(end - start).count());
             }
+#endif
         }
 
         future_t<Ret> get_future() { return coro->get_future(); }
