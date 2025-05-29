@@ -194,7 +194,6 @@ namespace AsyncRuntime {
         }
 
         void add_cpu_time(size_t time) {
-            cpu_time += time;
             cpu_time.fetch_add(time, std::memory_order_relaxed);
         }
 #endif
