@@ -25,8 +25,6 @@ namespace AsyncRuntime {
     public:
         static Runtime *g_runtime;
 
-        typedef resource_pools_manager::id_type ResourceId;
-
         Runtime();
 
         ~Runtime();
@@ -46,13 +44,11 @@ namespace AsyncRuntime {
         template<class CounterT>
         void CreateMetricer(const std::map<std::string, std::string> &labels);
 
-        ResourceId CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
+        ResourcePoolPtr CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0);
 
-        void DeleteResource(ResourceId id);
+        void DeleteResource(resource_pool *pool);
 
-        resource_pool *GetResource(ResourceId id);
-
-        resource_pool *GetResource();
+        resource_pool *GetDefaultResource();
 
         void Setup(const RuntimeOptions &options = {});
 
@@ -402,42 +398,12 @@ namespace AsyncRuntime {
         return Runtime::g_runtime->AsyncSleep<Rep, Period>(rtime);
     }
 
-
     /**
      * @brief
      * @return
      */
-    inline Runtime::ResourceId CreateResource(size_t chunk_sz = 128, size_t nnext_size = 1024, size_t nmax_size = 0) {
-        return Runtime::g_runtime->CreateResource(chunk_sz, nnext_size, nmax_size);
-    }
-
-    /**
-     * @brief
-     * @param id
-     */
-    inline void DeleteResource(Runtime::ResourceId id) {
-        Runtime::g_runtime->DeleteResource(id);
-    }
-
-    /**
-     * @brief
-     * @param id
-     * @return
-     */
-    inline resource_pool * GetResource(Runtime::ResourceId id) {
-        if (id != 0) {
-            return Runtime::g_runtime->GetResource(id);
-        }
-
-        return Runtime::g_runtime->GetResource();
-    }
-
-    /**
-     * @brief
-     * @return
-     */
-    inline resource_pool * GetResource() {
-        return Runtime::g_runtime->GetResource();
+    inline resource_pool * GetDefaultResource() {
+        return Runtime::g_runtime->GetDefaultResource();
     }
 }
 

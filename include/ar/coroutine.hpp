@@ -6,11 +6,14 @@
 #include "ar/pooled_stack.hpp"
 #include "ar/allocators.hpp"
 
+#include <config.hpp>
+
+#include <boost/chrono/thread_clock.hpp>
+
+#include <atomic>
+
 namespace AsyncRuntime {
     class resource_pool;
-
-    inline resource_pool * GetResource();
-    inline resource_pool * GetResource(int64_t resource_id);
 
     namespace ctx = boost::context;
 
@@ -183,6 +186,17 @@ namespace AsyncRuntime {
         resource_pool *get_resource() const final { return resource; }
 
         void init_promise() { y.promise = {}; }
+
+#if defined(MEASURE_CPU_TIME)
+        size_t get_cpu_time() {
+            auto r = cpu_time.exchange(0, std::memory_order_relaxed);
+            return r;
+        }
+
+        void add_cpu_time(size_t time) {
+            cpu_time.fetch_add(time, std::memory_order_relaxed);
+        }
+#endif
     private:
         inline void call();
 
@@ -195,6 +209,9 @@ namespace AsyncRuntime {
         std::atomic_bool end;
         yield_t y;
         resource_pool *resource = nullptr;
+#if defined(MEASURE_CPU_TIME)
+        std::atomic_size_t cpu_time{0};
+#endif
     };
 
     template< typename T >
@@ -233,6 +250,10 @@ namespace AsyncRuntime {
         ~coroutine_task() override = default;
 
         void execute(const execution_state & state) override {
+#if defined(MEASURE_CPU_TIME)
+            using namespace boost::chrono;
+            const auto start = thread_clock::now();
+#endif
             try {
                 task::state = state;
                 coro->set_execution_state(state);
@@ -240,6 +261,12 @@ namespace AsyncRuntime {
             } catch (std::exception & ex) {
                 std::cerr << ex.what() << std::endl;
             }
+#if defined(MEASURE_CPU_TIME)
+            const auto end = thread_clock::now();
+            if (end > start) {
+                coro->add_cpu_time(duration_cast<nanoseconds>(end - start).count());
+            }
+#endif
         }
 
         future_t<Ret> get_future() { return coro->get_future(); }
@@ -252,16 +279,7 @@ namespace AsyncRuntime {
         if (handler->get_resource() != nullptr) {
             resource = handler->get_resource();
         } else {
-            resource = GetResource();
-        }
-    }
-
-    template<typename T>
-    Allocator<T>::Allocator(const coroutine_handler *handler, int t) : tag(t) {
-        if (handler->get_resource() != nullptr) {
-            resource = handler->get_resource();
-        } else {
-            resource = GetResource();
+            resource = GetDefaultResource();
         }
     }
 
@@ -273,20 +291,6 @@ namespace AsyncRuntime {
     template <typename Ret = void, typename Fn>
     std::shared_ptr<coroutine<Ret>> make_coroutine(Fn &&fn) {
         return std::make_shared<coroutine<Ret>>(std::forward<Fn>(fn));
-    }
-
-    template <typename Ret = void, typename Fn, typename ...Arguments>
-    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn, Arguments &&... args) {
-        auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource),
-                std::bind(std::forward<Fn>(fn), std::placeholders::_1, std::placeholders::_2, std::forward<Arguments>(args)...),
-                resource);
-    }
-
-    template <typename Ret = void, typename Fn>
-    std::shared_ptr<coroutine<Ret>> make_coroutine(int64_t resource_id, Fn &&fn) {
-        auto resource = GetResource(resource_id);
-        return std::allocate_shared<coroutine<Ret>>(Allocator<coroutine<Ret>>(resource), std::forward<Fn>(fn), resource);
     }
 
     template <typename Ret = void, typename Fn, typename ...Arguments>

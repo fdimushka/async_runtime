@@ -4,7 +4,6 @@
 #include "ar/cpu_helper.hpp"
 #include "ar/resource_pool.hpp"
 #include "numbers.h"
-#include "config.hpp"
 
 #include "io_executor.h"
 
@@ -114,19 +113,15 @@ void Runtime::CreateDefaultExecutors(int virtual_numa_nodes_count) {
     }
 }
 
-Runtime::ResourceId Runtime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
+ResourcePoolPtr Runtime::CreateResource(size_t chunk_sz, size_t nnext_size, size_t nmax_size) {
    return resources_manager.create_resource(chunk_sz, nnext_size, nmax_size);
 }
 
-void Runtime::DeleteResource(Runtime::ResourceId id) {
-    resources_manager.delete_resource(id);
+void Runtime::DeleteResource(resource_pool *pool) {
+    resources_manager.delete_resource(pool);
 }
 
-resource_pool * Runtime::GetResource(Runtime::ResourceId id) {
-    return resources_manager.get_resource(id);
-}
-
-resource_pool * Runtime::GetResource() {
+resource_pool * Runtime::GetDefaultResource() {
     return resources_manager.get_default_resource();
 }
 

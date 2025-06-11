@@ -66,18 +66,18 @@ void async_fun_b(coroutine_handler* handler, yield<void> & yield, Channel<std::s
 int main() {
     AsyncRuntime::Logger::s_logger.SetStd();
     SetupRuntime();
-    auto resource_id = AsyncRuntime::CreateResource();
+    auto resource = AsyncRuntime::CreateResource();
     {
 
         Channel<std::shared_ptr<Packet>> ch;
-        auto coro_a = make_coroutine(resource_id, &async_fun_a, &ch);
+        auto coro_a = make_coroutine(resource.get(), &async_fun_a, &ch);
         Await(Async(coro_a));
-        auto coro_b = make_coroutine(resource_id, &async_fun_b, &ch);
+        auto coro_b = make_coroutine(resource.get(), &async_fun_b, &ch);
         auto result_async_fun = Async(coro_b);
         Async(coro_a);
         result_async_fun.wait();
     }
-    AsyncRuntime::DeleteResource(resource_id);
+    AsyncRuntime::DeleteResource(resource.release());
 
     Terminate();
     return 0;
