@@ -31,6 +31,7 @@ namespace AsyncRuntime::Dataflow {
      */
     class RawConsumer {
     public:
+        virtual ~RawConsumer() = default;
         virtual int Write(const uint8_t *buffer, size_t size) = 0;
         virtual bool IsActive() { return true; };
     };
